@@ -3,8 +3,8 @@
   <Name>keystone-db</Name>
   <!-- VERSION-PINNED on purpose (never :latest / a moving major tag): stateful DB containers
        are excluded from auto-update, and updates are DELIBERATE — back up, bump this pin,
-       verify the app reconnects. Current pin: PostgreSQL 16.14. -->
-  <Repository>postgres:16.14</Repository>
+       verify the app reconnects. Current pin: PostgreSQL 16.15. -->
+  <Repository>postgres:16.15</Repository>
   <Registry>https://hub.docker.com/_/postgres</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>

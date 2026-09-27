@@ -7,7 +7,7 @@
 -->
 <Container version="2">
   <Name>tape-db</Name>
-  <Repository>timescale/timescaledb:latest-pg16</Repository>
+  <Repository>timescale/timescaledb:2.30.0-pg16</Repository>
   <Registry>https://hub.docker.com/r/timescale/timescaledb</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>

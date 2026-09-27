@@ -121,14 +121,8 @@ FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
 #   tldw-redis  redis:7-alpine              — upstream's own compose choice; the blast radius is
 #                                             a cache and a queue, stated in the template.
-#   tape-db     timescale/timescaledb:latest-pg16 — a ROLLING tag on a STATEFUL database, which
-#                                             its own sibling keystone-db deliberately does not
-#                                             do (postgres:16.14). Recorded here so it is a
-#                                             decision on the record rather than a hole; whether
-#                                             to pin it is logged for the PM (see the RETURN
-#                                             that introduced this file).
 ROLLING_TAG_EXCEPTIONS = frozenset(
-    {("tldw-redis", "redis:7-alpine"), ("tape-db", "timescale/timescaledb:latest-pg16")}
+    {("tldw-redis", "redis:7-alpine")}
 )
 
 # No template in this repo currently needs Privileged by design. When one does, name it here
