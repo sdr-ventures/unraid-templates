@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
   cef-tracker — closed-end fund discount-to-NAV tracker (Flask/SQLite; its own repo:
-  github.com/texasdaddy/cef-tracker). Self-contained image built by that repo's CI → GHCR.
+  github.com/sdr-ventures/cef-tracker). Self-contained image built by that repo's CI → GHCR.
   Deploys the Unraid way: UI import → set FLASK_SECRET_KEY (+ optional OAuth) → Apply.
   /data (the SQLite DB) and /data/backups (its scheduled backup) are the two required
   volumes, both on the appdata pool path. Single prod container, single gunicorn worker
@@ -21,22 +21,22 @@
   crash-loop — see cef#9/#5/#4), unlike a sibling such as the-desk where alerting is core.
   Leave it unset to run with outbound email disabled, same as leaving smtp_host blank used
   to mean before this change. Setup + the annotated template for that shared file:
-  github.com/texasdaddy/kw-common/blob/main/docs/alerting-setup.md
+  github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md
 -->
 <Container version="2">
   <Name>cef-tracker</Name>
-  <Repository>ghcr.io/texasdaddy/cef-tracker:stable</Repository>
-  <Registry>https://github.com/texasdaddy/cef-tracker/pkgs/container/cef-tracker</Registry>
+  <Repository>ghcr.io/sdr-ventures/cef-tracker:stable</Repository>
+  <Registry>https://github.com/sdr-ventures/cef-tracker/pkgs/container/cef-tracker</Registry>
   <Network>bridge</Network>                                          <!-- neutral default; pick br0 + a fixed IP in the UI if you prefer. -->
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/cef-tracker</Project>
-  <Overview>CEF Tracker — closed-end fund discount-to-NAV surveillance (BUY/WATCH/HOLD/SELL/AVOID signals) over ~367 CEFs, with a CEFConnect/FRED/sponsor data pipeline (APScheduler). Flask/SQLite, single gunicorn worker. Two required persistent volumes: /data (the SQLite DB) and /data/backups (the scheduled SQLite backup the app writes every 3 days at 2am ET) — both on the appdata pool. Set FLASK_SECRET_KEY (required; without it the container starts but stays UNHEALTHY, serving only a 503 that names the missing variable). Google/Microsoft OAuth are optional. FRED key, Anthropic key and ntfy remain managed in-app under Admin → System Settings. SMTP infra creds (host/port/user/password/from) now come from kw-common's fleet-shared configs/alerting.env instead — set the Shared alerting root below to enable outbound email; it is OPTIONAL, and this container runs fine with it unset (email is simply disabled, exactly as an unset smtp_host meant before). See github.com/texasdaddy/kw-common/blob/main/docs/alerting-setup.md.</Overview>
+  <Project>https://github.com/sdr-ventures/cef-tracker</Project>
+  <Overview>CEF Tracker — closed-end fund discount-to-NAV surveillance (BUY/WATCH/HOLD/SELL/AVOID signals) over ~367 CEFs, with a CEFConnect/FRED/sponsor data pipeline (APScheduler). Flask/SQLite, single gunicorn worker. Two required persistent volumes: /data (the SQLite DB) and /data/backups (the scheduled SQLite backup the app writes every 3 days at 2am ET) — both on the appdata pool. Set FLASK_SECRET_KEY (required; without it the container starts but stays UNHEALTHY, serving only a 503 that names the missing variable). Google/Microsoft OAuth are optional. FRED key, Anthropic key and ntfy remain managed in-app under Admin → System Settings. SMTP infra creds (host/port/user/password/from) now come from kw-common's fleet-shared configs/alerting.env instead — set the Shared alerting root below to enable outbound email; it is OPTIONAL, and this container runs fine with it unset (email is simply disabled, exactly as an unset smtp_host meant before). See github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md.</Overview>
   <Category>Network:Other</Category>
   <WebUI>http://[IP]:[PORT:5000]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/cef-tracker.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/cef-tracker.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/cef-tracker.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/cef-tracker.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
@@ -59,7 +59,7 @@
     Admin -> System Settings; only the SMTP host/port/user/password/from move here, to the
     ONE file every Keystone container reads. Leave both settings below blank to run with
     outbound email disabled. Setup + the annotated template for that file:
-    github.com/texasdaddy/kw-common/blob/main/docs/alerting-setup.md
+    github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md
   -->
-  <Config Name="Shared alerting root" Target="/kw_shared" Default="" Mode="ro" Description="OPTIONAL. The host directory holding configs/alerting.env - the ONE file every Keystone container reads its SMTP settings from. Mounted READ-ONLY: this container never writes to it. Leave blank to run with outbound email disabled (job-error alert emails and invitation emails will not send; the app itself is unaffected). Full instructions: github.com/texasdaddy/kw-common/blob/main/docs/alerting-setup.md" Type="Path" Display="always" Required="false" Mask="false"/>
+  <Config Name="Shared alerting root" Target="/kw_shared" Default="" Mode="ro" Description="OPTIONAL. The host directory holding configs/alerting.env - the ONE file every Keystone container reads its SMTP settings from. Mounted READ-ONLY: this container never writes to it. Leave blank to run with outbound email disabled (job-error alert emails and invitation emails will not send; the app itself is unaffected). Full instructions: github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md" Type="Path" Display="always" Required="false" Mask="false"/>
 </Container>

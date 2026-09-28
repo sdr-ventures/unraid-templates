@@ -10,12 +10,12 @@
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/keystone</Project>
+  <Project>https://github.com/sdr-ventures/keystone</Project>
   <Overview>PostgreSQL 16 — Keystone's tenant-private datastore (row-level security). Stock postgres (NOT TimescaleDB — Keystone's schema is relational multi-tenant, no hypertables), VERSION-PINNED: this template names an exact postgres version; DB updates are deliberate (back up first), never a moving tag. ONE neutral template for dev and prod: at creation set Name (keystone-db / keystone-db-dev), network + a static IP if you use one, the data path on a pool, and POSTGRES_PASSWORD. Autostart this DB BEFORE the keystone app container; the app's DB_HOST/DB_USER/DB_PASSWORD/DB_NAME must match this container's IP + POSTGRES_USER/PASSWORD/DB.</Overview>
   <Category>Database:</Category>
   <WebUI/>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/keystone-db.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/keystone_db.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/keystone-db.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/keystone_db.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>

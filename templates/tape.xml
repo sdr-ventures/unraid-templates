@@ -52,18 +52,18 @@
 -->
 <Container version="2">
   <Name>tape</Name>
-  <Repository>ghcr.io/texasdaddy/tape:stable</Repository>
-  <Registry>https://github.com/texasdaddy/tape/pkgs/container/tape</Registry>
+  <Repository>ghcr.io/sdr-ventures/tape:stable</Repository>
+  <Registry>https://github.com/sdr-ventures/tape/pkgs/container/tape</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/tape</Project>
+  <Project>https://github.com/sdr-ventures/tape</Project>
   <Overview>Tape — Schwab-backed market + account data tier for CEF Tracker + Keystone. ONE neutral template for dev and prod: at creation set Name (tape / tape-dev), image tag (:stable for prod, :dev for dev), network + a static IP if you use one, and the discrete DB_* vars pointing at the tape-db container. The app assembles the DB connection string from DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME (§2 B.10), or set DATABASE_URL to override with a full connection string. Everything else, including the Schwab/FRED/Tiingo credentials, is database-managed via the admin API, seeded with shipped defaults — see the header comment.</Overview>
   <Category>Network:Other</Category>
   <WebUI>http://[IP]:[PORT:8000]/v1/health</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/tape.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/tape.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/tape.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/tape.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
@@ -93,7 +93,7 @@
     NTFY_URL_DEV / NTFY_URL_PROD) and the email/SMTP settings both live in the ONE shared file
     named by the "Shared alerting config" mount above, so rotating a password or repointing a
     topic is one edit fleet-wide instead of one per container. Setup and the annotated template
-    for that file: github.com/texasdaddy/kw-common/blob/main/docs/alerting-setup.md
+    for that file: github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md
 
     DEPLOY_ENV is the only Variable left in this section (T-CRED-PURGE-1) — it genuinely
     differs per deployment (prod vs dev), unlike SHARED_ROOT/CONFIG_PATH, which named a fixed

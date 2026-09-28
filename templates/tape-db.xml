@@ -16,8 +16,8 @@
   <Project>https://github.com/timescale/timescaledb</Project>
   <Overview>TimescaleDB — Tape's market-data warehouse. ONE neutral template for dev and prod: at creation set Name (tape-db / tape-db-dev), network + a static IP if you use one (start the DB before the app), the appdata data path on a pool, and POSTGRES_PASSWORD. The tape app's DB_HOST/DB_USER/DB_PASSWORD/DB_NAME must match this container's IP + POSTGRES_USER/PASSWORD/DB.</Overview>
   <Category>Database:</Category>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/tape-db.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/tape_db.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/tape-db.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/tape_db.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
