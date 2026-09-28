@@ -1,18 +1,18 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>keystone</Name>
-  <Repository>ghcr.io/texasdaddy/keystone:stable</Repository>
-  <Registry>https://github.com/texasdaddy/keystone/pkgs/container/keystone</Registry>
+  <Repository>ghcr.io/sdr-ventures/keystone:stable</Repository>
+  <Registry>https://github.com/sdr-ventures/keystone/pkgs/container/keystone</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/keystone</Project>
+  <Project>https://github.com/sdr-ventures/keystone</Project>
   <Overview>Keystone — self-hosted multi-tenant personal financial platform (FastAPI + PostgreSQL 16 + Next.js). Consumes market/account data from Tape via its API (Keystone does not talk to Schwab directly). ONE neutral template for dev and prod: at creation set Name (keystone / keystone-dev), image tag (:stable / :dev), network mode / static IP, DB host + the TWO DB logins (owner DB_* + non-owner APP_DB_*), the Tape base URL, and secrets. TWO DB logins are required (keystone#14): migrations run as the owner (DB_*), the app runs as a non-owner app_role member (APP_DB_*) so row-level security is enforced — the container fails closed if the app login is missing. The DB connection is assembled internally from the discrete variables (no baked DATABASE_URL). Start the keystone-db container FIRST; the entrypoint runs migrations, then serves. Deploy check: GET /v1/health reports release/sha plus db and tape reachability.</Overview>
   <Category>Network:Other</Category>
   <WebUI>http://[IP]:[PORT:8000]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/keystone.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/keystone.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/keystone.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/keystone.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>

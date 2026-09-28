@@ -86,7 +86,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 
 # ----------------------------------------------------------------------------- config
-REPO            = "texasdaddy/unraid-templates"
+REPO            = "sdr-ventures/unraid-templates"
 BRANCH          = "main"
 TEMPLATE_SUBDIR = "templates"
 TEMPLATES_USER  = "/boot/config/plugins/dockerMan/templates-user"

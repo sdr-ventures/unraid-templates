@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
   iron-tide - a self-hosted real-time strategy game (its own repo:
-  github.com/texasdaddy/iron-tide). Static site built by that repo's CI -> GHCR.
+  github.com/sdr-ventures/iron-tide). Static site built by that repo's CI -> GHCR.
   Deploys the Unraid way: UI import -> pick a port -> Apply.
 
   This one is unusual for this repo in that it has NOTHING to configure. There
@@ -16,18 +16,19 @@
 -->
 <Container version="2">
   <Name>iron-tide</Name>
+  <!-- Repository stays on texasdaddy until Game Dev's next build publishes ghcr.io/sdr-ventures/iron-tide (ORG-REPUBLISH-1). -->
   <Repository>ghcr.io/texasdaddy/iron-tide:stable</Repository>
-  <Registry>https://github.com/texasdaddy/iron-tide/pkgs/container/iron-tide</Registry>
+  <Registry>https://github.com/sdr-ventures/iron-tide/pkgs/container/iron-tide</Registry>
   <Network>bridge</Network>                                          <!-- neutral default; pick br0 + a fixed IP in the UI if you prefer. -->
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/iron-tide</Project>
+  <Project>https://github.com/sdr-ventures/iron-tide</Project>
   <Overview>IRON TIDE - a real-time strategy game of streaming economies and mechanised war, in the tradition of the 1997 Cavedog title but sharing none of its content. Metal and energy are spent continuously while you build rather than deducted when you click, so when your commitments outrun your income everything you are building slows down together. Two factions, twenty-nine unit types, seeded procedural maps, fog of war with a separate radar layer that reports position without identity, reclaimable wreckage, and a Commander whose death ends the match. A fifteen-step first-run tutorial teaches the controls by watching what you actually do. Nothing to configure: no volumes, no environment variables, no secrets, no database. The whole game is a few hundred kilobytes of text - unit sprites are drawn with canvas vector calls at load, terrain is a seeded heightmap shaded in the browser, and every sound effect is synthesised with the Web Audio API, so there is not a single image or audio file in the image. Stateless: settings and keybindings live in your browser, so this container can be deleted and recreated freely. Also installs from Safari on an iPhone or iPad as a fullscreen offline app with touch controls - serve it over HTTPS through your reverse proxy for that to work.</Overview>
   <Category>GameServers: Other:</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/iron-tide.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/iron-tide.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/iron-tide.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/iron-tide.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>

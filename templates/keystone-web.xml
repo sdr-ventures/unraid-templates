@@ -1,21 +1,21 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>keystone-web</Name>
-  <Repository>ghcr.io/texasdaddy/keystone-web:stable</Repository>
-  <Registry>https://github.com/texasdaddy/keystone-web/pkgs/container/keystone-web</Registry>
+  <Repository>ghcr.io/sdr-ventures/keystone-web:stable</Repository>
+  <Registry>https://github.com/sdr-ventures/keystone-web/pkgs/container/keystone-web</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/keystone-web</Project>
+  <Project>https://github.com/sdr-ventures/keystone-web</Project>
   <Overview>Keystone Web — the browser frontend for the Keystone platform (Next.js, standalone). A backend-for-frontend: its own server holds the browser session (refresh token in an httpOnly cookie, access token in memory) and calls the keystone API container server-to-server; it never connects to the database. Stateless — no volumes. ONE neutral template for dev and prod: at creation set Name (keystone-web / keystone-web-dev), image tag (:stable / :dev), network mode / static IP, and KEYSTONE_API_URL pointing at the matching keystone API container (http://&lt;api-ip&gt;:8000). Put both containers behind the same public hostname on the reverse proxy: /v1/*, /docs and /openapi.json to the API, everything else to this container — and add this container's IP to the API's TRUSTED_PROXIES so per-IP auth throttling sees the browser rather than this container. Deploy check: GET /api/health reports release/sha plus API reachability.</Overview>
   <Category>Network:Web</Category>
   <!-- No WebUI link on purpose: the session cookie is Secure-only, so opening the container
        directly over plain http signs in and then never restores. Reach it through the reverse
        proxy's public hostname. -->
   <WebUI/>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/keystone-web.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/keystone-web.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/keystone-web.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/keystone-web.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>

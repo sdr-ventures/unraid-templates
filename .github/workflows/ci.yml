@@ -23,7 +23,7 @@ permissions:
 # failing, permanently unmergeable. The names are invisible from the repo, which is why they are
 # written down here. To rename one, change the branch-protection required context FIRST (a
 # repo-settings change, not a code one), then the job.
-# Verified 2026-08-25: `gh api repos/texasdaddy/unraid-templates/branches/main/protection`.
+# Verified 2026-08-25: `gh api repos/sdr-ventures/unraid-templates/branches/main/protection`.
 jobs:
   # ⛔ REQUIRED STATUS CHECK — do not rename. See the note above `jobs:`.
   # This repo is PUBLIC by necessity — Unraid fetches the icons and templates anonymously

@@ -1,29 +1,29 @@
 <?xml version="1.0"?>
 <!--
   reauth-bot — standalone Schwab trusted-device re-consent bot (its own repo:
-  github.com/texasdaddy/reauth-bot). Self-contained image built by that repo's CI → GHCR:
+  github.com/sdr-ventures/reauth-bot). Self-contained image built by that repo's CI → GHCR:
   deploys the Unraid way — UI import → set IP + variables → Apply. One-time interactive seed is
   a SEED_MODE variable toggle (no docker-run, no mounted script). This template targets Tape;
   LOGIN_URL/TOKEN_URL have no default and are set at creation. Full runbook: reauth-bot repo README.
 -->
 <Container version="2">
   <Name>reauth-bot</Name>
-  <Repository>ghcr.io/texasdaddy/reauth-bot:latest</Repository>
-  <Registry>https://github.com/texasdaddy/reauth-bot/pkgs/container/reauth-bot</Registry>
+  <Repository>ghcr.io/sdr-ventures/reauth-bot:latest</Repository>
+  <Registry>https://github.com/sdr-ventures/reauth-bot/pkgs/container/reauth-bot</Registry>
   <Network>bridge</Network>                                           <!-- neutral default; the bot is outbound-only. Pick br0 + a fixed IP in the UI if you prefer. -->
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/reauth-bot</Project>
-  <Overview>Standalone Schwab trusted-device re-consent bot (repo: github.com/texasdaddy/reauth-bot). Self-contained image; on a ~96h cadence it drives a target service's login flow inside a persistent trusted-device profile (skips 2FA) so the Schwab 7-day consent refreshes itself. This template targets Tape; LOGIN_URL/TOKEN_URL have no default and must be set at creation. REQUIRES a one-time interactive trusted-device seed: set SEED_MODE=1 + SEED_VNC_PASSWORD, Apply, complete the consent over noVNC (http://CONTAINER-IP:6080/vnc.html), then clear SEED_MODE and Apply. The trusted-device cookie MUST persist across updates (Profile volume). Alerting follows the fleet's shared ops-alerting convention: set DEPLOY_ENV and mount the shared alerting config read-only at /kw_shared (see github.com/texasdaddy/kw-common/blob/main/docs/alerting-setup.md); each run reports OK/ERROR to both email and ntfy. Unlike most of the fleet this container is FAIL-OPEN on a bad alerting config — it degrades every channel to unconfigured rather than refusing to start, so a missing mount or a broken DEPLOY_ENV never stops the reauth loop itself. See the reauth-bot repo README.</Overview>
+  <Project>https://github.com/sdr-ventures/reauth-bot</Project>
+  <Overview>Standalone Schwab trusted-device re-consent bot (repo: github.com/sdr-ventures/reauth-bot). Self-contained image; on a ~96h cadence it drives a target service's login flow inside a persistent trusted-device profile (skips 2FA) so the Schwab 7-day consent refreshes itself. This template targets Tape; LOGIN_URL/TOKEN_URL have no default and must be set at creation. REQUIRES a one-time interactive trusted-device seed: set SEED_MODE=1 + SEED_VNC_PASSWORD, Apply, complete the consent over noVNC (http://CONTAINER-IP:6080/vnc.html), then clear SEED_MODE and Apply. The trusted-device cookie MUST persist across updates (Profile volume). Alerting follows the fleet's shared ops-alerting convention: set DEPLOY_ENV and mount the shared alerting config read-only at /kw_shared (see github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md); each run reports OK/ERROR to both email and ntfy. Unlike most of the fleet this container is FAIL-OPEN on a bad alerting config — it degrades every channel to unconfigured rather than refusing to start, so a missing mount or a broken DEPLOY_ENV never stops the reauth loop itself. See the reauth-bot repo README.</Overview>
   <Category>Network:Other</Category>
   <WebUI/>                                                            <!-- steady state has no web UI; seed noVNC is at http://CONTAINER-IP:6080/vnc.html only while SEED_MODE=1 -->
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/reauth-bot.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/reauth_bot.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/reauth-bot.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/reauth_bot.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>Standalone Schwab trusted-device re-consent bot (github.com/texasdaddy/reauth-bot). Self-contained image; UI-deployed; one-time seed via SEED_MODE. This template targets Tape.</Description>
+  <Description>Standalone Schwab trusted-device re-consent bot (github.com/sdr-ventures/reauth-bot). Self-contained image; UI-deployed; one-time seed via SEED_MODE. This template targets Tape.</Description>
 
   <!-- Trusted-device profile MUST persist across container updates (losing it forces a manual re-seed). -->
   <Config Name="Profile" Target="/profile" Default="" Mode="rw" Description="Trusted-device browser profile + /profile/shots debug captures. REQUIRED - an absolute path on a POOL. It MUST survive updates and reboots: losing it forces the manual interactive re-seed." Type="Path" Display="always" Required="true" Mask="false"/>
@@ -43,7 +43,7 @@
        DEPLOY_ENV, below, plus the shared file on the read-only /kw_shared mount — every email
        setting, the SMTP password, AND the ntfy topic(s) live there, so moving the inbox or
        rotating the password is one edit fleet-wide instead of one per container. Full setup:
-       github.com/texasdaddy/kw-common/blob/main/docs/alerting-setup.md. reauth-bot is
+       github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md. reauth-bot is
        deliberately FAIL-OPEN here, unlike most of the fleet: a bad or missing Variable below, or
        a missing mount, degrades every alert channel to unconfigured rather than refusing to
        start — the reauth loop itself must never be the price of a broken alerting Variable. -->
