@@ -4,19 +4,18 @@ Two bugs in one week made this file necessary, and they are the same shape twice
 `merge()` computed the right answer and `update_instance` threw part of it away because the
 gate on the write asked the wrong question.
 
-1. The gate was ``st["added"] or st["deleted"] or st["kept_flag"]``, so a template edit that
-   changed only a field's Description, Default, Display or Required was discarded. Every
-   operator-facing instruction in this repo lives in a `Description`, so the one edit the
-   templates exist to deliver was the one edit that could not arrive.
-2. Comparing content instead fixed that and broke the drift alarm: a variable the template
-   no longer defines but which still holds a value is copied *verbatim* into `merged`, so the
-   trees compare equal while `kept_flag` is non-empty. The `!! KEPT` line — which three
-   separate documents promise is loud, and which is a migration checklist's only pointer to
-   a mapping the operator must delete by hand — went silent on every run after the first.
+1. The gate was ``st["added"] or st["dropped"]``, so a template edit that changed only a
+   field's Description, Default, Display or Required was discarded. Every operator-facing
+   instruction in this repo lives in a `Description`, so the one edit the templates exist to
+   deliver was the one edit that could not arrive.
+2. Comparing content instead fixed that but made a preserved operator Path Mode invisible:
+   the merged tree equals the operator's, so the run said "nothing to change" while having
+   made a decision. A preserved Mode is therefore reported on every run, with no write.
 
 So the assertions below cover the whole surface, not just the bug of the day: writes,
-non-writes, the reported drift, the backup, and delete-as-necessary. Each one was checked by
-mutating `sync-templates.py` and confirming it goes red.
+non-writes, the reported Mode, the backup, and the rule that a variable absent from the
+repo template is dropped whatever it holds. Each one was checked by mutating
+`sync-templates.py` and confirming it goes red.
 """
 
 import importlib.util
@@ -36,7 +35,7 @@ TOKEN = (
     '<Config Name="TOKEN" Target="TOKEN" Default="" Mode="" Description="{desc}" '
     'Type="Variable" Display="always" Required="true" Mask="true"{tail}'
 )
-# a mapping the template no longer defines, still holding a real value: the drift case
+# a mapping the template does not define, holding a real value: it is deprecated, so it is dropped
 SOCKET = (
     '<Config Name="Docker socket" Target="/var/run/docker.sock" Default="" Mode="rw" '
     'Description="x" Type="Path" Display="always" Required="false" Mask="false">'
@@ -204,19 +203,18 @@ def test_an_instance_still_carrying_the_old_port_at_its_default_loses_it(sync):
     )
     merged, st = sync.merge(op_root, tpl_root)
     assert not [c for c in merged.findall("Config") if c.get("Type") == "Port"]
-    assert st["deleted"] == ["Redis Port"]
+    assert st["dropped"] == [("Redis Port", True)]
 
 
-def test_an_instance_with_the_port_set_to_a_real_value_keeps_it_and_is_flagged(sync):
+def test_an_instance_with_the_port_set_to_a_real_value_loses_it_too(sync):
     tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
     op_root = ET.fromstring(
         '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
         f"{_old_redis_port_config('7777')}</Container>"
     )
     merged, st = sync.merge(op_root, tpl_root)
-    kept = [c for c in merged.findall("Config") if c.get("Type") == "Port"]
-    assert len(kept) == 1 and kept[0].text == "7777", "a real value must never be dropped"
-    assert st["kept_flag"] == ["Redis Port"]
+    assert not [c for c in merged.findall("Config") if c.get("Type") == "Port"]
+    assert st["dropped"] == [("Redis Port", True)]
 
 
 def test_port_mode_is_never_operator_owned(sync):
@@ -252,32 +250,99 @@ def test_a_mode_only_difference_is_reported_on_every_run_not_just_the_first(sync
         assert "rw,slave" in capsys.readouterr().out, f"Mode preservation went unreported on run {run + 1}"
 
 
-# ----------------------------------------------------------------- bug 2: the drift alarm
+# ------------------------------------------------ the rule: not in the repo template = dropped
+#
+# The repo template is the schema; the live instance is the values. A Config the instance has
+# and the template lacks is deprecated and dropped, whatever it holds. There is no keep-and-flag.
 
-def test_drift_is_reported_even_when_there_is_nothing_to_write(sync, inst, tmp_path, capsys):
-    """The regression: merged == operator, so the content gate returned before warning."""
+BLANK_EXTRA = (
+    '<Config Name="Spare" Target="SPARE" Default="" Mode="" Description="x" '
+    'Type="Variable" Display="always" Required="false" Mask="false"></Config>'
+)
+
+
+def test_a_valued_variable_absent_from_the_template_is_dropped_and_reported_as_valued(
+        sync, inst, tmp_path, capsys):
     p = inst(instance_xml(extra=SOCKET))
     sync.update_instance(str(p), template(), str(tmp_path / "b"))
     out = capsys.readouterr().out
-    assert "KEPT" in out, "a removed-but-valued Config must still be flagged"
-    assert "Docker socket" in out, "the flag must name what drifted"
-    assert "nothing to change" not in out, "it is not 'nothing to change' - there is drift"
-    assert config_of(p, "/var/run/docker.sock") is not None, "drift is kept, never deleted"
+    assert config_of(p, "/var/run/docker.sock") is None, "a valued variable not in the template must go"
+    assert "DROPPED, not in repo template (deprecated): Docker socket (held a value)" in out
+    assert config_of(p).text == "s3cret", "a variable the template has keeps its applied value"
 
 
-def test_drift_is_reported_on_every_run_not_just_the_first(sync, inst, tmp_path, capsys):
-    """After the first sync the trees match, which is precisely when the alarm went silent."""
+def test_a_blank_variable_absent_from_the_template_is_dropped_and_reported_as_blank(
+        sync, inst, tmp_path, capsys):
+    p = inst(instance_xml(extra=BLANK_EXTRA))
+    sync.update_instance(str(p), template(), str(tmp_path / "b"))
+    out = capsys.readouterr().out
+    assert config_of(p, "SPARE") is None
+    line = [ln for ln in out.splitlines() if "Spare" in ln]
+    assert line and "DROPPED, not in repo template (deprecated): Spare" in line[0]
+    assert "held a value" not in line[0], "a blank drop must not claim it held a value"
+
+
+def test_a_variable_at_its_old_default_is_dropped_too_there_is_no_unused_exemption(
+        sync, inst, tmp_path):
+    at_default = (
+        '<Config Name="Spare" Target="SPARE" Default="d" Mode="" Description="x" '
+        'Type="Variable" Display="always" Required="false" Mask="false">d</Config>'
+    )
+    p = inst(instance_xml(extra=at_default))
+    sync.update_instance(str(p), template(), str(tmp_path / "b"))
+    assert config_of(p, "SPARE") is None
+
+
+def test_a_drop_is_a_real_write_with_a_backup_that_still_holds_the_dropped_variable(
+        sync, inst, tmp_path):
     p = inst(instance_xml(extra=SOCKET))
-    for run in range(3):
-        capsys.readouterr()
-        sync.update_instance(str(p), template(), str(tmp_path / "b"))
-        assert "KEPT" in capsys.readouterr().out, f"drift went unreported on run {run + 1}"
+    backups = tmp_path / "b"
+    sync.update_instance(str(p), template(), str(backups))
+    saved = list(backups.iterdir())
+    assert len(saved) == 1 and "/var/run/docker.sock" in saved[0].read_text(encoding="utf-8")
+
+
+def test_a_second_run_after_a_drop_is_up_to_date(sync, inst, tmp_path, capsys):
+    p = inst(instance_xml(extra=SOCKET))
+    sync.update_instance(str(p), template(), str(tmp_path / "b"))
+    capsys.readouterr()
+    sync.update_instance(str(p), template(), str(tmp_path / "b"))
+    out = capsys.readouterr().out
+    assert "up to date" in out and "DROPPED" not in out
+
+
+def test_there_is_no_keep_and_flag_path_left_in_merge(sync):
+    """Behavioural regression: every kind of absent Config must leave `merged`, whatever it holds.
+
+    Blank, at its old default, a real value, a secret, a Path, a Port: if any branch keeps one
+    of them (the old keep-and-flag), it shows up in `merged` and this fails.
+    """
+    absent = [
+        ("Variable", "A_BLANK", "", ""),
+        ("Variable", "B_DEFAULT", "d", "d"),
+        ("Variable", "C_VALUE", "d", "real"),
+        ("Variable", "D_SECRET", "", "hunter2"),
+        ("Path", "/e/path", "", "/mnt/POOL/x"),
+        ("Port", "9999", "9999", "7777"),
+    ]
+    xml = "".join(
+        f'<Config Name="{t}-{tg}" Target="{tg}" Default="{d}" Mode="" Description="x" Type="{t}" '
+        f'Display="always" Required="false" Mask="false">{v}</Config>'
+        for t, tg, d, v in absent
+    )
+    op_root = ET.fromstring(instance_xml(extra=xml))
+    merged, st = sync.merge(op_root, template())
+    left = {c.get("Target") for c in merged.findall("Config")}
+    assert left == {"TOKEN"}, f"an absent Config survived the merge: {left - {'TOKEN'}}"
+    assert len(st["dropped"]) == len(absent)
+    assert "kept_flag" not in st, "the keep-and-flag stat is gone"
+    assert [h for _, h in st["dropped"]] == [False, True, True, True, True, True]
 
 
 # ------------------------------------------------------------- promises made in the README
 
 def test_a_real_write_is_backed_up_first(sync, inst, tmp_path):
-    """README: 'creates/updates/deletes with timestamped backups'. Nothing was pinning it."""
+    """README: 'creates/updates/drops with timestamped backups'. Nothing was pinning it."""
     p = inst(instance_xml(desc="OLD TEXT"))
     backups = tmp_path / "b"
     sync.update_instance(str(p), template(desc="NEW TEXT"), str(backups))
@@ -286,16 +351,12 @@ def test_a_real_write_is_backed_up_first(sync, inst, tmp_path):
     assert "OLD TEXT" in saved[0].read_text(encoding="utf-8"), "the backup must hold the PRE-write file"
 
 
-def test_delete_as_necessary_only_deletes_what_is_unused(sync, inst, tmp_path):
-    """`if val == "" or val == default` -> `if True` destroys real operator values silently."""
-    unused = (
-        '<Config Name="Spare" Target="SPARE" Default="d" Mode="" Description="x" '
-        'Type="Variable" Display="always" Required="false" Mask="false">d</Config>'
-    )
-    p = inst(instance_xml(extra=unused + SOCKET))
+def test_only_variables_absent_from_the_template_are_dropped(sync, inst, tmp_path):
+    """The drop must not reach a variable the template defines, whatever its value."""
+    p = inst(instance_xml(extra=BLANK_EXTRA + SOCKET))
     sync.update_instance(str(p), template(), str(tmp_path / "b"))
-    assert config_of(p, "SPARE") is None, "a value still at its default is unused: delete it"
-    assert config_of(p, "/var/run/docker.sock") is not None, "a real value must never be dropped"
+    assert config_of(p, "SPARE") is None and config_of(p, "/var/run/docker.sock") is None
+    assert config_of(p).text == "s3cret", "a template variable's applied value must survive"
 
 
 # ------------------------------------------------------- mutations that used to survive
@@ -304,17 +365,18 @@ def test_delete_as_necessary_only_deletes_what_is_unused(sync, inst, tmp_path):
 
 
 def test_the_no_write_path_really_does_not_write_or_back_up(sync, inst, tmp_path):
-    """Drift reporting must not smuggle in a write.
+    """Reporting a preserved Path Mode must not smuggle in a write.
 
-    The drift tests above assert on stdout only. With that alone, making the `unchanged`
+    The Mode tests above assert on stdout only. With that alone, making the `unchanged`
     branch write and back up left the suite green — and the cost is a timestamped copy of a
-    secret-bearing template churned on EVERY run of a drifted instance, which is exactly the
-    accumulation unraid-templates#27 is about.
+    secret-bearing template churned on EVERY run, which is exactly the accumulation
+    unraid-templates#27 is about.
     """
-    p = inst(instance_xml(extra=SOCKET))
+    p = inst(HEAD + PATH_CFG.format(mode="rw,slave", desc="SAME", value="/mnt/POOL/data") + "</Container>")
+    tpl = ET.fromstring(HEAD + PATH_CFG.format(mode="rw", desc="SAME", value="") + "</Container>")
     before = p.read_bytes()
     backups = tmp_path / "b"
-    sync.update_instance(str(p), template(), str(backups))
+    sync.update_instance(str(p), tpl, str(backups))
     assert p.read_bytes() == before, "the no-write path wrote"
     assert not backups.exists() or not list(backups.iterdir()), "the no-write path took a backup"
 
@@ -352,20 +414,31 @@ def test_dry_run_reports_no_write_rather_than_would_update_when_there_is_nothing
     Swapping them made a dry run announce `would UPDATE` for an instance with nothing to
     write — a rehearsal that misreports what the real run will do is worse than no rehearsal.
     """
+    p = inst(HEAD + PATH_CFG.format(mode="rw,slave", desc="SAME", value="/mnt/POOL/data") + "</Container>")
+    tpl = ET.fromstring(HEAD + PATH_CFG.format(mode="rw", desc="SAME", value="") + "</Container>")
+    sync.DRY_RUN = True
+    sync.update_instance(str(p), tpl, str(tmp_path / "b"))
+    out = capsys.readouterr().out
+    assert "would UPDATE" not in out, "a dry run claimed it would write when there is nothing to write"
+    assert "rw,slave" in out, "a dry run must still report the preserved Mode"
+
+
+def test_a_dry_run_names_a_drop_but_removes_nothing(sync, inst, tmp_path, capsys):
     p = inst(instance_xml(extra=SOCKET))
+    before = p.read_bytes()
     sync.DRY_RUN = True
     sync.update_instance(str(p), template(), str(tmp_path / "b"))
     out = capsys.readouterr().out
-    assert "would UPDATE" not in out, "a dry run claimed it would write when there is nothing to write"
-    assert "KEPT" in out, "a dry run must still report drift"
+    assert p.read_bytes() == before
+    assert "would UPDATE" in out
+    assert "DROPPED, not in repo template (deprecated): Docker socket (held a value)" in out
 
 
 def test_metadata_refreshed_is_only_claimed_when_that_is_what_happened(sync, inst, tmp_path, capsys):
     """The line says "no variables added or removed" - so it must not print when some were.
 
-    It used to be computed from added/deleted/kept_flag alone, which left two ways to lie:
-    a duplicate-keyed Config, which merge() DROPS (a variable removed), and the no-write
-    path, where nothing was refreshed at all.
+    It must not claim that for a duplicate-keyed Config (merge() DROPS it: a variable
+    removed), for a dropped variable, or on the no-write path where nothing was refreshed.
     """
     # (a) a real metadata-only write: the claim is true and must be made
     p = inst(instance_xml(desc="OLD TEXT"))
@@ -373,11 +446,18 @@ def test_metadata_refreshed_is_only_claimed_when_that_is_what_happened(sync, ins
     assert "metadata refreshed" in capsys.readouterr().out
 
     # (b) nothing written at all: nothing was refreshed, so the claim must not be made
-    p2 = inst(instance_xml(extra=SOCKET))
+    p2 = inst(HEAD + PATH_CFG.format(mode="rw,slave", desc="SAME", value="/mnt/POOL/data") + "</Container>")
+    tpl2 = ET.fromstring(HEAD + PATH_CFG.format(mode="rw", desc="SAME", value="") + "</Container>")
     capsys.readouterr()
-    sync.update_instance(str(p2), template(), str(tmp_path / "b2"))
+    sync.update_instance(str(p2), tpl2, str(tmp_path / "b2"))
     out = capsys.readouterr().out
     assert "metadata refreshed" not in out, "claimed a refresh on a run that wrote nothing"
+
+    # (b2) a dropped variable is a variable removed
+    p4 = inst(instance_xml(extra=SOCKET))
+    capsys.readouterr()
+    sync.update_instance(str(p4), template(), str(tmp_path / "b4"))
+    assert "no variables added or removed" not in capsys.readouterr().out
 
     # (c) a duplicate is dropped, which IS a variable removed
     dupe = instance_xml(desc="SAME").replace("</Container>", "") + (

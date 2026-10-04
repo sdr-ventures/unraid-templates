@@ -60,13 +60,15 @@ by design — fill them in Unraid on import.
 
 ### `sync-templates.py`
 
-No parameters. Each run does **create / update / delete-as-necessary** across the
+No parameters. Each run does **create / update / drop-deprecated** across the
 managed container templates in `/boot/config/plugins/dockerMan/templates-user` that
 its `TEMPLATE` setting selects, **keeping each instance's applied values**:
 
 - **CREATE** — seeds `my-<name>.xml` for any repo template that has no `my-` file yet, so it is ready to pick under *Add Container*.
 - **UPDATE** — for **every live instance** of a template (for `tape`: `my-tape.xml` *and* `my-tape-dev.xml`, …; `my-tape-db-dev.xml` is `tape-db`'s): keeps that instance's applied value for each variable, refreshes the variable's metadata (description, defaults, visibility) from the repo template, and adds variables the template has gained.
-- **DELETE-as-necessary** — drops a variable the template no longer defines **only when it is genuinely unused** (blank, or still at its default). A removed variable that still holds a real, non-default value is **kept and loudly flagged** (`!! KEPT`), because that almost always means the *template* is missing it — repo drift, not an intentional removal. Treat a `!! KEPT` line as a bug in `templates/` — **except during a deliberate migration**, when it is the script telling you a mapping is still on your container: a `!! KEPT` line naming a variable the migration intentionally dropped means delete that mapping in the Unraid UI, **not** put it back in the template.
+- **DROP** — a variable the instance has and the repo template lacks is **deprecated and is dropped, whatever value it holds**. Each drop is named in the run output (`DROPPED, not in repo template (deprecated): NAME (held a value)`). The pre-sync backup (secrets redacted) is the only record of it.
+
+**The rule.** The repo template is the schema: variables, ports and paths by name, with neutral defaults. The live instance is the values. A sync copies each applied live value into the matching repo variable and adopts the repo's metadata. Not in the repo template means deprecated, and the sync drops it. To retire a variable, remove it from the repo template. To add one, add it to the repo template first, let the sync bring it to the instance, then set its value there. A variable added to a live instance only is dropped by the next sync.
 
 Container-level settings you set per instance — image tag, network/IP, WebUI, Extra
 Params, ports, the container Name — are **always preserved**; only `<Config>`
@@ -89,7 +91,7 @@ and never to `tape`. Containers that came from anywhere else are never touched.
 |---|---|
 | `TEMPLATE = None` | The full pass: every repo template and all of their instances. |
 | `TEMPLATE = "tape"` | **Only** `templates/tape.xml` and its live instances. Nothing that maps to another template is created, updated, deleted, or has its backups redacted or pruned — `tape-db` included, because instances are mapped against the *full* template list before the scope is applied. The output's `scope:` line names the template, so a dry run shows the scope before a live run acts on it. **Refused before anything is written** (exit non-zero, `Nothing changed.`): a name the repo does not have; a `my-tape.xml` that is really a *different* template's instance (by its `<TemplateURL>`) or a foreign container — case variants of the name such as `my-Tape.xml` included, since `/boot` is FAT32 — so fix that file's `<TemplateURL>` or rename the container; and a templates dir that cannot be listed. |
-| `DRY_RUN = True` | Prints exactly what it *would* create/update/delete. Writes nothing. |
+| `DRY_RUN = True` | Prints exactly what it *would* create/update/drop. Writes nothing. |
 | `DRY_RUN = False` | Performs the changes. Every overwritten file is backed up first (timestamped, under `templates-user/.template-sync-backups/`), writes are atomic, and a merged result is validated before it replaces the original. |
 
 The committed copy is the **live full pass** (`DRY_RUN = False`, `TEMPLATE = None`).

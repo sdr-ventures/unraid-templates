@@ -69,7 +69,10 @@ EXPECTED_IMAGE = {
 # stayed green, because every rule that covers it is conditional and its required-secret set
 # is legitimately empty. tldw-webui has no Path Config by design - it is stateless.
 MUST_DECLARE = {
-    "tldw-server": {("Port", "8000"), ("Path", "/app/Databases")},
+    "tldw-server": {
+        ("Port", "8000"), ("Path", "/app/Databases"),
+        ("Path", "/app/tldw_Server_API/Config_Files/config.txt"), ("Path", "/usr/local/bin/deno"),
+    },
     "tldw-redis": {("Path", "/data")},
     "tldw-webui": {("Port", "3000")},
 }

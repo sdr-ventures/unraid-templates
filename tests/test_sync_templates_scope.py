@@ -53,11 +53,11 @@ REPO = {
 }
 
 INSTANCES = {
-    # TemplateURL mapping; one var added, one deleted-as-unused, one kept as drift
+    # TemplateURL mapping; one var added, one blank var dropped, one valued var dropped
     "my-tape.xml": container("tape", [cfg("TOKEN", "s3cret", masked=True, desc="old"),
                                       cfg("PORT", "9090", default="8080", desc="port"),
                                       cfg("OLDVAR", "", desc="gone"),
-                                      cfg("DRIFT", "keepme", desc="drift")],
+                                      cfg("DEPRECATED", "applied", desc="retired")],
                              tpl="tape", env=mirror("TOKEN", "s3cret")),
     # no TemplateURL: filename fallback
     "my-tape-dev.xml": container("tape-dev", [cfg("TOKEN", "dev-s3cret", masked=True, desc="old"),
@@ -166,7 +166,9 @@ def test_the_golden_actually_exercises_every_step_on_both_prefix_templates():
         if fname != "my-foreign.xml":
             assert f"{fname:<22} UPDATED" in out, fname
     assert "my-widget.xml         CREATED" in out
-    assert "deleted (unused): OLDVAR" in out and "KEPT" in out
+    assert "DROPPED, not in repo template (deprecated): OLDVAR\n" in out
+    assert "DROPPED, not in repo template (deprecated): DEPRECATED (held a value)" in out
+    assert "DEPRECATED" not in json.dumps(files["my-tape.xml"]), "the valued stray must be gone"
     assert "REDACTED 2 masked value(s) across 2 pre-existing backup(s)" in out
     assert "pruned 4 backup(s)" in out
     assert "old-s3cret" not in json.dumps(files) and "hand-s3cret" not in json.dumps(files)
@@ -222,6 +224,24 @@ def test_a_scoped_run_creates_only_its_own_stub(sync, tmp_path, capsys, name, ex
     after = b"".join(p.read_bytes() for p in (tmp_path / BACKUPS).iterdir())
     mine, other = {"tape": ("old-s3cret", "hand-s3cret"), "tape-db": ("hand-s3cret", "old-s3cret")}[name]
     assert mine.encode() not in after and other.encode() in after
+
+
+@pytest.mark.parametrize("name,own,other", [("tape", "my-tape.xml", "my-tape-db.xml"),
+                                            ("tape-db", "my-tape-db.xml", "my-tape.xml")])
+def test_a_scoped_run_drops_strays_only_from_its_own_templates_instances(
+        sync, tmp_path, capsys, name, own, other):
+    world(tmp_path)
+    for fname in ("my-tape.xml", "my-tape-db.xml"):
+        text = (tmp_path / fname).read_text(encoding="utf-8")
+        (tmp_path / fname).write_text(
+            text.replace("</Container>", cfg("STRAY", "applied") + "</Container>"), encoding="utf-8")
+    other_before = (tmp_path / other).read_bytes()
+    sync.TEMPLATE = name
+    code, out, _ = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    assert "STRAY" not in (tmp_path / own).read_text(encoding="utf-8"), "own stray not dropped"
+    assert (tmp_path / other).read_bytes() == other_before, "another template's instance was touched"
+    assert "STRAY" in (tmp_path / other).read_text(encoding="utf-8")
 
 
 def test_the_scope_is_decided_against_the_FULL_template_list(sync, tmp_path, capsys):
