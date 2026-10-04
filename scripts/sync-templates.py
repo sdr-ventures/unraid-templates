@@ -3,7 +3,7 @@
 sync-templates — reconcile Unraid dockerMan container templates against the
 published `unraid-templates` repo WITHOUT losing your applied values.
 
-NO PARAMETERS, NO WRAPPER. Running it does create / update / delete-as-necessary
+NO PARAMETERS, NO WRAPPER. Running it does create / update / drop-deprecated
 across the managed container templates that TEMPLATE (below) selects:
 
   TEMPLATE = None     every repo template and all their instances (the full pass).
@@ -30,10 +30,16 @@ across the managed container templates that TEMPLATE (below) selects:
             my-tape-dev.xml, ...; my-tape-db-dev.xml is tape-db's): keep each
             instance's applied values, refresh each variable's metadata from the
             template, and ADD new template vars.
-  DELETE  — drop a variable the template removed ONLY when it is genuinely unused
-            (blank or still at its default). A removed variable that still holds a
-            real, non-default value is KEPT and loudly flagged — that almost always
-            means the TEMPLATE is missing it (drift), not that you wanted it gone.
+  DROP    — a variable the instance has and the repo template lacks is deprecated and is
+            dropped, whatever value it holds; each drop is named in the run output
+            ("DROPPED, not in repo template (deprecated): NAME (held a value)").
+
+THE RULE: the repo template is the schema (names + neutral defaults); the live instance
+is the values. A sync copies each applied value into the matching repo variable and adopts
+the repo's metadata. Not in the repo template = deprecated = dropped. To retire a variable,
+remove it from the repo template. To add one, add it to the repo template FIRST, then sync,
+then set its value live. Never add a variable to a live instance only: the next sync drops it.
+
   Container-level settings you set per instance — image tag, network/IP, WebUI,
   Extra Params, ports, the container Name — are ALWAYS preserved. Only <Config>
   elements are reconciled.
@@ -45,7 +51,7 @@ across the managed container templates that TEMPLATE (below) selects:
 
 ------------------------------------------------------------------------------
 DRY-RUN vs LIVE  —  the DRY_RUN constant below is the switch.
-  * DRY_RUN = True   prints exactly what it WOULD create/update/delete, writes
+  * DRY_RUN = True   prints exactly what it WOULD create/update/drop, writes
                      nothing. This is the version you validate.
   * DRY_RUN = False  performs the changes (each overwritten file is backed up
                      first, timestamped, under templates-user/.template-sync-backups/;
@@ -77,7 +83,7 @@ REQUIRES  python3 >= 3.9 (stdlib only). Run on the Unraid host via User Scripts.
 """
 
 # =============================================================================
-DRY_RUN = False    # LIVE — creates/updates/deletes with timestamped backups. (dev phase used True)
+DRY_RUN = False    # LIVE — creates/updates/drops with timestamped backups. (dev phase used True)
 TEMPLATE = None    # None = every template. "<name>" = only templates/<name>.xml and its instances.
 # =============================================================================
 
@@ -109,9 +115,9 @@ TIMEOUT         = 30
 # physical access can read then accumulated one more cleartext copy of each secret per run.
 #
 # The backup exists to recover from a bad merge, and the value of a secret is not what it
-# recovers: `merge()` copies every applied value across VERBATIM (`new_c.text = op_by_key[k].text`)
-# and keeps a template-removed variable verbatim too, so a merge cannot corrupt a secret in the
-# first place. What a restore actually needs is the STRUCTURE and the non-secret values, and those
+# recovers: `merge()` copies every applied value across VERBATIM (`new_c.text = op_c.text`),
+# so a merge cannot corrupt a secret in the first place. (A variable the template lacks is
+# dropped on purpose, so the backup is also the only record of one.) What a restore actually needs is the STRUCTURE and the non-secret values, and those
 # are preserved in full. A masked value is re-entered from wherever it came from.
 REDACTED = "***REDACTED***"
 
@@ -227,8 +233,8 @@ def discover_instances(directory, repo_names):
 
 def merge(operator_root, template_root):
     """Return (merged_root, stats). Base = operator tree; reconcile <Config> only.
-    Delete-as-necessary: a removed var is dropped only if unused (blank/default);
-    a removed var with a real value is kept + flagged (template drift)."""
+    A Config the operator has but the template lacks is deprecated and always dropped,
+    whatever it holds; stats["dropped"] lists (label, held_a_value) for each."""
     op_by_key, dup_keys = {}, []
     for c in operator_root.findall("Config"):
         k = config_key(c)
@@ -241,8 +247,7 @@ def merge(operator_root, template_root):
     for c in merged.findall("Config"):          # strip Configs; container tags stay
         merged.remove(c)
 
-    stats = {"added": [], "retained": 0, "deleted": [], "kept_flag": [], "dupes": dup_keys,
-              "mode_kept": []}
+    stats = {"added": [], "retained": 0, "dropped": [], "dupes": dup_keys, "mode_kept": []}
     seen = set()
 
     for tc in template_root.findall("Config"):  # template order; refresh metadata
@@ -276,17 +281,9 @@ def merge(operator_root, template_root):
             stats["added"].append(tc.get("Name") or k[1])
         merged.append(new_c)
 
-    for k, c in op_by_key.items():              # vars the template no longer defines
-        if k in seen:
-            continue
-        val = (c.text or "").strip()
-        default = (c.get("Default") or "").strip()
-        label = c.get("Name") or k[1]
-        if val == "" or val == default:
-            stats["deleted"].append(label)      # unused -> delete as necessary
-        else:
-            merged.append(copy.deepcopy(c))     # real value -> keep + flag drift
-            stats["kept_flag"].append(label)
+    for k, c in op_by_key.items():              # not in the template = deprecated = dropped
+        if k not in seen:
+            stats["dropped"].append((c.get("Name") or k[1], bool((c.text or "").strip())))
 
     return merged, stats
 
@@ -642,31 +639,24 @@ def update_instance(inst_path, tpl_root, backup_dir):
     if err:
         print(f"    ! {fname:<22} SKIP — merged result invalid ({err}); left untouched")
         return False
-    # Compare the SEMANTIC result, not the variable set. Gating on added/deleted/kept meant a
+    # Compare the SEMANTIC result, not the variable set. Gating on added/dropped alone meant a
     # template edit that changed only a field's Description, Default, Display or Required was
     # computed correctly by merge() and then thrown away — and a Description is where every
     # operator-facing instruction in this repo lives, so the one edit the templates are
     # written to deliver was the one edit that never arrived. Both sides go through the same
     # indent+serialise path so this compares content, not the file's original formatting.
-    # kept_flag is the ONE stat this comparison cannot see. A variable the template no longer
-    # defines but which still holds a real value is copied VERBATIM into merged (see merge()),
-    # so merged can equal the operator's tree while drift is sitting right there. Returning on
-    # content alone therefore silenced the loudest warning this script has - and silenced it on
-    # every run after the first, which is exactly when an operator re-runs to check their work.
-    # Drift is reported whether or not there is anything to write. dupes rides along in the
-    # condition for safety, though for an operator-side duplicate it is redundant: merge()
-    # keeps only the first of a duplicate-keyed Config, which changes the merged tree, so
-    # `unchanged` is already False.
+    # mode_kept is the ONE stat this comparison cannot see: a preserved operator Path Mode
+    # makes merged equal the operator's tree, so it must still be reported. dupes rides along
+    # for safety, though for an operator-side duplicate it is redundant: merge() keeps only
+    # the first of a duplicate-keyed Config, which changes the merged tree.
     unchanged = canonical(merged) == canonical(op_root)
-    if unchanged and not (st["kept_flag"] or st["dupes"] or st["mode_kept"]):
+    if unchanged and not (st["dupes"] or st["mode_kept"]):
         print(f"    = {fname:<22} up to date  ({st['retained']} values, nothing to change)")
         return True
     # "metadata refreshed ... no variables added or removed" must be true of the run that
     # prints it. dupes belongs in here because merge() DROPS all but the first duplicate,
-    # which IS a variable removed. `unchanged` needs no term of its own: when unchanged is
-    # true the early return above only falls through if kept_flag or dupes is set, and either
-    # of those already zeroes this.
-    meta_only = not (st["added"] or st["deleted"] or st["kept_flag"] or st["dupes"] or st["mode_kept"])
+    # which IS a variable removed.
+    meta_only = not (st["added"] or st["dropped"] or st["dupes"] or st["mode_kept"])
     if unchanged:
         # nothing to write, but there IS something to say - fall through to the warnings
         print(f"    = {fname:<22} no write needed, but see below")
@@ -703,16 +693,14 @@ def update_instance(inst_path, tpl_root, backup_dir):
         print("        metadata refreshed (descriptions/defaults/visibility); no variables added or removed")
     if st["added"]:
         print(f"        added         : {', '.join(st['added'])}")
-    if st["deleted"]:
-        print(f"        deleted (unused): {', '.join(st['deleted'])}")
-    if st["kept_flag"]:
-        print(f"        !! KEPT (removed from template but still holds a value — FIX THE "
-              f"TEMPLATE, it is probably missing these): {', '.join(st['kept_flag'])}")
+    for label, held in st["dropped"]:
+        print(f"        DROPPED, not in repo template (deprecated): {label}"
+              f"{' (held a value)' if held else ''}")
     if st["dupes"]:
         print(f"        ! duplicate keys (first kept): {st['dupes']}")
     if st["mode_kept"]:
         for label, op_mode, tpl_mode in st["mode_kept"]:
-            print(f"        Path Mode KEPT (operator-owned): {label} stays {op_mode!r} "
+            print(f"        Path Mode PRESERVED (operator-owned): {label} stays {op_mode!r} "
                   f"— the template now ships Mode={tpl_mode!r} for it, reaching only a "
                   f"freshly-seeded my-<name>.xml, not this instance")
     return True
@@ -799,7 +787,7 @@ def main():
     names = all_repo if TEMPLATE is None else [TEMPLATE]
 
     banner = "DRY-RUN — writes NOTHING (validate me, then install the DRY_RUN=False version)" \
-        if DRY_RUN else "LIVE — will create/update/delete with backups"
+        if DRY_RUN else "LIVE — will create/update/drop with backups"
     print(f"sync-templates  repo={REPO}@{BRANCH}  dir={TEMPLATES_USER}")
     print(f"mode: {banner}")
     if TEMPLATE is not None:
