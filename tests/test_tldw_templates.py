@@ -83,6 +83,10 @@ MUST_DECLARE = {
 # and is the value this template ships, so matching that substring would red a correct tree.
 COMPOSE_HOST = re.compile(r"(?<!/)//(?:app|redis)(?::\d+)?(?:/|$)")
 
+# REDIS_URL's default: the tldw-redis template's own name (its Name element, asserted below)
+# on the image's internal port. No network name, address or credential.
+REDIS_URL_DEFAULT = "redis://tldw-redis:6379/0"
+
 # The users database, as an ABSOLUTE SQLite URL. Upstream's relative default
 # (`sqlite:///./Databases/users.db`) names the same file under WORKDIR /app, but the
 # entrypoint's BYOK key-loss guard resolves that URL to /Databases/users.db, which never
@@ -211,10 +215,10 @@ def test_the_compose_host_classifier_bites_on_upstreams_service_names():
 
 
 @pytest.mark.parametrize("name", TLDW)
-def test_the_wiring_variables_ship_blank_so_the_operator_must_fill_them(name):
-    # A default that cannot work is worse than no default: it looks configured. Upstream's
-    # compose service names resolve only on a user-defined Docker network, which a template
-    # cannot create, so anything of that shape must not be shipped as a value.
+def test_no_wiring_variable_ships_a_compose_service_name(name):
+    # Upstream's compose service names (`redis`, `app`) resolve only inside upstream's own
+    # compose project, so anything of that shape must not be shipped as a value. REDIS_URL
+    # ships the tldw-redis container name instead, which resolves on the set's shared network.
     root = template(name)
     pairs = [(var_name(c), v) for c in configs(root) if is_variable(c) for v in value_of(c)]
     pairs += environment_pairs(root)
@@ -224,8 +228,9 @@ def test_the_wiring_variables_ship_blank_so_the_operator_must_fill_them(name):
             f"does not resolve on the bridge network"
         )
     if name == "tldw-server":
-        default, text = value_of(one_by_target(template(name), "REDIS_URL"))
-        assert default == "" and text == "", "REDIS_URL must ship blank"
+        # The default is a name, never a compose service name: it is the tldw-redis template's
+        # own name on Redis's internal port, so it resolves on the set's shared network.
+        assert value_of(one_by_target(template(name), "REDIS_URL")) == (REDIS_URL_DEFAULT, REDIS_URL_DEFAULT)
 
 
 def test_the_users_database_url_is_absolute_so_upstreams_byok_guard_can_find_it():
@@ -356,6 +361,82 @@ def test_no_template_text_points_the_operator_at_a_redis_host_port():
         for phrase in ("host port you gave tldw-redis", "host port you published",
                        "the port published below", "this is the interface"):
             assert phrase not in haystack, f"{name}: still points the operator at a Redis host port ({phrase!r})"
+
+
+def test_redis_url_default_is_the_tldw_redis_container_name_on_its_internal_port():
+    # Derived from the sibling template, not just a literal: renaming tldw-redis without
+    # moving this default (or the reverse) breaks name resolution on the shared network.
+    redis_name = (template("tldw-redis").findtext("Name") or "").strip()
+    cfg = one_by_target(template("tldw-server"), "REDIS_URL")
+    assert value_of(cfg) == (f"redis://{redis_name}:6379/0",) * 2
+    assert cfg.get("Mask") == "false"
+    # No network name, address or credential rides in the default.
+    default = cfg.get("Default")
+    assert "@" not in default and not re.search(r"\d+\.\d+\.\d+\.\d+", default)
+    for env_name, env_value in environment_pairs(template("tldw-server")):
+        if env_name == "REDIS_URL":
+            assert env_value == default, "<Environment> contradicts the Config value"
+
+
+def test_mcp_allowed_ips_is_an_optional_blank_unmasked_advanced_variable():
+    # The web UI calls MCP from its container-network address; the application allows
+    # loopback only by default, so the UI's MCP health check gets a 403 until this is set.
+    # The repo carries the name and an empty default - the real list is a host value.
+    cfg = one_by_target(template("tldw-server"), "MCP_ALLOWED_IPS")
+    assert cfg.get("Type") == "Variable"
+    assert cfg.get("Display") == "advanced"
+    assert cfg.get("Required") == "false"
+    assert cfg.get("Mask") == "false"
+    assert value_of(cfg) == ("", "")
+    description = cfg.get("Description") or ""
+    for phrase in ("Comma-separated", "CIDR", "loopback", "web UI", "403", "container network"):
+        assert phrase in description, f"MCP_ALLOWED_IPS Description no longer says {phrase!r}"
+    # The source-verified trap: an empty list means no restriction, not loopback.
+    assert "NO restriction" in description
+
+
+def test_the_network_statements_are_present_on_each_template():
+    # Overview text is the only prose an operator sees before creating the container; each
+    # statement is one an edit that looks like tidying could delete. Substring pins, with the
+    # limit stated at the top of this file.
+    pins = {
+        "tldw-redis": ("user-defined Docker network", "by hand, before the first start",
+                       "container name, tldw-redis", "preserve user-defined networks"),
+        "tldw-server": ("user-defined Docker network", "by hand, before the first start",
+                        "redis://tldw-redis:6379/0", "preserve user-defined networks",
+                        "SINGLE_USER_API_KEY", "MCP_ALLOWED_IPS"),
+        "tldw-webui": ("preserve user-defined networks", "SINGLE_USER_API_KEY",
+                       "MCP_ALLOWED_IPS", "tldw-redis"),
+    }
+    for name, phrases in pins.items():
+        overview = template(name).findtext("Overview") or ""
+        for phrase in phrases:
+            assert phrase in overview, f"{name}: Overview no longer says {phrase!r}"
+    # Start order: Redis, then the server, then the UI.
+    assert "tldw-redis first, then tldw-server, then tldw-webui" in (
+        template("tldw-webui").findtext("Overview") or "")
+
+
+@pytest.mark.parametrize("name", TLDW)
+def test_the_network_is_bridge_and_extra_parameters_are_empty(name):
+    # A network is a host-side object a template cannot create, so the template names none
+    # and carries no flag that depends on one. The operator sets both by hand.
+    root = template(name)
+    assert (root.findtext("Network") or "").strip() == "bridge"
+    assert (root.findtext("ExtraParams") or "").strip() == ""
+
+
+def test_no_template_config_or_prose_offers_a_redis_host_port():
+    # Repo-wide over the three templates' text (header comments included), not only the
+    # Overview: nothing may tell the operator to publish, choose or point at a Redis host port.
+    for name in TLDW:
+        raw = (TEMPLATES / f"{name}.xml").read_text(encoding="utf-8").lower()
+        for phrase in ("redis port", "choose the host port", "host port you", "published below",
+                       "6380"):
+            assert phrase not in raw, f"{name}: mentions {phrase!r}"
+    assert not [c for c in configs(template("tldw-redis")) if (c.get("Type") or "") == "Port"]
+    # And tldw-server declares no Port for Redis either: its only Port is its own API.
+    assert [c.get("Target") for c in configs(template("tldw-server")) if c.get("Type") == "Port"] == ["8000"]
 
 
 def test_webui_ships_no_path_config_because_it_is_stateless():

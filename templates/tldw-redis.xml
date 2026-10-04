@@ -4,11 +4,21 @@
   redis:7-alpine from Docker Hub with the command line upstream's single-user compose file
   uses; nothing here is specific to any host or operator.
 
-  ONE OF TWO, AND THE FIRST TO START:
-      tldw-redis -> tldw-server
+  THE FIRST TO START:
+      tldw-redis -> tldw-server -> tldw-webui
   Unraid templates have no equivalent of compose's depends_on or healthchecks, so nothing
   starts these in order for you. tldw-server expects Redis to be reachable when it comes
   up, which is why this one goes first.
+
+  NETWORK WIRING (the same for the whole set). The three containers share ONE user-defined
+  Docker network that the operator creates once, by hand, before the first start - a network
+  is a host-side object a template cannot create or name, so every template here keeps
+  Network bridge and empty Extra Parameters, and you set the Network field to your network
+  when you create each container. On that network this container is reachable by its own
+  container name, tldw-redis, on Redis's internal port 6379, which is the address
+  tldw-server's REDIS_URL defaults to. Docker must be set to preserve user-defined networks
+  across updates (Unraid: Settings > Docker); without it the network is removed by a Docker
+  restart and the containers fall back to bridge, where that name does not resolve.
 
   ⚠️ THE IMAGE TAG IS NOT PINNED THE WAY ITS SIBLING'S IS, and that is a stated limit
   rather than an oversight. `redis:7-alpine` is a ROLLING tag: Docker Hub re-points it at
@@ -24,15 +34,12 @@
   for a queue at upstream's sizing, and destructive to another application's data if it
   were sharing the same server.
 
-  NO HOST PORT IS PUBLISHED (UT-SYNC-SAFE). An earlier revision of this template published
-  one so tldw-server, on the stock bridge network, could reach this container at the host's
-  own address - at the cost of a no-password Redis reachable from every network this host is
-  on, for a port nothing outside this container's own sibling needed. tldw-server now reaches
-  this container over a shared user-defined Docker network instead (see tldw-server.xml's own
-  header); wiring that network and its alias up by default is a separate, larger change
-  (UT-3), not this one. A sync drops any Config the repo template lacks, so an instance
-  created from a prior revision loses its Redis Port Config on the next sync, whatever value
-  it held; the container then publishes no host port.
+  NO HOST PORT IS PUBLISHED. A no-password Redis on a host port is reachable from every
+  network the host is on, for a port nothing outside this container's own sibling needs;
+  tldw-server reaches this container over the shared network above instead. A sync drops
+  any Config the repo template lacks, so an instance created from a prior revision loses its
+  old host-port Config on the next sync, whatever value it held; the container then
+  publishes no host port once it is recreated.
 -->
 <Container version="2">
   <Name>tldw-redis</Name>
@@ -43,7 +50,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/rmusser01/tldw_server</Project>
-  <Overview>Redis for tl;dw (Too Long, Didn't Watch) - the job queue and cache the tl;dw API server runs its background work through. TWO CONTAINERS, STARTED IN ORDER: tldw-redis first, then tldw-server. There is no template equivalent of compose depends_on, so nothing enforces that for you. GIVE TL;DW ITS OWN: this container runs with a 512 MB memory ceiling and an allkeys-lru eviction policy, exactly as upstream's single-user compose file does, which means that under memory pressure it throws away the least recently used keys - acceptable for a cache and for this queue at upstream's sizing, destructive for anything else that might be sharing a Redis with it. STORAGE: the /data mount holds the append-only file, so the queue survives a restart. Losing it does not lose your ingested corpus - that lives on the tl;dw API container's own mount - it loses whatever work was queued. EXPOSURE: this template publishes no host port for Redis, so it is reachable only from a container on the same Docker network as this one, not from the wider network this host is on; there is still no password, so keep that network one you trust. See tldw-server.xml's own header for how that container reaches this one. IMAGE TAG: redis:7-alpine is a rolling tag, so unlike its sibling this container can take an upstream version change on an Update - see the comment at the top of the template file. The Redis command line is set in Post Arguments rather than as variables, because that is how this image is configured.</Overview>
+  <Overview>Redis for tl;dw (Too Long, Didn't Watch) - the job queue and cache the tl;dw API server runs its background work through. STARTED IN ORDER: tldw-redis first, then tldw-server (then tldw-webui, if you run it). There is no template equivalent of compose depends_on, so nothing enforces that for you. GIVE TL;DW ITS OWN: this container runs with a 512 MB memory ceiling and an allkeys-lru eviction policy, exactly as upstream's single-user compose file does, which means that under memory pressure it throws away the least recently used keys - acceptable for a cache and for this queue at upstream's sizing, destructive for anything else that might be sharing a Redis with it. STORAGE: the /data mount holds the append-only file, so the queue survives a restart. Losing it does not lose your ingested corpus - that lives on the tl;dw API container's own mount - it loses whatever work was queued. NETWORK: the three tl;dw containers share one user-defined Docker network that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to your network when you create the container). On that network this container is reachable by its container name, tldw-redis, on port 6379, which is what tldw-server's REDIS_URL defaults to. Docker must preserve user-defined networks across updates (Unraid: Settings > Docker), or the containers fall back to bridge and that name stops resolving. EXPOSURE: this template publishes no host port for Redis, so it is reachable only from a container on the same Docker network as this one, not from the wider network this host is on; there is still no password, so keep that network one you trust. IMAGE TAG: redis:7-alpine is a rolling tag, so unlike its sibling this container can take an upstream version change on an Update - see the comment at the top of the template file. The Redis command line is set in Post Arguments rather than as variables, because that is how this image is configured.</Overview>
   <Category>Database:</Category>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/tldw-redis.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/tldw-redis.png</Icon>
