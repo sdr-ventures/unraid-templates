@@ -72,6 +72,13 @@ Container-level settings you set per instance — image tag, network/IP, WebUI, 
 Params, ports, the container Name — are **always preserved**; only `<Config>`
 elements are reconciled.
 
+**A Path's Mode (Read/Write vs Read-only) is operator-owned, once an instance is
+seeded** — a Mode you set on an existing instance survives every later sync even when
+the template's own Mode changes; a template-side Mode change reaches a newly-seeded
+`my-<name>.xml` only, never an instance that already exists. Every other attribute of
+every Config, including a **Port's** tcp/udp Mode, keeps refreshing from the template
+on every run.
+
 Instances map to templates by their `<TemplateURL>` basename, falling back to the
 longest dash-prefix of the filename — so `my-tape-db-dev.xml` maps to `tape-db`
 and never to `tape`. Containers that came from anywhere else are never touched.

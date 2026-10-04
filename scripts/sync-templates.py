@@ -37,6 +37,11 @@ across the managed container templates that TEMPLATE (below) selects:
   Container-level settings you set per instance — image tag, network/IP, WebUI,
   Extra Params, ports, the container Name — are ALWAYS preserved. Only <Config>
   elements are reconciled.
+  PATH MODE IS OPERATOR-OWNED, once seeded — a Path's Read/Write-vs-Read-only Mode you
+  set on an instance survives every later sync, even when the template's own Mode
+  changes; a template-side Mode change reaches only a newly-seeded my-<name>.xml, never
+  an existing instance. Every other attribute of every Config — including a Port's
+  tcp/udp Mode — keeps refreshing from the template on every run, same as always.
 
 ------------------------------------------------------------------------------
 DRY-RUN vs LIVE  —  the DRY_RUN constant below is the switch.
@@ -236,7 +241,8 @@ def merge(operator_root, template_root):
     for c in merged.findall("Config"):          # strip Configs; container tags stay
         merged.remove(c)
 
-    stats = {"added": [], "retained": 0, "deleted": [], "kept_flag": [], "dupes": dup_keys}
+    stats = {"added": [], "retained": 0, "deleted": [], "kept_flag": [], "dupes": dup_keys,
+              "mode_kept": []}
     seen = set()
 
     for tc in template_root.findall("Config"):  # template order; refresh metadata
@@ -244,7 +250,27 @@ def merge(operator_root, template_root):
         seen.add(k)
         new_c = copy.deepcopy(tc)               # template metadata + default value
         if k in op_by_key:
-            new_c.text = op_by_key[k].text      # keep the applied value verbatim
+            op_c = op_by_key[k]
+            new_c.text = op_c.text              # keep the applied value verbatim
+            # Path Mode (Read/Write vs Read-only) is OPERATOR-owned once an instance has
+            # been seeded — it is how an operator expresses something the template cannot
+            # know (a slave/secondary mount, say). Every other attribute, including Port
+            # Mode (tcp/udp), keeps refreshing from the template every run, same as before.
+            # A blank/absent operator Mode is not an operator decision to preserve — it
+            # takes the template's, same as a Config new to this instance always does.
+            if (tc.get("Type") or "").strip() == "Path":
+                op_mode = (op_c.get("Mode") or "").strip()
+                tpl_mode = (tc.get("Mode") or "").strip()
+                if op_mode:
+                    new_c.set("Mode", op_mode)
+                    if op_mode != tpl_mode:
+                        # A Mode-only difference is otherwise invisible: `new_c` ends up
+                        # identical to the operator's own Config (the one attribute the
+                        # template changed is the one just overwritten back), so the
+                        # content-comparison gate below sees NO change at all and the run
+                        # would silently say "nothing to change" while quietly keeping the
+                        # operator's Mode against a template that now disagrees with it.
+                        stats["mode_kept"].append((tc.get("Name") or k[1], op_mode, tpl_mode))
             stats["retained"] += 1
         else:
             stats["added"].append(tc.get("Name") or k[1])
@@ -632,7 +658,7 @@ def update_instance(inst_path, tpl_root, backup_dir):
     # keeps only the first of a duplicate-keyed Config, which changes the merged tree, so
     # `unchanged` is already False.
     unchanged = canonical(merged) == canonical(op_root)
-    if unchanged and not (st["kept_flag"] or st["dupes"]):
+    if unchanged and not (st["kept_flag"] or st["dupes"] or st["mode_kept"]):
         print(f"    = {fname:<22} up to date  ({st['retained']} values, nothing to change)")
         return True
     # "metadata refreshed ... no variables added or removed" must be true of the run that
@@ -640,7 +666,7 @@ def update_instance(inst_path, tpl_root, backup_dir):
     # which IS a variable removed. `unchanged` needs no term of its own: when unchanged is
     # true the early return above only falls through if kept_flag or dupes is set, and either
     # of those already zeroes this.
-    meta_only = not (st["added"] or st["deleted"] or st["kept_flag"] or st["dupes"])
+    meta_only = not (st["added"] or st["deleted"] or st["kept_flag"] or st["dupes"] or st["mode_kept"])
     if unchanged:
         # nothing to write, but there IS something to say - fall through to the warnings
         print(f"    = {fname:<22} no write needed, but see below")
@@ -684,6 +710,11 @@ def update_instance(inst_path, tpl_root, backup_dir):
               f"TEMPLATE, it is probably missing these): {', '.join(st['kept_flag'])}")
     if st["dupes"]:
         print(f"        ! duplicate keys (first kept): {st['dupes']}")
+    if st["mode_kept"]:
+        for label, op_mode, tpl_mode in st["mode_kept"]:
+            print(f"        Path Mode KEPT (operator-owned): {label} stays {op_mode!r} "
+                  f"— the template now ships Mode={tpl_mode!r} for it, reaching only a "
+                  f"freshly-seeded my-<name>.xml, not this instance")
     return True
 
 
