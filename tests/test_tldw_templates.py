@@ -70,7 +70,7 @@ EXPECTED_IMAGE = {
 # is legitimately empty. tldw-webui has no Path Config by design - it is stateless.
 MUST_DECLARE = {
     "tldw-server": {("Port", "8000"), ("Path", "/app/Databases")},
-    "tldw-redis": {("Port", "6379"), ("Path", "/data")},
+    "tldw-redis": {("Path", "/data")},
     "tldw-webui": {("Port", "3000")},
 }
 
@@ -327,6 +327,32 @@ def test_webui_documents_the_alias_requirement_with_a_working_issue_link():
             f"per this repo's own sync-templates.py behaviour, so it cannot rely on the "
             f"Overview alone"
         )
+
+
+def test_tldw_redis_publishes_no_host_port(name="tldw-redis"):
+    # UT-SYNC-SAFE: a published Redis with no password is reachable from every network a host
+    # port exposes it to, for nothing beyond this one container's own sibling. CI invariant: a
+    # Port Config reappearing here is the exact regression this guards.
+    root = template(name)
+    kinds = {(c.get("Type") or "").strip() for c in configs(root)}
+    assert "Port" not in kinds, (
+        "tldw-redis: a Port Config was added back - this template deliberately publishes no "
+        "host port for Redis (UT-SYNC-SAFE); tldw-server reaches it over a Docker network instead"
+    )
+
+
+def test_no_template_text_points_the_operator_at_a_redis_host_port():
+    # Done-when: "No template text tells the operator to use a Redis host port the template
+    # no longer defines (including the REDIS_URL guidance in the tldw server template)."
+    for name in ("tldw-redis", "tldw-server"):
+        root = template(name)
+        haystack = " ".join(filter(None, [
+            root.findtext("Overview"),
+            (one_by_target(root, "REDIS_URL").get("Description") if name == "tldw-server" else None),
+        ])).lower()
+        for phrase in ("host port you gave tldw-redis", "host port you published",
+                       "the port published below", "this is the interface"):
+            assert phrase not in haystack, f"{name}: still points the operator at a Redis host port ({phrase!r})"
 
 
 def test_webui_ships_no_path_config_because_it_is_stateless():

@@ -119,6 +119,139 @@ def test_dry_run_writes_nothing_even_when_there_is_a_real_change(sync, inst, tmp
     assert p.read_bytes() == before
 
 
+# --------------------------------------------------- UT-SYNC-SAFE: Path Mode is operator-owned
+#
+# The lane queue note claimed the sync never reconciles Mode at all. A scratch run against
+# `origin/main@fb8d8cf` (the pre-fix script) proved the OPPOSITE: `merge()` built every new
+# Config from `copy.deepcopy(template_config)` and touched only `.text`, so an operator's Path
+# Mode (e.g. a slave/secondary mount) was silently overwritten by the template's every run — and
+# the run's own report said "metadata refreshed ... no variables added or removed", naming
+# nothing, because the overwritten Config came out byte-identical to the template's own copy.
+# Port Mode is explicitly NOT part of this — only a Path's Mode is an operator decision; a
+# Port's protocol (tcp/udp) stays template-owned, same as before.
+
+PATH_CFG = (
+    '<Config Name="Data" Target="/data" Default="" Mode="{mode}" Description="{desc}" '
+    'Type="Path" Display="always" Required="true" Mask="false">{value}</Config>'
+)
+PORT_CFG = (
+    '<Config Name="P" Target="8080" Default="8080" Mode="{mode}" Description="{desc}" '
+    'Type="Port" Display="always" Required="true" Mask="false">8080</Config>'
+)
+
+
+def test_an_operator_set_path_mode_survives_a_template_side_mode_change(sync):
+    op_root = ET.fromstring(HEAD + PATH_CFG.format(
+        mode="rw,slave", desc="x", value="/mnt/pool/data") + "</Container>")
+    tpl_root = ET.fromstring(HEAD + PATH_CFG.format(
+        mode="rw", desc="y", value="") + "</Container>")
+    merged, st = sync.merge(op_root, tpl_root)
+    cfg = merged.find("Config")
+    assert cfg.get("Mode") == "rw,slave", "the operator's Path Mode must survive"
+    assert cfg.text == "/mnt/pool/data", "the applied value must still survive too"
+    assert cfg.get("Description") == "y", "every OTHER attribute keeps refreshing"
+    assert st["mode_kept"] == [("Data", "rw,slave", "rw")]
+
+
+def test_a_blank_operator_path_mode_takes_the_templates(sync):
+    op_root = ET.fromstring(HEAD + PATH_CFG.format(
+        mode="", desc="x", value="/mnt/pool/data") + "</Container>")
+    tpl_root = ET.fromstring(HEAD + PATH_CFG.format(
+        mode="rw", desc="y", value="") + "</Container>")
+    merged, st = sync.merge(op_root, tpl_root)
+    assert merged.find("Config").get("Mode") == "rw", "blank is not an operator decision to keep"
+    assert st["mode_kept"] == []
+
+
+def test_a_path_new_to_the_operator_takes_the_templates_mode(sync):
+    op_root = ET.fromstring(HEAD + "</Container>")
+    tpl_root = ET.fromstring(HEAD + PATH_CFG.format(
+        mode="rw", desc="y", value="") + "</Container>")
+    merged, st = sync.merge(op_root, tpl_root)
+    assert merged.find("Config").get("Mode") == "rw"
+    assert st["added"] == ["Data"]
+    assert st["mode_kept"] == []
+
+
+REAL_TLDW_REDIS = pathlib.Path(__file__).resolve().parents[1] / "templates" / "tldw-redis.xml"
+
+
+def _old_redis_port_config(value):
+    return (
+        '<Config Name="Redis Port" Target="6379" Default="6380" Mode="tcp" Description="old" '
+        f'Type="Port" Display="always" Required="true" Mask="false">{value}</Config>'
+    )
+
+
+def test_a_fresh_instance_synced_against_the_real_tldw_redis_template_gets_no_port(sync):
+    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+    op_root = ET.fromstring(
+        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        '<Config Name="Data" Target="/data" Default="" Mode="rw" Description="d" Type="Path" '
+        'Display="always" Required="true" Mask="false">/mnt/pool/appdata/tldw-redis/data'
+        "</Config></Container>"
+    )
+    merged, st = sync.merge(op_root, tpl_root)
+    assert not [c for c in merged.findall("Config") if c.get("Type") == "Port"]
+    assert st["added"] == []
+
+
+def test_an_instance_still_carrying_the_old_port_at_its_default_loses_it(sync):
+    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+    op_root = ET.fromstring(
+        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        f"{_old_redis_port_config('6380')}</Container>"
+    )
+    merged, st = sync.merge(op_root, tpl_root)
+    assert not [c for c in merged.findall("Config") if c.get("Type") == "Port"]
+    assert st["deleted"] == ["Redis Port"]
+
+
+def test_an_instance_with_the_port_set_to_a_real_value_keeps_it_and_is_flagged(sync):
+    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+    op_root = ET.fromstring(
+        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        f"{_old_redis_port_config('7777')}</Container>"
+    )
+    merged, st = sync.merge(op_root, tpl_root)
+    kept = [c for c in merged.findall("Config") if c.get("Type") == "Port"]
+    assert len(kept) == 1 and kept[0].text == "7777", "a real value must never be dropped"
+    assert st["kept_flag"] == ["Redis Port"]
+
+
+def test_port_mode_is_never_operator_owned(sync):
+    op_root = ET.fromstring(HEAD + PORT_CFG.format(mode="udp", desc="x") + "</Container>")
+    tpl_root = ET.fromstring(HEAD + PORT_CFG.format(mode="tcp", desc="y") + "</Container>")
+    merged, st = sync.merge(op_root, tpl_root)
+    assert merged.find("Config").get("Mode") == "tcp", "Port Mode must keep refreshing"
+    assert st["mode_kept"] == [], "mode_kept is a Path-only concept"
+
+
+def test_a_mode_only_difference_is_named_in_the_report_instead_of_being_invisible(sync, inst, tmp_path, capsys):
+    """The exact regression: a preserved Mode must not be reported as 'nothing to change'."""
+    p = inst(HEAD + PATH_CFG.format(mode="rw,slave", desc="SAME", value="/mnt/pool/data") + "</Container>")
+    tpl = ET.fromstring(HEAD + PATH_CFG.format(mode="rw", desc="SAME", value="") + "</Container>")
+    backups = tmp_path / "b"
+    before = p.read_bytes()
+
+    sync.update_instance(str(p), tpl, str(backups))
+
+    assert p.read_bytes() == before, "a preserved-Mode-only run must not write the instance"
+    assert not backups.exists() or not list(backups.iterdir()), "nor take a backup"
+    out = capsys.readouterr().out
+    assert "rw,slave" in out and "Mode" in out, "the preserved Mode must be named in the report"
+    assert "nothing to change" not in out, "it is not 'nothing to change' - the Mode differs"
+
+
+def test_a_mode_only_difference_is_reported_on_every_run_not_just_the_first(sync, inst, tmp_path, capsys):
+    p = inst(HEAD + PATH_CFG.format(mode="rw,slave", desc="SAME", value="/mnt/pool/data") + "</Container>")
+    tpl = ET.fromstring(HEAD + PATH_CFG.format(mode="rw", desc="SAME", value="") + "</Container>")
+    for run in range(3):
+        capsys.readouterr()
+        sync.update_instance(str(p), tpl, str(tmp_path / "b"))
+        assert "rw,slave" in capsys.readouterr().out, f"Mode preservation went unreported on run {run + 1}"
+
+
 # ----------------------------------------------------------------- bug 2: the drift alarm
 
 def test_drift_is_reported_even_when_there_is_nothing_to_write(sync, inst, tmp_path, capsys):
