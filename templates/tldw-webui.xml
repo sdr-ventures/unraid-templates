@@ -45,7 +45,7 @@
 
   THE NETWORK IS THE SET'S ONE SHARED NETWORK. The network in step 1 is the same one
   tldw-redis and tldw-server use: Redis is reached on it by the container name tldw-redis
-  (tldw-server's REDIS_URL default), and Docker must be set to preserve user-defined
+  (the host you enter in tldw-server's REDIS_URL), and Docker must be set to preserve user-defined
   networks across updates (Unraid: Settings > Docker), or the containers fall back to
   bridge and every name here stops resolving. Two more things this UI needs from the
   server: the server's SINGLE_USER_API_KEY entered in the UI, and the server's

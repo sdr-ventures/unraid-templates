@@ -83,9 +83,9 @@ MUST_DECLARE = {
 # and is the value this template ships, so matching that substring would red a correct tree.
 COMPOSE_HOST = re.compile(r"(?<!/)//(?:app|redis)(?::\d+)?(?:/|$)")
 
-# REDIS_URL's default: the tldw-redis template's own name (its Name element, asserted below)
-# on the image's internal port. No network name, address or credential.
-REDIS_URL_DEFAULT = "redis://tldw-redis:6379/0"
+# MCP_ALLOWED_IPS's default: the application's own built-in loopback default, so applying
+# the template changes no behaviour. It is never empty (an empty allowlist allows everyone).
+MCP_ALLOWED_IPS_DEFAULT = "127.0.0.1,::1"
 
 # The users database, as an ABSOLUTE SQLite URL. Upstream's relative default
 # (`sqlite:///./Databases/users.db`) names the same file under WORKDIR /app, but the
@@ -218,7 +218,7 @@ def test_the_compose_host_classifier_bites_on_upstreams_service_names():
 def test_no_wiring_variable_ships_a_compose_service_name(name):
     # Upstream's compose service names (`redis`, `app`) resolve only inside upstream's own
     # compose project, so anything of that shape must not be shipped as a value. REDIS_URL
-    # ships the tldw-redis container name instead, which resolves on the set's shared network.
+    # ships blank; the operator enters it (see the REDIS_URL test below).
     root = template(name)
     pairs = [(var_name(c), v) for c in configs(root) if is_variable(c) for v in value_of(c)]
     pairs += environment_pairs(root)
@@ -227,10 +227,6 @@ def test_no_wiring_variable_ships_a_compose_service_name(name):
             f"{name}: {target} ships {value!r}, a compose service name that "
             f"does not resolve on the bridge network"
         )
-    if name == "tldw-server":
-        # The default is a name, never a compose service name: it is the tldw-redis template's
-        # own name on Redis's internal port, so it resolves on the set's shared network.
-        assert value_of(one_by_target(template(name), "REDIS_URL")) == (REDIS_URL_DEFAULT, REDIS_URL_DEFAULT)
 
 
 def test_the_users_database_url_is_absolute_so_upstreams_byok_guard_can_find_it():
@@ -363,36 +359,44 @@ def test_no_template_text_points_the_operator_at_a_redis_host_port():
             assert phrase not in haystack, f"{name}: still points the operator at a Redis host port ({phrase!r})"
 
 
-def test_redis_url_default_is_the_tldw_redis_container_name_on_its_internal_port():
-    # Derived from the sibling template, not just a literal: renaming tldw-redis without
-    # moving this default (or the reverse) breaks name resolution on the shared network.
-    redis_name = (template("tldw-redis").findtext("Name") or "").strip()
-    cfg = one_by_target(template("tldw-server"), "REDIS_URL")
-    assert value_of(cfg) == (f"redis://{redis_name}:6379/0",) * 2
+def test_redis_url_is_required_unmasked_blank_and_describes_its_format():
+    # A template carries names, not values: the operator enters the Redis address. The format
+    # is stated in the Description so a blank field is still self-explanatory.
+    root = template("tldw-server")
+    cfg = one_by_target(root, "REDIS_URL")
+    assert cfg.get("Required") == "true"
     assert cfg.get("Mask") == "false"
-    # No network name, address or credential rides in the default.
-    default = cfg.get("Default")
-    assert "@" not in default and not re.search(r"\d+\.\d+\.\d+\.\d+", default)
-    for env_name, env_value in environment_pairs(template("tldw-server")):
+    assert value_of(cfg) == ("", ""), f"REDIS_URL ships a value: {value_of(cfg)}"
+    assert "redis://<host>:<port>/0" in (cfg.get("Description") or "")
+    for env_name, env_value in environment_pairs(root):
         if env_name == "REDIS_URL":
-            assert env_value == default, "<Environment> contradicts the Config value"
+            assert env_value == "", "<Environment> ships a REDIS_URL value"
 
 
-def test_mcp_allowed_ips_is_an_optional_blank_unmasked_advanced_variable():
+def test_mcp_allowed_ips_ships_the_loopback_default_and_is_never_empty():
     # The web UI calls MCP from its container-network address; the application allows
     # loopback only by default, so the UI's MCP health check gets a 403 until this is set.
-    # The repo carries the name and an empty default - the real list is a host value.
-    cfg = one_by_target(template("tldw-server"), "MCP_ALLOWED_IPS")
+    # Unraid passes a blank Variable as an EMPTY environment variable, which the application
+    # reads as an empty allowlist - and an empty allowlist allows every client. So the
+    # default is the application's own loopback value (a no-op), never blank.
+    root = template("tldw-server")
+    cfg = one_by_target(root, "MCP_ALLOWED_IPS")
     assert cfg.get("Type") == "Variable"
     assert cfg.get("Display") == "advanced"
     assert cfg.get("Required") == "false"
     assert cfg.get("Mask") == "false"
-    assert value_of(cfg) == ("", "")
+    assert value_of(cfg) == (MCP_ALLOWED_IPS_DEFAULT, MCP_ALLOWED_IPS_DEFAULT)
+    for env_name, env_value in environment_pairs(root):
+        if env_name == "MCP_ALLOWED_IPS":
+            assert env_value == MCP_ALLOWED_IPS_DEFAULT, "<Environment> contradicts the Config value"
     description = cfg.get("Description") or ""
-    for phrase in ("Comma-separated", "CIDR", "loopback", "web UI", "403", "container network"):
+    for phrase in ("Comma-separated", "CIDR", "loopback", "web UI", "403", "container network",
+                   "NEVER BLANK", "allows EVERY client"):
         assert phrase in description, f"MCP_ALLOWED_IPS Description no longer says {phrase!r}"
-    # The source-verified trap: an empty list means no restriction, not loopback.
-    assert "NO restriction" in description
+    # No text may suggest a blank value is acceptable.
+    raw = (TEMPLATES / "tldw-server.xml").read_text(encoding="utf-8")
+    for fragment in ("Leave it blank", "blank only if", "blank field is unrestricted"):
+        assert fragment not in raw, f"tldw-server text still treats a blank MCP_ALLOWED_IPS as fine: {fragment!r}"
 
 
 def test_the_network_statements_are_present_on_each_template():
@@ -403,7 +407,7 @@ def test_the_network_statements_are_present_on_each_template():
         "tldw-redis": ("user-defined Docker network", "by hand, before the first start",
                        "container name, tldw-redis", "preserve user-defined networks"),
         "tldw-server": ("user-defined Docker network", "by hand, before the first start",
-                        "redis://tldw-redis:6379/0", "preserve user-defined networks",
+                        "redis://<host>:<port>/0", "tldw-redis", "preserve user-defined networks",
                         "SINGLE_USER_API_KEY", "MCP_ALLOWED_IPS"),
         "tldw-webui": ("preserve user-defined networks", "SINGLE_USER_API_KEY",
                        "MCP_ALLOWED_IPS", "tldw-redis"),

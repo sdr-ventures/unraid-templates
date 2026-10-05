@@ -16,7 +16,7 @@
   Network bridge and empty Extra Parameters, and you set the Network field to your network
   when you create each container. On that network this container is reachable by its own
   container name, tldw-redis, on Redis's internal port 6379, which is the address
-  tldw-server's REDIS_URL defaults to. Docker must be set to preserve user-defined networks
+  you enter in tldw-server's REDIS_URL. Docker must be set to preserve user-defined networks
   across updates (Unraid: Settings > Docker); without it the network is removed by a Docker
   restart and the containers fall back to bridge, where that name does not resolve.
 
