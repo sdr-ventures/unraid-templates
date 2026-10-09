@@ -129,15 +129,21 @@ are how you restore it.
 > so review and delete those by hand.
 >
 > **What this costs a restore:** the structure and every non-secret value come
-> back in full; a masked value must be re-entered. That is not much of a loss —
+> back in full (except a mirror entry with no `<Config>`, redacted as unknown); a
+> masked value must be re-entered. That is not much of a loss —
 > `merge()` copies applied values across verbatim, so a merge cannot damage a
 > secret; the backup is there in case a *merge* goes wrong.
 >
 > `DRY_RUN = True` covers all of this: it reports what it would redact and prune
 > and writes nothing.
 >
-> **What is redacted, stated exactly** — a `Mask="true"` `<Config>`, and the
-> `<Environment><Variable><Value>` mirror dockerMan writes for the same variable.
+> **What is redacted, stated exactly** — a `<Config>` that is `Mask="true"` in the
+> instance file **or in the repo template** (#104: a live file can hold a secret with
+> `Mask="false"`), and the `<Environment><Variable><Value>` mirror dockerMan writes for
+> the same variable. The same rule applies to the backups earlier runs left. A mirror
+> entry with no `<Config>` of its name is redacted too, since nothing says it is safe;
+> and a sync drops a mirror entry the repo template has no variable for, along with
+> the `<Config>` it mirrored (`DROPPED legacy <Environment> mirror, not in repo template: NAME`).
 > A secret passed some other way is **not** covered and never claimed to be: most
 > importantly anything you typed into **`<Extra Parameters>`** (e.g.
 > `-e TOKEN=...`), which is free text with no `Mask` flag to key on. Keep secrets
