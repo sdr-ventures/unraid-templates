@@ -592,6 +592,9 @@ def test_the_mirror_matches_the_VARIABLE_name_not_the_human_label(sync):
         HEAD
         + '<Config Name="Key" Target="API_KEY" Default="" Mode="" Description="x" '
           'Type="Variable" Display="always" Required="true" Mask="true">s3cret</Config>'
+        # the unrelated variable has its own unmasked Config: a mirror with none is redacted (#104)
+        + '<Config Name="Other" Target="Key" Default="" Mode="" Description="x" '
+          'Type="Variable" Display="always" Required="false" Mask="false">public-config-value</Config>'
         + "<Environment>"
           "<Variable><Value>s3cret</Value><Name>API_KEY</Name></Variable>"
           "<Variable><Value>public-not-a-secret</Value><Name>Key</Name></Variable>"
@@ -872,7 +875,7 @@ def test_update_instance_REFUSES_to_write_when_the_backup_cannot_be_made(sync, i
     before = p.read_bytes()
     backups = tmp_path / "b"
 
-    def refuse(path, backup_dir):
+    def refuse(path, backup_dir, secret_targets=()):
         raise sync.BackupUnsafe("simulated: cannot redact this file")
 
     monkeypatch.setattr(sync, "backup", refuse)
