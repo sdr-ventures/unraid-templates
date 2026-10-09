@@ -48,6 +48,7 @@ def sync():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     mod.DRY_RUN = False
+    mod.TEMPLATE = "widget"     # the repo copy is unset and refuses (unraid-templates#102)
     return mod
 
 
@@ -276,9 +277,9 @@ def test_main_exits_nonzero_on_a_prune_failure_alone(sync, tmp_path, monkeypatch
     monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
     backups = tmp_path / ".template-sync-backups"
     backups.mkdir()
-    victim = "my-noisy.xml.20260101-000000.bak"
+    victim = "my-widget.xml.20260101-000000.bak"
     for i in range(sync.KEEP_BACKUPS + 3):
-        (backups / f"my-noisy.xml.202601{i + 2:02d}-000000.bak").write_text(
+        (backups / f"my-widget.xml.202601{i + 2:02d}-000000.bak").write_text(
             "<Container/>", encoding="utf-8")
     (backups / victim).write_text("<Container/>", encoding="utf-8")
 
