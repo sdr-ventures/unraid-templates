@@ -64,7 +64,7 @@ No parameters. Each run does **create / update / drop-deprecated** for the one
 managed container template in `/boot/config/plugins/dockerMan/templates-user` that
 its `TEMPLATE` setting names, **keeping each instance's applied values**:
 
-- **CREATE** — seeds `my-<name>.xml` for any repo template that has no `my-` file yet, so it is ready to pick under *Add Container*.
+- **CREATE** — seeds `my-<name>.xml` for the template if it has no `my-` file yet, so it is ready to pick under *Add Container*.
 - **UPDATE** — for **every live instance** of a template (for `tape`: `my-tape.xml` *and* `my-tape-dev.xml`, …; `my-tape-db-dev.xml` is `tape-db`'s): keeps that instance's applied value for each variable, refreshes the variable's metadata (description, defaults, visibility) from the repo template, and adds variables the template has gained.
 - **DROP** — a variable the instance has and the repo template lacks is **deprecated and is dropped, whatever value it holds**. Each drop is named in the run output (`DROPPED, not in repo template (deprecated): NAME (held a value)`). The pre-sync backup (secrets redacted) is the only record of it.
 
@@ -150,5 +150,6 @@ body, and change **only** its `TEMPLATE` line to `TEMPLATE = "<name>"` (and `DRY
 while you rehearse — see above). Run it with *Run Script* (leave it unscheduled — it
 is a deliberate, on-demand action, not a cron job). When the script changes, re-paste
 every copy and re-set each one's `TEMPLATE` line. A copy left at `TEMPLATE = None`
-refuses to run. Requires python3 ≥ 3.9; stdlib
+refuses to run. An older single `sync-templates` copy whose `TEMPLATE = None` still runs every
+template (#102): delete it. Requires python3 ≥ 3.9; stdlib
 only, no dependencies to install.

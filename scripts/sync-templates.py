@@ -26,7 +26,7 @@ for the ONE repo template that TEMPLATE (below) names:
   apart from its TEMPLATE line, so syncing one template can never ship another
   template's merged-but-not-intended changes.
 
-  CREATE  — seed my-<name>.xml for any repo template that has no my- file yet,
+  CREATE  — seed my-<name>.xml for the template if it has no my- file yet,
             so it is ready to pick in Add Container.
   UPDATE  — for EVERY live instance of a template (tape: my-tape.xml AND
             my-tape-dev.xml, ...; my-tape-db-dev.xml is tape-db's): keep each
