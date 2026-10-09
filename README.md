@@ -60,11 +60,11 @@ by design — fill them in Unraid on import.
 
 ### `sync-templates.py`
 
-No parameters. Each run does **create / update / drop-deprecated** across the
-managed container templates in `/boot/config/plugins/dockerMan/templates-user` that
-its `TEMPLATE` setting selects, **keeping each instance's applied values**:
+No parameters. Each run does **create / update / drop-deprecated** for the one
+managed container template in `/boot/config/plugins/dockerMan/templates-user` that
+its `TEMPLATE` setting names, **keeping each instance's applied values**:
 
-- **CREATE** — seeds `my-<name>.xml` for any repo template that has no `my-` file yet, so it is ready to pick under *Add Container*.
+- **CREATE** — seeds `my-<name>.xml` for the template if it has no `my-` file yet, so it is ready to pick under *Add Container*.
 - **UPDATE** — for **every live instance** of a template (for `tape`: `my-tape.xml` *and* `my-tape-dev.xml`, …; `my-tape-db-dev.xml` is `tape-db`'s): keeps that instance's applied value for each variable, refreshes the variable's metadata (description, defaults, visibility) from the repo template, and adds variables the template has gained.
 - **DROP** — a variable the instance has and the repo template lacks is **deprecated and is dropped, whatever value it holds**. Each drop is named in the run output (`DROPPED, not in repo template (deprecated): NAME (held a value)`). The pre-sync backup (secrets redacted) is the only record of it.
 
@@ -89,18 +89,19 @@ and never to `tape`. Containers that came from anywhere else are never touched.
 
 | | |
 |---|---|
-| `TEMPLATE = None` | The full pass: every repo template and all of their instances. |
+| `TEMPLATE = None` | Not set: the run refuses before it reads or writes anything (exit non-zero, `Nothing changed.`). There is no run over every template (#102: it reconciled a `my-<name>.xml` against two templates). |
 | `TEMPLATE = "tape"` | **Only** `templates/tape.xml` and its live instances. Nothing that maps to another template is created, updated, deleted, or has its backups redacted or pruned — `tape-db` included, because instances are mapped against the *full* template list before the scope is applied. The output's `scope:` line names the template, so a dry run shows the scope before a live run acts on it. **Refused before anything is written** (exit non-zero, `Nothing changed.`): a name the repo does not have; a `my-tape.xml` that is really a *different* template's instance (by its `<TemplateURL>`) or a foreign container — case variants of the name such as `my-Tape.xml` included, since `/boot` is FAT32 — so fix that file's `<TemplateURL>` or rename the container; and a templates dir that cannot be listed. |
 | `DRY_RUN = True` | Prints exactly what it *would* create/update/drop. Writes nothing. |
 | `DRY_RUN = False` | Performs the changes. Every overwritten file is backed up first (timestamped, under `templates-user/.template-sync-backups/`), writes are atomic, and a merged result is validated before it replaces the original. |
 
-The committed copy is the **live full pass** (`DRY_RUN = False`, `TEMPLATE = None`).
+The committed copy is live but unset (`DRY_RUN = False`, `TEMPLATE = None`), so it
+refuses until a copy names its template.
 To validate a change first, flip `DRY_RUN` to `True`, run it, review the output, then
 flip it back.
 
-**One installed User Script per template.** A full pass also ships every *other*
-template's merged-but-not-yet-intended changes, so the host runs one copy per repo
-template instead — each **identical to the repo copy except for its `TEMPLATE` line**.
+**One installed User Script per template.** Syncing one template must not ship every
+*other* template's merged-but-not-yet-intended changes, so the host runs one copy per
+repo template — each **identical to the repo copy except for its `TEMPLATE` line**.
 A template added to the repo later gets its own copy then; no per-template copy seeds it.
 
 A backup whose instance is gone, is not a repo template's (a foreign container, or a
@@ -112,8 +113,7 @@ Every backup this script writes is already redacted, so such an orphan holds a s
 only if it predates #27 or was dropped there by hand. Delete orphans by hand: in
 `templates-user/.template-sync-backups/`, remove the backups whose `my-*.xml` is gone
 or no longer synced — but keep those of a `my-*.xml` that cannot be read, since they
-are how you restore it. A live full pass would redact them too, but it also ships
-every template's pending changes, and it never deletes the newest 10 of any group.
+are how you restore it.
 
 > **Backups redact your `Mask="true"` values** (#27). `Mask="true"` is a *UI* setting —
 > it makes the Unraid form render a password box, but the XML on the flash drive
@@ -125,7 +125,7 @@ every template's pending changes, and it never deletes the newest 10 of any grou
 > the **first run also redacts the backups earlier versions already wrote**, and
 > backups are pruned to the newest `KEEP_BACKUPS` (10) per instance. A `.bak`
 > that cannot be parsed is *reported by name and left alone* by the run that owns
-> it (a full pass owns them all; see orphans above) — it may still hold a secret,
+> it (an orphan has no owning run; see orphans above) — it may still hold a secret,
 > so review and delete those by hand.
 >
 > **What this costs a restore:** the structure and every non-secret value come
@@ -149,7 +149,7 @@ every template's pending changes, and it never deletes the newest 10 of any grou
 body, and change **only** its `TEMPLATE` line to `TEMPLATE = "<name>"` (and `DRY_RUN`
 while you rehearse — see above). Run it with *Run Script* (leave it unscheduled — it
 is a deliberate, on-demand action, not a cron job). When the script changes, re-paste
-every copy and re-set each one's `TEMPLATE` line. **Delete the old single
-`sync-templates` User Script** when the per-template copies go in: it is a live full
-pass, one click from shipping every template at once. Requires python3 ≥ 3.9; stdlib
+every copy and re-set each one's `TEMPLATE` line. A copy left at `TEMPLATE = None`
+refuses to run. An older single `sync-templates` copy whose `TEMPLATE = None` still runs every
+template (#102): delete it. Requires python3 ≥ 3.9; stdlib
 only, no dependencies to install.

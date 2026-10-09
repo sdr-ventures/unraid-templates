@@ -1,13 +1,11 @@
 """`sync-templates.py` `TEMPLATE` scope: one installed User Script per repo template.
 
-A full pass reconciles every managed template on the host, so syncing one template also ships
-every other template's merged-but-not-yet-intended changes. `TEMPLATE` narrows a run to one repo
+A run over every managed template would ship every other template's merged-but-not-yet-intended
+changes along with the one being synced. `TEMPLATE` narrows a run to one repo
 template and its live instances. These tests pin the four things that matter:
 
-1. `TEMPLATE = None` is exactly the full pass it always was — checked against a golden snapshot
-   (stdout, exit status and every file left on disk, live AND dry-run) recorded from the script as
-   it stood before `TEMPLATE` existed. Regenerate ONLY for an intended full-pass change:
-   `SYNC_GOLDEN_REGEN=1 pytest tests/test_sync_templates_scope.py -k golden`, then review the diff.
+1. `TEMPLATE = None` (the repo copy) refuses before anything is read or written: the run over
+   every template is retired (unraid-templates#102).
 2. A scoped run writes nothing outside its own template — including the prefix trap: `tape` and
    `tape-db` are separate templates, and `my-tape-db-dev.xml` belongs to `tape-db` only.
 3. A name the repo does not have is refused before anything is written.
@@ -16,14 +14,12 @@ template and its live instances. These tests pin the four things that matter:
 
 import datetime as _dt
 import importlib.util
-import json
 import os
 import pathlib
 
 import pytest
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "sync-templates.py"
-GOLDEN = pathlib.Path(__file__).with_name("sync_full_pass_golden.json")
 BACKUPS = ".template-sync-backups"
 
 
@@ -137,46 +133,24 @@ def owned_by(path, instances):
     return (base if base.endswith(".xml") else base.rsplit(".", 2)[0]) in instances
 
 
-# ------------------------------------------------------------------ 1. unset = the full pass
+# ------------------------------------------------------------- 1. unset = refuse (no full pass)
 
-def test_golden_unset_TEMPLATE_is_byte_identical_to_the_pre_split_full_pass(sync, tmp_path, capsys):
-    got = {}
-    for mode, dry in (("live", False), ("dry_run", True)):
-        root = tmp_path / mode
-        root.mkdir()
-        world(root)
-        sync.DRY_RUN = dry
-        code, out, _ = run(sync, root, capsys)
-        # line endings normalised: ElementTree writes in text mode, so CRLF on Windows, LF on
-        # the Linux CI runner and on Unraid
-        got[mode] = {"exit": code, "stdout": out,
-                     "files": {k: v.decode().replace("\r\n", "\n") for k, v in snap(root).items()}}
-    if os.environ.get("SYNC_GOLDEN_REGEN") == "1":
-        GOLDEN.write_text(json.dumps(got, indent=1, sort_keys=True) + "\n",
-                          encoding="utf-8", newline="\n")
-    assert got == json.loads(GOLDEN.read_text(encoding="utf-8"))
-
-
-def test_the_golden_actually_exercises_every_step_on_both_prefix_templates():
-    """A snapshot of a run that did nothing would pin nothing. Hold the golden to the work."""
-    live = json.loads(GOLDEN.read_text(encoding="utf-8"))["live"]
-    out, files = live["stdout"], live["files"]
-    assert live["exit"] == 0
-    for fname in INSTANCES:
-        if fname != "my-foreign.xml":
-            assert f"{fname:<22} UPDATED" in out, fname
-    assert "my-widget.xml         CREATED" in out
-    assert "DROPPED, not in repo template (deprecated): OLDVAR\n" in out
-    assert "DROPPED, not in repo template (deprecated): DEPRECATED (held a value)" in out
-    assert "DEPRECATED" not in json.dumps(files["my-tape.xml"]), "the valued stray must be gone"
-    assert "REDACTED 2 masked value(s) across 2 pre-existing backup(s)" in out
-    assert "pruned 4 backup(s)" in out
-    assert "old-s3cret" not in json.dumps(files) and "hand-s3cret" not in json.dumps(files)
-
-
-def test_the_committed_copy_is_the_full_pass(sync):
-    """Every installed copy differs from the repo only in its TEMPLATE line."""
+@pytest.mark.parametrize("dry", [False, True])
+def test_the_committed_copy_is_unset_and_refuses_before_reading_anything(
+        sync, tmp_path, capsys, monkeypatch, dry):
+    """unraid-templates#102: the run over every template reconciled a my-<name>.xml against two
+    templates. It is retired: the repo copy (TEMPLATE = None) refuses, and does so before the
+    network listing or the backup redaction, so it cannot write or report anything else."""
     assert sync.TEMPLATE is None
+    world(tmp_path)
+    before = snap(tmp_path)
+    monkeypatch.setattr(sync, "list_repo_templates",
+                        lambda: pytest.fail("the unset copy must refuse before the listing"))
+    sync.DRY_RUN = dry
+    code, out, _ = run(sync, tmp_path, capsys)
+    assert isinstance(code, str) and "TEMPLATE is not set" in code and "Nothing changed" in code
+    assert out == ""
+    assert snap(tmp_path) == before
 
 
 # ------------------------------------------------------ 2. scoped = that template, nothing else
@@ -354,9 +328,9 @@ def test_a_backup_belongs_to_the_LONGEST_instance_name_it_extends(sync, tmp_path
         assert len(left) == 10 and not any(b"dotted-s3cret" in v for v in left.values())
 
 
-def test_a_backup_whose_instance_is_gone_is_left_to_the_full_pass(sync, tmp_path, capsys):
+def test_a_backup_whose_instance_is_gone_is_touched_by_no_run(sync, tmp_path, capsys):
     """A gone container named like a template's instance (`my-tape-old.xml`) and a hand-dropped
-    ownerless `.bak`: no per-template run may redact or prune them. The full pass does both."""
+    ownerless `.bak`: no run may redact or prune them (the operator deletes them by hand)."""
     world(tmp_path)
     b = tmp_path / BACKUPS
     for i in range(11):
@@ -377,12 +351,6 @@ def test_a_backup_whose_instance_is_gone_is_left_to_the_full_pass(sync, tmp_path
         code, out, _ = run(sync, tmp_path, capsys)
         assert code == 0, out
         assert orphans() == before, f"TEMPLATE={name!r} touched an orphan backup"
-
-    sync.TEMPLATE = None
-    run(sync, tmp_path, capsys)
-    after = orphans()
-    assert len(after) == 12   # 10 of my-tape-old's group, plus the two hand-named (never pruned)
-    assert not any(b"gone-s3cret" in v or b"loose-s3cret" in v for v in after.values())
 
 
 def test_another_templates_unreadable_backup_is_not_this_runs_failure(sync, tmp_path, capsys):

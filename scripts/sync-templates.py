@@ -4,9 +4,10 @@ sync-templates — reconcile Unraid dockerMan container templates against the
 published `unraid-templates` repo WITHOUT losing your applied values.
 
 NO PARAMETERS, NO WRAPPER. Running it does create / update / drop-deprecated
-across the managed container templates that TEMPLATE (below) selects:
+for the ONE repo template that TEMPLATE (below) names:
 
-  TEMPLATE = None     every repo template and all their instances (the full pass).
+  TEMPLATE = None     NOT SET: refuses before anything is read or written. This is the
+                      repo copy; there is no run over every template (unraid-templates#102).
   TEMPLATE = "tape"   ONLY the `tape` repo template and its live instances. Nothing
                       that maps to another template is created, updated, deleted,
                       or has its backups redacted or pruned — `tape-db` included,
@@ -16,15 +17,16 @@ across the managed container templates that TEMPLATE (below) selects:
                       another template's instance or a foreign container (case
                       variants of the name, e.g. my-Tape.xml, included); and a
                       templates dir that cannot be listed. A backup whose
-                      instance is gone, unmapped or unreadable is left to the
-                      full pass — except my-tape.xml's, which are tape's (unless
-                      that file maps to another template, when tape refuses).
+                      instance is gone, unmapped or unreadable belongs to no
+                      run (delete it by hand) — except my-tape.xml's, which are
+                      tape's (unless that file maps to another template, when
+                      tape refuses).
 
   ONE USER SCRIPT PER TEMPLATE: each installed copy is identical to this file
   apart from its TEMPLATE line, so syncing one template can never ship another
-  template's merged-but-not-intended changes. The repo copy is the full pass.
+  template's merged-but-not-intended changes.
 
-  CREATE  — seed my-<name>.xml for any repo template that has no my- file yet,
+  CREATE  — seed my-<name>.xml for the template if it has no my- file yet,
             so it is ready to pick in Add Container.
   UPDATE  — for EVERY live instance of a template (tape: my-tape.xml AND
             my-tape-dev.xml, ...; my-tape-db-dev.xml is tape-db's): keep each
@@ -84,7 +86,7 @@ REQUIRES  python3 >= 3.9 (stdlib only). Run on the Unraid host via User Scripts.
 
 # =============================================================================
 DRY_RUN = False    # LIVE — creates/updates/drops with timestamped backups. (dev phase used True)
-TEMPLATE = None    # None = every template. "<name>" = only templates/<name>.xml and its instances.
+TEMPLATE = None    # "<name>" = only templates/<name>.xml and its instances. None = unset: refuses.
 # =============================================================================
 
 import copy
@@ -765,6 +767,13 @@ def process_template(name, instances_by_tpl, backup_dir):
 
 # ----------------------------------------------------------------------------- main
 def main():
+    # unraid-templates#102: the run over every template is retired, not repaired. It claimed
+    # my-<name>.xml by NAME for template <name> even when the instance map gave that file to
+    # another template, so one file was reconciled against two templates and each dropped the
+    # other's variables. Only a scoped run checks that, so only a scoped run exists.
+    if TEMPLATE is None:
+        sys.exit('error: TEMPLATE is not set. Set TEMPLATE = "<name>" in this copy (one User '
+                 'Script per repo template). Nothing changed.')
     if not os.path.isdir(TEMPLATES_USER):
         sys.exit(f"error: templates dir not found: {TEMPLATES_USER}")
 
@@ -780,56 +789,53 @@ def main():
         sys.exit(f"error: could not list repo templates from {REPO}@{BRANCH}"
                  f"{why or ' (empty listing)'}. Nothing changed.")
     # ⛔ REFUSE BEFORE THE FIRST WRITE (the backup redaction below). A misspelt TEMPLATE must
-    # never quietly become a clean-looking no-op, nor fall back to the full pass it exists to avoid.
-    if TEMPLATE is not None and TEMPLATE not in all_repo:
+    # never quietly become a clean-looking no-op.
+    if TEMPLATE not in all_repo:
         sys.exit(f"error: TEMPLATE={TEMPLATE!r} is not a template in {REPO}@{BRANCH} "
                  f"(it has: {', '.join(all_repo)}). Nothing changed.")
-    names = all_repo if TEMPLATE is None else [TEMPLATE]
 
     banner = "DRY-RUN — writes NOTHING (validate me, then install the DRY_RUN=False version)" \
         if DRY_RUN else "LIVE — will create/update/drop with backups"
     print(f"sync-templates  repo={REPO}@{BRANCH}  dir={TEMPLATES_USER}")
     print(f"mode: {banner}")
-    if TEMPLATE is not None:
-        print(f"scope: TEMPLATE={TEMPLATE!r} — only this template and its live instances; "
-              f"the other {len(all_repo) - 1} repo template(s) are left alone")
-    print(f"templates: {', '.join(names)}\n")
+    print(f"scope: TEMPLATE={TEMPLATE!r} — only this template and its live instances; "
+          f"the other {len(all_repo) - 1} repo template(s) are left alone")
+    print(f"templates: {TEMPLATE}\n")
 
     # ⚠️ Map against the FULL list, then pick this run's templates out of the result. Mapping
     # against [TEMPLATE] alone leaves it the only candidate prefix, so a `tape` run would claim
     # `my-tape-db-dev.xml` — the exact trap the longest-dash-prefix rule exists to avoid.
     instances_by_tpl, unmapped, broken = discover_instances(TEMPLATES_USER, all_repo)
-    scope = None                                # the full pass may touch every backup
-    if TEMPLATE is not None:
-        # ⛔ The stub my-<TEMPLATE>.xml is always processed as TEMPLATE's (process_template), so a
-        # file there that is really another template's instance, or a foreign container, would be
-        # rewritten with the wrong template's variables. SAME FILE, not same name: /boot is FAT32,
-        # where my-Tape.xml IS my-tape.xml. Refuse rather than guess; the full pass is unchanged.
-        # Without a listing there is nothing to tell this template's instances from anyone else's.
-        # The listing the scope is built from, not a second one: discover_instances reports its
-        # failure as a `broken` entry named for the dir itself (no instance name looks like that).
-        unlisted = [why for f, why in broken if f == os.path.basename(TEMPLATES_USER.rstrip("/\\"))]
-        if unlisted:
-            sys.exit(f"error: {unlisted[0]}, so a TEMPLATE={TEMPLATE!r} run cannot tell its own "
-                     f"instances apart. Nothing changed.")
-        base = os.path.join(TEMPLATES_USER, f"my-{TEMPLATE}.xml")
-        claimed = [(p, f"maps to {t!r}")
-                   for t, paths in instances_by_tpl.items() if t != TEMPLATE for p in paths]
-        claimed += [(os.path.join(TEMPLATES_USER, f), "is not from these templates") for f in unmapped]
-        for p, why in sorted(claimed):
-            if _same_file(p, base):
-                sys.exit(f"error: {os.path.basename(p)} (the file at my-{TEMPLATE}.xml) {why}, so a "
-                         f"TEMPLATE={TEMPLATE!r} run would rewrite it with the wrong template. Fix its "
-                         f"<TemplateURL> or rename that container. Nothing changed.")
-        # A backup is this run's only if its owner — judged against EVERY instance name, not just
-        # this template's — is one of this template's instances. A backup whose instance is gone
-        # (other than the stub's) belongs to no scoped run; only the full pass touches those.
-        own = {f"my-{TEMPLATE}.xml"} | {os.path.basename(p) for p in instances_by_tpl.get(TEMPLATE, ())}
-        known = ({os.path.basename(p) for paths in instances_by_tpl.values() for p in paths}
-                 | set(unmapped) | {f for f, _ in broken} | {f"my-{t}.xml" for t in all_repo})
+    # ⛔ The stub my-<TEMPLATE>.xml is always processed as TEMPLATE's (process_template), so a
+    # file there that is really another template's instance, or a foreign container, would be
+    # rewritten with the wrong template's variables. SAME FILE, not same name: /boot is FAT32,
+    # where my-Tape.xml IS my-tape.xml. Refuse rather than guess.
+    # Without a listing there is nothing to tell this template's instances from anyone else's.
+    # The listing the scope is built from, not a second one: discover_instances reports its
+    # failure as a `broken` entry named for the dir itself (no instance name looks like that).
+    unlisted = [why for f, why in broken if f == os.path.basename(TEMPLATES_USER.rstrip("/\\"))]
+    if unlisted:
+        sys.exit(f"error: {unlisted[0]}, so a TEMPLATE={TEMPLATE!r} run cannot tell its own "
+                 f"instances apart. Nothing changed.")
+    base = os.path.join(TEMPLATES_USER, f"my-{TEMPLATE}.xml")
+    claimed = [(p, f"maps to {t!r}")
+               for t, paths in instances_by_tpl.items() if t != TEMPLATE for p in paths]
+    claimed += [(os.path.join(TEMPLATES_USER, f), "is not from these templates") for f in unmapped]
+    for p, why in sorted(claimed):
+        if _same_file(p, base):
+            sys.exit(f"error: {os.path.basename(p)} (the file at my-{TEMPLATE}.xml) {why}, so a "
+                     f"TEMPLATE={TEMPLATE!r} run would rewrite it with the wrong template. Fix its "
+                     f"<TemplateURL> or rename that container. Nothing changed.")
+    # A backup is this run's only if its owner — judged against EVERY instance name, not just
+    # this template's — is one of this template's instances. A backup whose instance is gone
+    # (other than the stub's) belongs to no run; the operator deletes those by hand (README).
+    own = {f"my-{TEMPLATE}.xml"} | {os.path.basename(p) for p in instances_by_tpl.get(TEMPLATE, ())}
+    known = ({os.path.basename(p) for paths in instances_by_tpl.values() for p in paths}
+             | set(unmapped) | {f for f, _ in broken} | {f"my-{t}.xml" for t in all_repo})
 
-        def scope(fname):
-            return _backup_owner(fname, known) in own
+    def scope(fname):
+        return _backup_owner(fname, known) in own
+
     backup_dir = os.path.join(TEMPLATES_USER, BACKUP_SUBDIR)
     failures = 0                                # unraid-templates#62: a run must be able to say so
 
@@ -859,9 +865,8 @@ def main():
             print(f"    {fname} ({why})")
         print()
 
-    for name in names:
-        failures += process_template(name, instances_by_tpl, backup_dir)
-        print()
+    failures += process_template(TEMPLATE, instances_by_tpl, backup_dir)
+    print()
 
     # ⭐ PRUNE LAST, once this run's own backups exist. Pruning first left KEEP_BACKUPS + 1 on
     # disk afterwards, so the run ended one over the number it reported keeping. It also spent
