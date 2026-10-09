@@ -85,6 +85,15 @@ Instances map to templates by their `<TemplateURL>` basename, falling back to th
 longest dash-prefix of the filename — so `my-tape-db-dev.xml` maps to `tape-db`
 and never to `tape`. Containers that came from anywhere else are never touched.
 
+**One commit per run** (#103). A run first resolves `main` to its current commit and
+reads the template listing and the template body at that commit, so a run right after
+a merge cannot list the new templates and merge against a body a cache still serves
+from before it. The first output line names the commit (`commit=<40-char sha>`).
+That costs two unauthenticated `api.github.com` requests per run (the commit and the
+listing; the body comes from `raw.githubusercontent.com`, which is not counted), out
+of GitHub's 60 per hour per IP. A run that hits the limit stops before writing
+anything and says when it resets.
+
 **Two constants at the top of the file are its only settings** — never a parameter:
 
 | | |

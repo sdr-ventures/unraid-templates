@@ -78,6 +78,12 @@ BACKUPS AND SECRETS  (unraid-templates#27)
   only in its TEMPLATE line (and DRY_RUN while you rehearse).
 ------------------------------------------------------------------------------
 
+ONE COMMIT PER RUN  (unraid-templates#103)
+  BRANCH is resolved to its commit once; the listing and the template body are read at
+  that commit, and the first output line names it. 2 api.github.com requests per run
+  (unauthenticated limit: 60/hour per IP); a run that hits the limit stops before any
+  write and prints the reset time.
+
 INSTANCE -> TEMPLATE MAPPING
   Primary: the instance's <TemplateURL> basename (my-tape-dev.xml -> tape.xml).
   Fallback: longest dash-prefix of the filename (my-tape-db-dev.xml -> tape-db,
@@ -96,6 +102,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -132,15 +139,45 @@ KEEP_BACKUPS = 10
 
 
 # ----------------------------------------------------------------------------- http
-def _get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return r.read()
+def _get(url, accept=None):
+    headers = {"User-Agent": UA}
+    if accept:
+        headers["Accept"] = accept
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        # Unauthenticated api.github.com allows 60 requests/hour per IP and a run makes 2 (the
+        # commit and the listing; raw.githubusercontent.com is not counted). Say so, with the
+        # reset time, rather than a bare "HTTP Error 403" that reads like a firewall problem.
+        h = e.headers or {}
+        if e.code in (403, 429) and (h.get("X-RateLimit-Remaining") == "0" or h.get("Retry-After")):
+            reset = h.get("X-RateLimit-Reset") or ""
+            when = (datetime.fromtimestamp(int(reset)).strftime("%Y-%m-%d %H:%M:%S") if reset.isdigit()
+                    else f"in {h.get('Retry-After')}s" if h.get("Retry-After") else "an unknown time")
+            raise RuntimeError(f"GitHub API rate limit reached (unauthenticated: 60 requests/hour "
+                               f"per IP, 2 per run); it resets at {when} host time") from e
+        raise
 
 
-def list_repo_templates():
-    """Enumerate <name> for every .xml under templates/ (via the GitHub API)."""
-    url = f"https://api.github.com/repos/{REPO}/contents/{TEMPLATE_SUBDIR}?ref={BRANCH}"
+def resolve_sha():
+    """The commit BRANCH points at, resolved ONCE per run (unraid-templates#103).
+
+    The listing and every template body are then read at this commit. Reading bodies by BRANCH
+    from raw.githubusercontent.com (cached up to 300 s) could merge a run against a template
+    from before the commit its own listing came from; a commit URL is immutable.
+    """
+    url = f"https://api.github.com/repos/{REPO}/commits/{BRANCH}"
+    sha = _get(url, accept="application/vnd.github.sha").decode("utf-8", "replace").strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError(f"resolving {BRANCH} did not return a commit sha: {sha[:60]!r}")
+    return sha
+
+
+def list_repo_templates(sha):
+    """Enumerate <name> for every .xml under templates/ at commit `sha` (via the GitHub API)."""
+    url = f"https://api.github.com/repos/{REPO}/contents/{TEMPLATE_SUBDIR}?ref={sha}"
     data = json.loads(_get(url).decode("utf-8"))
     return sorted(
         e["name"][:-4] for e in data
@@ -148,8 +185,8 @@ def list_repo_templates():
     )
 
 
-def fetch_template(name):
-    url = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{TEMPLATE_SUBDIR}/{name}.xml"
+def fetch_template(name, sha):
+    url = f"https://raw.githubusercontent.com/{REPO}/{sha}/{TEMPLATE_SUBDIR}/{name}.xml"
     return _get(url)
 
 
@@ -740,10 +777,11 @@ def update_instance(inst_path, tpl_root, backup_dir):
     return True
 
 
-def load_template(name):
-    """Fetch, parse and validate repo template `name`. Returns (root, None) or (None, why)."""
+def load_template(name, sha):
+    """Fetch (at commit `sha`), parse and validate repo template `name`. Returns (root, None)
+    or (None, why)."""
     try:
-        tpl_root = ET.fromstring(fetch_template(name))
+        tpl_root = ET.fromstring(fetch_template(name, sha))
     except Exception as e:
         return None, f"could not fetch/parse repo template: {e}"
     err = validate(tpl_root)
@@ -814,8 +852,11 @@ def main():
     # Report the REASON. This is step 0 of the runner conversion, and an unauthenticated
     # api.github.com is rate-limited to 60 requests/hour per IP — "network/API" alone sends
     # the operator looking at their firewall instead of at a 403 that clears by itself.
+    # ONE commit for the whole run (#103): the listing and the template body are both read at it.
+    sha = ""
     try:
-        all_repo = list_repo_templates()
+        sha = resolve_sha()
+        all_repo = list_repo_templates(sha)
         why = ""
     except Exception as e:
         all_repo, why = [], f" ({e})"
@@ -825,12 +866,12 @@ def main():
     # ⛔ REFUSE BEFORE THE FIRST WRITE (the backup redaction below). A misspelt TEMPLATE must
     # never quietly become a clean-looking no-op.
     if TEMPLATE not in all_repo:
-        sys.exit(f"error: TEMPLATE={TEMPLATE!r} is not a template in {REPO}@{BRANCH} "
+        sys.exit(f"error: TEMPLATE={TEMPLATE!r} is not a template in {REPO}@{BRANCH} ({sha}) "
                  f"(it has: {', '.join(all_repo)}). Nothing changed.")
 
     banner = "DRY-RUN — writes NOTHING (validate me, then install the DRY_RUN=False version)" \
         if DRY_RUN else "LIVE — will create/update/drop with backups"
-    print(f"sync-templates  repo={REPO}@{BRANCH}  dir={TEMPLATES_USER}")
+    print(f"sync-templates  repo={REPO}@{BRANCH}  commit={sha}  dir={TEMPLATES_USER}")
     print(f"mode: {banner}")
     print(f"scope: TEMPLATE={TEMPLATE!r} — only this template and its live instances; "
           f"the other {len(all_repo) - 1} repo template(s) are left alone")
@@ -878,7 +919,7 @@ def main():
     # them; doing it first means a crash later still leaves the flash drive better than it was.
     # The template is loaded first, once: what counts as secret is its call as well as each
     # file's (unraid-templates#104). If it cannot load, the files' own masks still apply.
-    tpl_root, tpl_error = load_template(TEMPLATE)
+    tpl_root, tpl_error = load_template(TEMPLATE, sha)
     secret_targets = _masked_names(tpl_root) if tpl_root is not None else set()
     files, values, unreadable = redact_existing_backups(backup_dir, scope, secret_targets)
     if files:
