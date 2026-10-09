@@ -82,7 +82,8 @@ ONE COMMIT PER RUN  (unraid-templates#103)
   BRANCH is resolved to its commit once; the listing and the template body are read at
   that commit, and the first output line names it. 2 api.github.com requests per run
   (unauthenticated limit: 60/hour per IP); a run that hits the limit stops before any
-  write and prints the reset time.
+  write and says when to retry. GitHub caches the commit lookup up to 60 s, so a
+  run right after a merge may use the commit before it; the first line shows which.
 
 INSTANCE -> TEMPLATE MAPPING
   Primary: the instance's <TemplateURL> basename (my-tape-dev.xml -> tape.xml).
@@ -149,15 +150,29 @@ def _get(url, accept=None):
             return r.read()
     except urllib.error.HTTPError as e:
         # Unauthenticated api.github.com allows 60 requests/hour per IP and a run makes 2 (the
-        # commit and the listing; raw.githubusercontent.com is not counted). Say so, with the
-        # reset time, rather than a bare "HTTP Error 403" that reads like a firewall problem.
+        # commit and the listing; raw.githubusercontent.com is not counted). Say so, with the retry
+        # time when GitHub gives one, rather than a bare "HTTP Error 403" that reads like a firewall.
+        # A secondary limit may say so only in the body, so that is checked too.
         h = e.headers or {}
-        if e.code in (403, 429) and (h.get("X-RateLimit-Remaining") == "0" or h.get("Retry-After")):
-            reset = h.get("X-RateLimit-Reset") or ""
-            when = (datetime.fromtimestamp(int(reset)).strftime("%Y-%m-%d %H:%M:%S") if reset.isdigit()
-                    else f"in {h.get('Retry-After')}s" if h.get("Retry-After") else "an unknown time")
-            raise RuntimeError(f"GitHub API rate limit reached (unauthenticated: 60 requests/hour "
-                               f"per IP, 2 per run); it resets at {when} host time") from e
+        if e.code in (403, 429):
+            try:
+                body = e.read()[:2000].lower()
+            except Exception:
+                body = b""
+            if h.get("X-RateLimit-Remaining") == "0" or h.get("Retry-After") or b"rate limit" in body:
+                when = "later"
+                reset, after = h.get("X-RateLimit-Reset") or "", h.get("Retry-After") or ""
+                if reset.isdigit():
+                    try:
+                        when = "after " + datetime.fromtimestamp(int(reset)).strftime(
+                            "%Y-%m-%d %H:%M:%S") + " host time"
+                    except (OverflowError, OSError, ValueError):
+                        pass
+                elif after:
+                    when = f"in {after} s" if after.isdigit() else f"after {after}"
+                raise RuntimeError(f"GitHub rate limit reached (api.github.com allows 60 "
+                                   f"unauthenticated requests/hour per IP; a run makes 2); "
+                                   f"retry {when}") from e
         raise
 
 

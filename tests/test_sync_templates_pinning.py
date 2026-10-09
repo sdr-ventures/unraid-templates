@@ -112,7 +112,7 @@ def test_the_listing_is_the_commits_not_the_branchs(sync, http, tmp_path, capsys
 
 
 @pytest.mark.parametrize("answer", [b"", b"main", b"<html>sign in</html>", SHA[:39].encode(),
-                                    SHA.upper().encode()])
+                                    SHA.upper().encode(), (SHA + "x").encode()])
 def test_an_answer_that_is_not_a_commit_sha_refuses_before_any_write(
         sync, http, tmp_path, capsys, answer):
     http.routes[f"https://api.github.com/repos/{sync.REPO}/commits/main"] = answer
@@ -124,31 +124,36 @@ def test_an_answer_that_is_not_a_commit_sha_refuses_before_any_write(
     assert len(http.seen) == 1, "nothing may be read after a failed resolve"
 
 
-def _limited(headers):
+def _limited(headers, code=403, body=b""):
     def raise_limited(req, timeout=None):
         msg = email.message.Message()
         for k, v in headers.items():
             msg[k] = v
-        raise urllib.error.HTTPError(req.full_url, 403, "rate limit exceeded", msg, None)
+        raise urllib.error.HTTPError(req.full_url, code, "Forbidden", msg, io.BytesIO(body))
     return raise_limited
 
 
-@pytest.mark.parametrize("headers,expect", [
-    ({"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1700000000"}, "resets at 20"),
-    ({"Retry-After": "60"}, "resets at in 60s"),
+@pytest.mark.parametrize("headers,code,body,expect", [
+    ({"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1700000000"}, 403, b"", "retry after 20"),
+    ({"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1700000000"}, 429, b"", "retry after 20"),
+    ({"Retry-After": "60"}, 403, b"", "retry in 60 s"),
+    ({}, 403, b'{"message": "You have exceeded a secondary rate limit."}', "retry later"),
+    ({"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "9" * 30}, 403, b"", "retry later"),
 ])
 def test_the_rate_limit_is_named_with_its_reset_and_nothing_changes(
-        sync, tmp_path, capsys, monkeypatch, headers, expect):
-    monkeypatch.setattr(sync.urllib.request, "urlopen", _limited(headers))
+        sync, tmp_path, capsys, monkeypatch, headers, code, body, expect):
+    monkeypatch.setattr(sync.urllib.request, "urlopen", _limited(headers, code, body))
     (tmp_path / "my-app.xml").write_text(container([cfg("NEW_NAME", "applied")]), encoding="utf-8")
     before = (tmp_path / "my-app.xml").read_bytes()
     code, out = run(sync, tmp_path, capsys)
-    assert isinstance(code, str) and "rate limit reached" in code and "60 requests/hour" in code, code
-    assert expect in code and "Nothing changed" in code
+    assert isinstance(code, str) and "rate limit reached" in code and "60 unauthenticated" in code, code
+    assert expect in code and "Nothing changed" in code, code
     assert (tmp_path / "my-app.xml").read_bytes() == before
 
 
-def test_a_403_that_is_not_the_rate_limit_is_not_called_one(sync, tmp_path, capsys, monkeypatch):
-    monkeypatch.setattr(sync.urllib.request, "urlopen", _limited({}))
-    code, out = run(sync, tmp_path, capsys)
-    assert isinstance(code, str) and "HTTP Error 403" in code and "rate limit reached" not in code
+@pytest.mark.parametrize("code", [403, 404])
+def test_an_error_that_is_not_the_rate_limit_is_not_called_one(sync, tmp_path, capsys, monkeypatch, code):
+    monkeypatch.setattr(sync.urllib.request, "urlopen",
+                        _limited({"X-RateLimit-Remaining": "59"}, code, b'{"message": "Not Found"}'))
+    code_, out = run(sync, tmp_path, capsys)
+    assert isinstance(code_, str) and f"HTTP Error {code}" in code_ and "rate limit" not in code_

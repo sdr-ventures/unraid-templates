@@ -89,10 +89,13 @@ and never to `tape`. Containers that came from anywhere else are never touched.
 reads the template listing and the template body at that commit, so a run right after
 a merge cannot list the new templates and merge against a body a cache still serves
 from before it. The first output line names the commit (`commit=<40-char sha>`).
+GitHub caches the commit lookup itself for up to 60 s, so a run in the first minute
+after a merge may still use the commit before it — consistently, listing and body
+alike; check that line before relying on a just-merged change.
 That costs two unauthenticated `api.github.com` requests per run (the commit and the
 listing; the body comes from `raw.githubusercontent.com`, which is not counted), out
 of GitHub's 60 per hour per IP. A run that hits the limit stops before writing
-anything and says when it resets.
+anything and says when to retry.
 
 **Two constants at the top of the file are its only settings** — never a parameter:
 
