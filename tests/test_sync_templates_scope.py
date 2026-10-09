@@ -101,8 +101,9 @@ def sync(monkeypatch):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     mod.DRY_RUN = False     # pinned: the README invites flipping it
-    monkeypatch.setattr(mod, "list_repo_templates", lambda: sorted(REPO))
-    monkeypatch.setattr(mod, "fetch_template", lambda name: REPO[name].encode())
+    mod.resolve_sha = lambda: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"     # no network: the commit is pinned per run (#103)
+    monkeypatch.setattr(mod, "list_repo_templates", lambda sha: sorted(REPO))
+    monkeypatch.setattr(mod, "fetch_template", lambda name, sha: REPO[name].encode())
     monkeypatch.setattr(mod, "datetime", Frozen)
     return mod
 
@@ -144,8 +145,8 @@ def test_the_committed_copy_is_unset_and_refuses_before_reading_anything(
     assert sync.TEMPLATE is None
     world(tmp_path)
     before = snap(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates",
-                        lambda: pytest.fail("the unset copy must refuse before the listing"))
+    monkeypatch.setattr(sync, "resolve_sha",
+                        lambda: pytest.fail("the unset copy must refuse before any network call"))
     sync.DRY_RUN = dry
     code, out, _ = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "TEMPLATE is not set" in code and "Nothing changed" in code
