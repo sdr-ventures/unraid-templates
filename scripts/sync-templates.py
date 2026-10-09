@@ -63,8 +63,9 @@ DRY-RUN vs LIVE  —  the DRY_RUN constant below is the switch.
 BACKUPS AND SECRETS  (unraid-templates#27)
   `Mask="true"` is a UI setting only -- it makes the Unraid web form render a
   password box. The XML on the flash drive holds the value in PLAINTEXT either
-  way. So a backup is written with every masked value REDACTED, and the first
-  run also redacts the backups previous versions already wrote. Backups are
+  way. So a backup is written with every masked value REDACTED (masked in the
+  instance file OR in the repo template, #104), and each run also redacts the
+  backups previous versions already wrote. Backups are
   pruned to the newest KEEP_BACKUPS per instance.
 
   What that means for a restore: the structure and every non-secret value come
@@ -236,7 +237,8 @@ def discover_instances(directory, repo_names):
 def merge(operator_root, template_root):
     """Return (merged_root, stats). Base = operator tree; reconcile <Config> only.
     A Config the operator has but the template lacks is deprecated and always dropped,
-    whatever it holds; stats["dropped"] lists (label, held_a_value) for each."""
+    whatever it holds; stats["dropped"] lists (label, held_a_value) for each, and
+    stats["mirror_dropped"] each legacy <Environment> mirror entry with no template Target."""
     op_by_key, dup_keys = {}, []
     for c in operator_root.findall("Config"):
         k = config_key(c)
@@ -249,7 +251,8 @@ def merge(operator_root, template_root):
     for c in merged.findall("Config"):          # strip Configs; container tags stay
         merged.remove(c)
 
-    stats = {"added": [], "retained": 0, "dropped": [], "dupes": dup_keys, "mode_kept": []}
+    stats = {"added": [], "retained": 0, "dropped": [], "dupes": dup_keys, "mode_kept": [],
+             "mirror_dropped": []}
     seen = set()
 
     for tc in template_root.findall("Config"):  # template order; refresh metadata
@@ -287,6 +290,17 @@ def merge(operator_root, template_root):
         if k not in seen:
             stats["dropped"].append((c.get("Name") or k[1], bool((c.text or "").strip())))
 
+    # dockerMan's legacy <Environment><Variable> mirror repeats each value. Dropping a Config left
+    # its mirror, value and all, in the live file, where no Config marks it secret any more, so
+    # every later backup copied it in clear. A mirror with no template Target is dropped with it.
+    targets = {_config_name(tc) for tc in template_root.findall("Config")}
+    for env in merged.findall("Environment"):
+        for var in env.findall("Variable"):
+            name = (var.findtext("Name") or "").strip()
+            if name not in targets:
+                env.remove(var)
+                stats["mirror_dropped"].append(name)
+
     return merged, stats
 
 
@@ -317,18 +331,28 @@ def _is_masked(c):
     return (c.get("Mask") or "").strip().lower() == "true"
 
 
-def _masked_configs(root):
-    """Every masked <Config> anywhere under `root`.
+def _config_name(c):
+    """The variable a <Config> sets: its Target, or its Name when it has no Target."""
+    return (c.get("Target") or "").strip() or (c.get("Name") or "").strip()
+
+
+def _masked_configs(root, secret_targets=()):
+    """Every secret <Config> anywhere under `root`: masked in this file, OR named in
+    `secret_targets` (the variables the REPO template masks — unraid-templates#104).
+
+    ⚠️ THE FILE'S OWN MASK IS NOT ENOUGH. A live Config can hold a secret with `Mask="false"` or
+    no Mask at all while the repo template masks that variable; trusting the file alone wrote that
+    value into the backup in clear text. Either side saying "secret" makes it one.
 
     `iter` and NOT `findall`: `findall("Config")` is direct children only, so a masked <Config>
     nested one level down was skipped entirely. Over-reaching costs nothing here — this only ever
     runs against a BACKUP copy, where redacting one element too many is harmless and missing one
     is the bug.
     """
-    return [c for c in root.iter("Config") if _is_masked(c)]
+    return [c for c in root.iter("Config") if _is_masked(c) or _config_name(c) in secret_targets]
 
 
-def _masked_names(root):
+def _masked_names(root, secret_targets=()):
     """The environment-variable KEYS the masked <Config> elements correspond to.
 
     ⚠️ `Target` IS THE VARIABLE NAME; `Name` is the human label the UI shows ("Key", "API token").
@@ -337,15 +361,10 @@ def _masked_names(root):
     restore would want, and counting it, so the run reported more redactions than it performed.
     `Name` is used only as a fallback for a <Config> that has no Target.
     """
-    names = set()
-    for c in _masked_configs(root):
-        key = (c.get("Target") or "").strip() or (c.get("Name") or "").strip()
-        if key:
-            names.add(key)
-    return names
+    return {_config_name(c) for c in _masked_configs(root, secret_targets)} - {""}
 
 
-def _mirrored_secrets(root):
+def _mirrored_secrets(root, secret_targets=()):
     """The <Environment><Variable><Value> elements that mirror a masked <Config>.
 
     ⭐ dockerMan WRITES EACH VARIABLE TWICE. Alongside the <Config> elements this script
@@ -358,15 +377,18 @@ def _mirrored_secrets(root):
     the secret sitting in the <Environment> half, in cleartext, in every backup, while the run
     reported the value redacted. Both agents that reviewed this reproduced it independently.
 
-    Matched by NAME against the masked <Config> set rather than by any flag of its own: the
+    Matched by NAME against the secret <Config> set rather than by any flag of its own: the
     <Variable> element carries no `Mask` attribute, so the <Config> is the only place that says
-    whether the value is a secret.
+    whether the value is a secret. ⛔ So a mirror with NO <Config> of its name in the file (its
+    Config was dropped by an earlier sync, which leaves the mirror behind) cannot be shown to be
+    safe, and is redacted: fail closed, never print a value nothing vouches for.
     """
-    secret_names = _masked_names(root)
+    secret_names = _masked_names(root, secret_targets)
+    configured = {_config_name(c) for c in root.iter("Config")}
     found = []
     for var in root.iter("Variable"):
         name = (var.findtext("Name") or "").strip()
-        if name and name in secret_names:
+        if name in secret_names or name not in configured:
             value = var.find("Value")
             if value is not None:
                 found.append(value)
@@ -388,8 +410,9 @@ def _element_holds_a_secret(el):
     return len(el) > 0
 
 
-def redact_secrets(root):
+def redact_secrets(root, secret_targets=()):
     """Blank every masked value on `root`, IN PLACE. Returns how many were redacted.
+    `secret_targets`: the variables the repo template masks (see `_masked_configs`).
 
     Covers BOTH places dockerMan stores a variable: the <Config> element and its <Environment>
     mirror. Only a field that actually HOLDS something is touched — marking an empty one would
@@ -397,7 +420,7 @@ def redact_secrets(root):
     configured would be misled.
     """
     n = 0
-    for el in _masked_configs(root) + _mirrored_secrets(root):
+    for el in _masked_configs(root, secret_targets) + _mirrored_secrets(root, secret_targets):
         if not _element_holds_a_secret(el):
             continue
         for child in list(el):      # the child elements are content too
@@ -407,15 +430,16 @@ def redact_secrets(root):
     return n
 
 
-def count_secrets(root):
+def count_secrets(root, secret_targets=()):
     """How many masked values `root` still holds. The exact converse of `redact_secrets`, so the
     reported count and the work actually done cannot drift apart."""
-    return sum(1 for el in _masked_configs(root) + _mirrored_secrets(root)
-               if _element_holds_a_secret(el))
+    return sum(1 for el in _masked_configs(root, secret_targets)
+               + _mirrored_secrets(root, secret_targets) if _element_holds_a_secret(el))
 
 
-def backup(path, backup_dir):
-    """Copy `path` aside before it is overwritten, with every masked value REDACTED.
+def backup(path, backup_dir, secret_targets=()):
+    """Copy `path` aside before it is overwritten, with every masked value REDACTED — masked in
+    the file OR in the repo template (`secret_targets`, unraid-templates#104).
 
     Returns (dest, n_redacted). Raises BackupUnsafe if the file cannot be parsed — see the class.
 
@@ -428,7 +452,7 @@ def backup(path, backup_dir):
         tree = ET.parse(path)
     except (ET.ParseError, OSError) as e:
         raise BackupUnsafe(f"{os.path.basename(path)}: {e}") from e
-    n = redact_secrets(tree.getroot())
+    n = redact_secrets(tree.getroot(), secret_targets)
     # ⛔ A WRITE FAILURE HERE IS ALSO "could not back it up safely". `redact_existing_backups` was
     # hardened so one bad file could not abort the sync, and this sibling path was left raising —
     # so a full or read-only flash drive gave a traceback out of main(), a half-finished run, and
@@ -511,7 +535,7 @@ def _same_file(a, b):
         return False
 
 
-def redact_existing_backups(backup_dir, scope=None):
+def redact_existing_backups(backup_dir, scope=None, secret_targets=()):
     """ONE-TIME CLEAR-OUT of the plaintext accumulation already on the flash drive.
 
     Fixing `backup()` stops NEW cleartext copies; it does nothing about the pile already written,
@@ -528,6 +552,10 @@ def redact_existing_backups(backup_dir, scope=None):
 
     Idempotent — a second run finds nothing left to redact, because a redacted value no longer
     differs from the marker.
+
+    `secret_targets` (the repo template's masked variables) also redacts a backup whose own Config
+    was not masked when it was taken (unraid-templates#104) — the scope must then be one
+    template's backups, since the set is that template's.
     """
     redacted_files, redacted_values, unreadable = 0, 0, []
     files, list_error = _backup_files(backup_dir)
@@ -548,12 +576,12 @@ def redact_existing_backups(backup_dir, scope=None):
             unreadable.append((fname, f"could not be read: {e}"))
             continue
         root = tree.getroot()
-        n = count_secrets(root)
+        n = count_secrets(root, secret_targets)
         if not n:
             continue
         if not DRY_RUN:
             try:
-                redact_secrets(root)
+                redact_secrets(root, secret_targets)
                 atomic_write(full, root)
             except OSError as e:
                 # ⛔ ONE BAD FILE MUST NOT ABORT THE SYNC. An uncaught OSError here (a full flash
@@ -658,7 +686,8 @@ def update_instance(inst_path, tpl_root, backup_dir):
     # "metadata refreshed ... no variables added or removed" must be true of the run that
     # prints it. dupes belongs in here because merge() DROPS all but the first duplicate,
     # which IS a variable removed.
-    meta_only = not (st["added"] or st["dropped"] or st["dupes"] or st["mode_kept"])
+    meta_only = not (st["added"] or st["dropped"] or st["dupes"] or st["mode_kept"]
+                     or st["mirror_dropped"])
     if unchanged:
         # nothing to write, but there IS something to say - fall through to the warnings
         print(f"    = {fname:<22} no write needed, but see below")
@@ -675,7 +704,7 @@ def update_instance(inst_path, tpl_root, backup_dir):
         # "raise rather than write a plaintext copy" and a caller that assumed otherwise is
         # exactly how this bug returns — not because this branch is expected to fire.
         try:
-            b, masked = backup(inst_path, backup_dir)
+            b, masked = backup(inst_path, backup_dir, _masked_names(tpl_root))
         except BackupUnsafe as e:
             print(f"    ! {fname:<22} SKIP — could not back it up safely ({e}); left untouched")
             return False
@@ -698,6 +727,8 @@ def update_instance(inst_path, tpl_root, backup_dir):
     for label, held in st["dropped"]:
         print(f"        DROPPED, not in repo template (deprecated): {label}"
               f"{' (held a value)' if held else ''}")
+    for name in st["mirror_dropped"]:
+        print(f"        DROPPED legacy <Environment> mirror, not in repo template: {name or '(no name)'}")
     if st["dupes"]:
         print(f"        ! duplicate keys (first kept): {st['dupes']}")
     if st["mode_kept"]:
@@ -708,20 +739,22 @@ def update_instance(inst_path, tpl_root, backup_dir):
     return True
 
 
-def process_template(name, instances_by_tpl, backup_dir):
-    """Process one repo template: CREATE the stub if absent, UPDATE every live instance.
-    Returns the number of failures (unraid-templates#61/#62) — 0 means clean."""
-    print(f"[{name}]")
+def load_template(name):
+    """Fetch, parse and validate repo template `name`. Returns (root, None) or (None, why)."""
     try:
         tpl_root = ET.fromstring(fetch_template(name))
     except Exception as e:
-        print(f"    ! could not fetch/parse repo template: {e}")
-        return 1
+        return None, f"could not fetch/parse repo template: {e}"
     err = validate(tpl_root)
     if err:
-        print(f"    ! repo template invalid ({err}); skipping")
-        return 1
+        return None, f"repo template invalid ({err}); skipping"
+    return tpl_root, None
 
+
+def process_template(name, tpl_root, instances_by_tpl, backup_dir):
+    """Process one loaded repo template: CREATE the stub if absent, UPDATE every live instance.
+    Returns the number of failures (unraid-templates#61/#62) — 0 means clean."""
+    print(f"[{name}]")
     failures = 0
     base_path = os.path.join(TEMPLATES_USER, f"my-{name}.xml")
 
@@ -842,7 +875,11 @@ def main():
     # BEFORE anything else touches the backup dir. Every `.bak` written before this release is a
     # cleartext copy of whatever secrets that instance held, and this is the run that clears
     # them; doing it first means a crash later still leaves the flash drive better than it was.
-    files, values, unreadable = redact_existing_backups(backup_dir, scope)
+    # The template is loaded first, once: what counts as secret is its call as well as each
+    # file's (unraid-templates#104). If it cannot load, the files' own masks still apply.
+    tpl_root, tpl_error = load_template(TEMPLATE)
+    secret_targets = _masked_names(tpl_root) if tpl_root is not None else set()
+    files, values, unreadable = redact_existing_backups(backup_dir, scope, secret_targets)
     if files:
         print(f"{'would redact' if DRY_RUN else 'REDACTED'} {values} masked value(s) across "
               f"{files} pre-existing backup(s) in {BACKUP_SUBDIR}/ (unraid-templates#27: "
@@ -865,7 +902,11 @@ def main():
             print(f"    {fname} ({why})")
         print()
 
-    failures += process_template(TEMPLATE, instances_by_tpl, backup_dir)
+    if tpl_error:
+        print(f"[{TEMPLATE}]\n    ! {tpl_error}")
+        failures += 1
+    else:
+        failures += process_template(TEMPLATE, tpl_root, instances_by_tpl, backup_dir)
     print()
 
     # ⭐ PRUNE LAST, once this run's own backups exist. Pruning first left KEEP_BACKUPS + 1 on

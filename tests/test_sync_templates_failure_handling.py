@@ -90,13 +90,12 @@ def test_the_CREATE_write_that_cannot_be_written_is_reported_and_counted(
 ):
     """process_template's CREATE path (no my-*.xml yet) had the same unwrapped atomic_write."""
     sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
 
     def no_space(path, root):
         raise OSError(28, "No space left on device")
 
     monkeypatch.setattr(sync, "atomic_write", no_space)
-    failures = sync.process_template("widget", {}, str(tmp_path / "b"))
+    failures = sync.process_template("widget", ET.fromstring(TEMPLATE_BYTES), {}, str(tmp_path / "b"))
 
     assert failures == 1, "a failed CREATE must count as a failure"
     assert "FAILED to create" in capsys.readouterr().out
@@ -117,7 +116,6 @@ def test_a_stat_failure_on_the_base_file_is_refused_not_treated_as_absent(
     sync.TEMPLATES_USER = str(tmp_path)
     base = tmp_path / "my-widget.xml"
     base.write_text(instance_xml(desc="OLD TEXT"), encoding="utf-8")
-    monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
 
     real_stat = sync.os.stat
 
@@ -127,7 +125,7 @@ def test_a_stat_failure_on_the_base_file_is_refused_not_treated_as_absent(
         return real_stat(path, *a, **kw)
 
     monkeypatch.setattr(sync.os, "stat", flaky)
-    failures = sync.process_template("widget", {}, str(tmp_path / "b"))
+    failures = sync.process_template("widget", ET.fromstring(TEMPLATE_BYTES), {}, str(tmp_path / "b"))
 
     assert failures == 1, "a masked stat failure must be counted, not silently treated as absent"
     assert "OLD TEXT" in base.read_text(encoding="utf-8"), (
@@ -140,9 +138,8 @@ def test_a_genuinely_absent_base_file_still_creates_normally(sync, tmp_path, mon
     """The positive direction - the new os.stat-based check must not turn an ordinary
     first-ever-sync into a false refusal."""
     sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
 
-    failures = sync.process_template("widget", {}, str(tmp_path / "b"))
+    failures = sync.process_template("widget", ET.fromstring(TEMPLATE_BYTES), {}, str(tmp_path / "b"))
 
     assert failures == 0
     assert (tmp_path / "my-widget.xml").exists()
