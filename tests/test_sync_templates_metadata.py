@@ -594,7 +594,7 @@ def test_the_mirror_matches_the_VARIABLE_name_not_the_human_label(sync):
           'Type="Variable" Display="always" Required="true" Mask="true">s3cret</Config>'
         # the unrelated variable has its own unmasked Config: a mirror with none is redacted (#104)
         + '<Config Name="Other" Target="Key" Default="" Mode="" Description="x" '
-          'Type="Variable" Display="always" Required="false" Mask="false">public-not-a-secret</Config>'
+          'Type="Variable" Display="always" Required="false" Mask="false">public-config-value</Config>'
         + "<Environment>"
           "<Variable><Value>s3cret</Value><Name>API_KEY</Name></Variable>"
           "<Variable><Value>public-not-a-secret</Value><Name>Key</Name></Variable>"

@@ -69,7 +69,8 @@ BACKUPS AND SECRETS  (unraid-templates#27)
   pruned to the newest KEEP_BACKUPS per instance.
 
   What that means for a restore: the structure and every non-secret value come
-  back in full; a masked value must be re-entered. It is not a real loss --
+  back in full (except a mirror entry with no Config, redacted as unknown); a
+  masked value must be re-entered. It is not a real loss --
   merge() copies applied values across verbatim, so a merge cannot damage a
   secret, and the backup is there for a bad merge.
   Workflow: run the dry-run version -> review -> when it is correct, install the

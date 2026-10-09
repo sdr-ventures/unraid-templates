@@ -129,7 +129,8 @@ are how you restore it.
 > so review and delete those by hand.
 >
 > **What this costs a restore:** the structure and every non-secret value come
-> back in full; a masked value must be re-entered. That is not much of a loss —
+> back in full (except a mirror entry with no `<Config>`, redacted as unknown); a
+> masked value must be re-entered. That is not much of a loss —
 > `merge()` copies applied values across verbatim, so a merge cannot damage a
 > secret; the backup is there in case a *merge* goes wrong.
 >

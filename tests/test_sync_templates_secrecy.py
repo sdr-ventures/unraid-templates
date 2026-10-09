@@ -219,3 +219,51 @@ def test_a_mirror_the_template_still_has_is_never_pruned_from_the_live_file(sync
         assert f"<Value>{value}</Value>" in live and f"<Name>{name}</Name>" in live
     code, out = run(sync, tmp_path, capsys)
     assert "up to date" in out, out
+
+
+# ------------------------------------------------------------------- edges of matching by name
+
+def test_a_padded_live_Target_still_matches_the_templates_mask(sync, tmp_path, capsys):
+    (tmp_path / "my-app.xml").write_text(
+        container([cfg("TOKEN", SECRET).replace('Target="TOKEN"', 'Target=" TOKEN "')]),
+        encoding="utf-8")
+    code, out = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    assert not any(SECRET in v for v in backups(tmp_path).values())
+
+
+def test_a_Config_with_no_Target_matches_the_templates_mask_by_Name(sync, tmp_path, capsys, monkeypatch):
+    def no_target(xml):
+        return xml.replace(' Target="TOKEN"', "")
+    monkeypatch.setitem(REPO, "app", no_target(container([cfg("TOKEN", masked=True)])))
+    (tmp_path / "my-app.xml").write_text(no_target(container([cfg("TOKEN", SECRET)])), encoding="utf-8")
+    code, out = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    (bak,) = backups(tmp_path).values()
+    assert SECRET not in bak
+
+
+def test_a_padded_mirror_Name_the_template_has_is_not_pruned(sync, tmp_path, capsys):
+    (tmp_path / "my-app.xml").write_text(
+        container([cfg("TOKEN", "t", masked=True), cfg("PLAIN", "kept")],
+                  env="<Environment><Variable><Value>mirror-kept</Value><Name> PLAIN </Name>"
+                      "</Variable></Environment>"), encoding="utf-8")
+    code, out = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    assert "DROPPED" not in out, out
+    assert "mirror-kept" in (tmp_path / "my-app.xml").read_text(encoding="utf-8")
+
+
+def test_a_mirror_only_drop_is_not_reported_as_metadata_only(sync, tmp_path, capsys):
+    (tmp_path / "my-app.xml").write_text(
+        container([cfg("TOKEN", "t", masked=True), cfg("PLAIN", "kept")],
+                  env=mirror(TOKEN="t", PLAIN="kept", GONE="x")), encoding="utf-8")
+    run(sync, tmp_path, capsys)                                  # first run also re-serialises
+    (tmp_path / "my-app.xml").write_text(
+        (tmp_path / "my-app.xml").read_text(encoding="utf-8").replace(
+            "</Environment>", "<Variable><Value>x</Value><Name>GONE</Name></Variable></Environment>"),
+        encoding="utf-8")
+    code, out = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    assert "DROPPED legacy <Environment> mirror, not in repo template: GONE" in out
+    assert "no variables added or removed" not in out, out
