@@ -49,6 +49,7 @@ def sync():
     spec.loader.exec_module(mod)
     mod.DRY_RUN = False
     mod.TEMPLATE = "widget"     # the repo copy is unset and refuses (unraid-templates#102)
+    mod.resolve_sha = lambda: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"     # no network: the commit is pinned per run (#103)
     return mod
 
 
@@ -198,9 +199,9 @@ def test_a_run_where_every_template_is_skipped_exits_nonzero(sync, tmp_path, mon
     """The regression: every skip branch used to reach the same 'done.' with an implicit exit 0
     — a wrapper, a schedule, or a person skimming the tail all saw success."""
     sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates", lambda: ["widget"])
+    monkeypatch.setattr(sync, "list_repo_templates", lambda sha: ["widget"])
 
-    def boom(name):
+    def boom(name, sha):
         raise RuntimeError("network down")
 
     monkeypatch.setattr(sync, "fetch_template", boom)
@@ -216,8 +217,8 @@ def test_a_run_where_every_template_is_skipped_exits_nonzero(sync, tmp_path, mon
 def test_a_clean_run_still_exits_zero(sync, tmp_path, monkeypatch):
     """The positive direction — the new counter must not turn a genuinely clean run red."""
     sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates", lambda: ["widget"])
-    monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
+    monkeypatch.setattr(sync, "list_repo_templates", lambda sha: ["widget"])
+    monkeypatch.setattr(sync, "fetch_template", lambda name, sha: TEMPLATE_BYTES)
 
     sync.main()  # must return normally - no SystemExit
 
@@ -231,8 +232,8 @@ def test_main_exits_nonzero_on_an_unreadable_pre_existing_backup_alone(
     the process_template one exercised above. This one is an unparseable pre-existing .bak,
     with everything else in the run clean."""
     sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates", lambda: ["widget"])
-    monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
+    monkeypatch.setattr(sync, "list_repo_templates", lambda sha: ["widget"])
+    monkeypatch.setattr(sync, "fetch_template", lambda name, sha: TEMPLATE_BYTES)
     backups = tmp_path / ".template-sync-backups"
     backups.mkdir()
     (backups / "my-widget.xml.20260101-000000.bak").write_text(
@@ -255,8 +256,8 @@ def test_main_exits_nonzero_on_a_broken_instance_alone(sync, tmp_path, monkeypat
     so `broken` is the ONLY contributor a run over it can produce.
     """
     sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates", lambda: ["widget"])
-    monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
+    monkeypatch.setattr(sync, "list_repo_templates", lambda sha: ["widget"])
+    monkeypatch.setattr(sync, "fetch_template", lambda name, sha: TEMPLATE_BYTES)
     (tmp_path / "my-orphan.xml").write_text("<Container><Name>x</Name>", encoding="utf-8")
 
     with pytest.raises(SystemExit) as exc:
@@ -270,8 +271,8 @@ def test_main_exits_nonzero_on_a_broken_instance_alone(sync, tmp_path, monkeypat
 def test_main_exits_nonzero_on_a_prune_failure_alone(sync, tmp_path, monkeypatch):
     """Same, for `prune_failed` — every template/instance clean, only the prune step fails."""
     sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates", lambda: ["widget"])
-    monkeypatch.setattr(sync, "fetch_template", lambda name: TEMPLATE_BYTES)
+    monkeypatch.setattr(sync, "list_repo_templates", lambda sha: ["widget"])
+    monkeypatch.setattr(sync, "fetch_template", lambda name, sha: TEMPLATE_BYTES)
     backups = tmp_path / ".template-sync-backups"
     backups.mkdir()
     victim = "my-widget.xml.20260101-000000.bak"

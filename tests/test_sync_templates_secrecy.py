@@ -51,8 +51,9 @@ def sync(monkeypatch):
     spec.loader.exec_module(mod)
     mod.DRY_RUN = False
     mod.TEMPLATE = "app"
-    monkeypatch.setattr(mod, "list_repo_templates", lambda: sorted(REPO))
-    monkeypatch.setattr(mod, "fetch_template", lambda name: REPO[name].encode())
+    mod.resolve_sha = lambda: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"     # no network: the commit is pinned per run (#103)
+    monkeypatch.setattr(mod, "list_repo_templates", lambda sha: sorted(REPO))
+    monkeypatch.setattr(mod, "fetch_template", lambda name, sha: REPO[name].encode())
     return mod
 
 
@@ -163,7 +164,7 @@ def test_a_template_that_cannot_load_still_runs_the_pass_on_the_files_own_masks(
     (b / "my-app.xml.20200101-000000.bak").write_text(
         container([cfg("TOKEN", SECRET, masked=True)]), encoding="utf-8")
 
-    def down(name):
+    def down(name, sha):
         raise OSError("network down")
 
     monkeypatch.setattr(sync, "fetch_template", down)
