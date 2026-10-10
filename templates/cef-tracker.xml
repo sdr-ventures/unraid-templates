@@ -53,6 +53,8 @@
   <Config Name="DB_PATH" Target="DB_PATH" Default="/data/cef_tracker.db" Mode="" Description="SQLite database file, INSIDE the container. Leave as the default unless you know why you are changing it — it must sit under the /data mount above or the database will not survive a restart. Also determines where the scheduled backup writes (its own directory's 'backups' subfolder) — moving this out of /data moves the backup out of the Backups mount above too. Blank is treated as the default." Type="Variable" Display="advanced" Required="false" Mask="false">/data/cef_tracker.db</Config>
   <Config Name="FLASK_ENV" Target="FLASK_ENV" Default="production" Mode="" Description="production (default) or development. Only set development for debugging — it enables debug mode. Blank is treated as production." Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
 
+  <Config Name="UI_V2" Target="UI_V2" Default="" Mode="" Description="OPTIONAL. Blank or any value except 0/false/no/off = the new Tracker fund tile UI at /app. Set 0 to use the classic page. Add ?ui=classic to /app to reach the classic page either way." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
   <!--
     TAPE (CT-TAPE-CLIENT-1) — read-only, dual-run only. Feeds the NAV parity report, not the
     app's own signal/history path. All three are OPTIONAL and blank by default: the app boots
