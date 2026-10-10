@@ -11,6 +11,7 @@ Every value here is synthetic.
 
 import importlib.util
 import pathlib
+import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -220,6 +221,27 @@ def test_a_mirror_the_template_still_has_is_never_pruned_from_the_live_file(sync
         assert f"<Value>{value}</Value>" in live and f"<Name>{name}</Name>" in live
     code, out = run(sync, tmp_path, capsys)
     assert "up to date" in out, out
+
+
+def test_a_mirror_is_kept_by_its_templates_Target_not_its_label(sync):
+    """dockerMan's mirror Name is the Config's Target; a template label that differs from it
+    must not get the mirror of a variable the template still declares pruned."""
+    labelled = cfg("TOKEN", masked=True).replace('Name="TOKEN"', 'Name="Token label"')
+    op = ET.fromstring(container([cfg("TOKEN", "t", masked=True)], env=mirror(TOKEN="kept")))
+    merged, st = sync.merge(op, ET.fromstring(container([labelled])))
+    assert st["mirror_dropped"] == []
+    assert merged.findtext("Environment/Variable/Value") == "kept"
+
+
+@pytest.mark.parametrize("env", ["", "<Environment/>", "<Environment></Environment>"])
+def test_an_empty_or_absent_mirror_is_left_as_it_is(sync, env):
+    """The prune only removes Variables: it never adds, removes or fills an <Environment>."""
+    op = ET.fromstring(container([cfg("TOKEN", "t", masked=True)], env=env))
+    merged, st = sync.merge(op, ET.fromstring(REPO["app"]))
+    assert st["mirror_dropped"] == []
+    envs = merged.findall("Environment")
+    assert len(envs) == (1 if env else 0)
+    assert all(len(e) == 0 and not (e.text or "").strip() for e in envs)
 
 
 # ------------------------------------------------------------------- edges of matching by name
