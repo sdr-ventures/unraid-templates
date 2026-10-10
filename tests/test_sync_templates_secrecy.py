@@ -223,6 +223,16 @@ def test_a_mirror_the_template_still_has_is_never_pruned_from_the_live_file(sync
     assert "up to date" in out, out
 
 
+def test_a_mirror_is_kept_by_its_templates_Target_not_its_label(sync):
+    """dockerMan's mirror Name is the Config's Target; a template label that differs from it
+    must not get the mirror of a variable the template still declares pruned."""
+    labelled = cfg("TOKEN", masked=True).replace('Name="TOKEN"', 'Name="Token label"')
+    op = ET.fromstring(container([cfg("TOKEN", "t", masked=True)], env=mirror(TOKEN="kept")))
+    merged, st = sync.merge(op, ET.fromstring(container([labelled])))
+    assert st["mirror_dropped"] == []
+    assert merged.findtext("Environment/Variable/Value") == "kept"
+
+
 @pytest.mark.parametrize("env", ["", "<Environment/>", "<Environment></Environment>"])
 def test_an_empty_or_absent_mirror_is_left_as_it_is(sync, env):
     """The prune only removes Variables: it never adds, removes or fills an <Environment>."""
