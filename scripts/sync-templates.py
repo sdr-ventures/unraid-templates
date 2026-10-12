@@ -636,6 +636,7 @@ def redact_existing_backups(backup_dir, scope=None, secret_targets=()):
             try:
                 redact_secrets(root, secret_targets)
                 atomic_write(full, root)
+                _wrote()
             except OSError as e:
                 # ⛔ ONE BAD FILE MUST NOT ABORT THE SYNC. An uncaught OSError here (a full flash
                 # drive, a read-only mount) propagated out of main() BEFORE a single template was
@@ -656,6 +657,22 @@ def _discard(path):
         os.remove(path)
     except OSError:
         pass
+
+
+WRITES = 0         # live writes this run has made: stub, instance, backup redaction, prune
+
+
+def _wrote():
+    global WRITES
+    WRITES += 1
+
+
+def _outcome():
+    """The closing word, from what the run DID. Choosing it from DRY_RUN alone printed `changes
+    written` for a live run that wrote nothing (#124)."""
+    if DRY_RUN:
+        return "(dry-run — nothing changed)"
+    return f"(LIVE — changes written: {WRITES})" if WRITES else "(LIVE — nothing changed)"
 
 
 def prune_backups(backup_dir, protected=(), scope=None):
@@ -702,6 +719,7 @@ def prune_backups(backup_dir, protected=(), scope=None):
                 except OSError as e:
                     failed.append((fname, str(e)))
                     continue
+                _wrote()
             dropped.append(fname)
     return dropped, failed
 
@@ -770,6 +788,7 @@ def update_instance(inst_path, tpl_root, backup_dir):
             _discard(inst_path + ".tmp")
             print(f"    ! {fname:<22} SKIP — could not write it ({e}); left untouched")
             return False
+        _wrote()
         note = f", {masked} masked value(s) REDACTED" if masked else ""
         print(f"    * {fname:<22} UPDATED   (backup: {os.path.basename(b)}{note})")
     print(f"        values kept   : {st['retained']}")
@@ -834,6 +853,7 @@ def process_template(name, tpl_root, instances_by_tpl, backup_dir):
         else:
             try:
                 atomic_write(base_path, copy.deepcopy(tpl_root))
+                _wrote()
                 print(f"    + my-{name}.xml         CREATED  (ready for Add Container)")
                 base_exists = True
             except OSError as e:
@@ -854,6 +874,8 @@ def process_template(name, tpl_root, instances_by_tpl, backup_dir):
 
 # ----------------------------------------------------------------------------- main
 def main():
+    global WRITES
+    WRITES = 0
     # unraid-templates#102: the run over every template is retired, not repaired. It claimed
     # my-<name>.xml by NAME for template <name> even when the instance map gave that file to
     # another template, so one file was reconciled against two templates and each dropped the
@@ -995,10 +1017,9 @@ def main():
     # an implicit exit 0 — a run that skipped every template looked identical to a clean one to
     # anything that reads the exit status (a wrapper, a schedule, a person skimming the tail).
     if failures:
-        print(f"done. {failures} failure(s) — see above"
-              + ("  (dry-run — nothing changed)" if DRY_RUN else "  (LIVE — changes written)"))
+        print(f"done. {failures} failure(s) — see above  {_outcome()}")
         sys.exit(1)
-    print("done." + ("  (dry-run — nothing changed)" if DRY_RUN else "  (LIVE — changes written)"))
+    print(f"done.  {_outcome()}")
 
 
 if __name__ == "__main__":
