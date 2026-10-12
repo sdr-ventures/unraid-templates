@@ -659,7 +659,7 @@ def _discard(path):
         pass
 
 
-WRITES = 0         # live writes this run has made: stub, instance, backup redaction, prune
+WRITES = 0         # live files written this run: stub, backup, instance, backup redaction, prune
 
 
 def _wrote():
@@ -668,8 +668,7 @@ def _wrote():
 
 
 def _outcome():
-    """The closing word, from what the run DID. Choosing it from DRY_RUN alone printed `changes
-    written` for a live run that wrote nothing (#124)."""
+    """Closing word from the files this run wrote (live only). DRY_RUN alone does not decide it."""
     if DRY_RUN:
         return "(dry-run — nothing changed)"
     return f"(LIVE — changes written: {WRITES})" if WRITES else "(LIVE — nothing changed)"
@@ -779,6 +778,7 @@ def update_instance(inst_path, tpl_root, backup_dir):
         except BackupUnsafe as e:
             print(f"    ! {fname:<22} SKIP — could not back it up safely ({e}); left untouched")
             return False
+        _wrote()
         try:
             atomic_write(inst_path, merged)
         except OSError as e:

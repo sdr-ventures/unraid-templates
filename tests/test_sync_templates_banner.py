@@ -1,8 +1,8 @@
-"""`sync-templates.py`: the closing line says what the run DID, not what it was asked to do.
+"""`sync-templates.py`: the closing line counts the files a live run wrote.
 
-A live run that changed nothing used to end `done.  (LIVE — changes written)` because the
-banner keyed on DRY_RUN alone (issue #124). The closing line is now chosen from the writes the
-run actually made, with a count, so a run that wrote nothing cannot say it wrote.
+A live run with no file write closes `(LIVE — nothing changed)`; any write closes with the number
+of files written. The count includes every backup, including one written before a failed
+instance write, so no run can leave a file on disk while claiming nothing changed.
 """
 
 import datetime as _dt
@@ -66,11 +66,29 @@ def test_a_live_run_that_wrote_nothing_does_not_claim_it_wrote(sync, tmp_path, c
     assert closing_line(out) == "done.  (LIVE — nothing changed)"
 
 
-def test_a_live_run_that_updates_an_instance_says_how_many_it_wrote(sync, tmp_path, capsys):
+def test_a_live_run_that_updates_an_instance_counts_the_backup_and_the_instance(sync, tmp_path, capsys):
     (tmp_path / "my-widget.xml").write_bytes(TPL.format(desc="old", mask="false", value="5").encode())
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
-    assert closing_line(out) == "done.  (LIVE — changes written: 1)"
+    assert len(list((tmp_path / BACKUPS).iterdir())) == 1
+    assert closing_line(out) == "done.  (LIVE — changes written: 2)"
+
+
+def test_a_backup_written_before_a_failed_instance_write_is_counted(sync, tmp_path, capsys, monkeypatch):
+    """The backup is on disk even though the instance write failed, so the run must say it wrote."""
+    (tmp_path / "my-widget.xml").write_bytes(TPL.format(desc="old", mask="false", value="5").encode())
+    real_write = sync.atomic_write
+
+    def fail_the_instance(path, root):
+        if str(path).endswith("my-widget.xml"):
+            raise OSError("disk full")
+        return real_write(path, root)
+
+    monkeypatch.setattr(sync, "atomic_write", fail_the_instance)
+    code, out = run(sync, tmp_path, capsys)
+    assert code == 1, out
+    assert len(list((tmp_path / BACKUPS).iterdir())) == 1
+    assert closing_line(out) == "done. 1 failure(s) — see above  (LIVE — changes written: 1)"
 
 
 def test_a_live_run_that_creates_the_stub_counts_it_as_a_write(sync, tmp_path, capsys):
