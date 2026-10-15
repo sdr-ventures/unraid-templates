@@ -47,7 +47,10 @@ README = REPO / "README.md"
 RAW_PREFIX = "https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/"
 # gambit is frozen in place (not moved to the org, ORG-REPUBLISH-1) — its TemplateURL/Icon stay
 # on the old owner, the one visible exception to RAW_PREFIX.
-RAW_PREFIX_EXCEPTIONS = {"gambit": "https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/"}
+RAW_PREFIX_EXCEPTIONS = {
+    "gambit": "https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/",
+    "gambit-loop": "https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/",
+}
 
 # Every template, discovered — a new file is covered the day it lands, with no roster to update.
 NAMES = sorted(p.stem for p in TEMPLATES.glob("*.xml"))
@@ -137,8 +140,9 @@ PRIVILEGED_BY_DESIGN = frozenset()
 
 # PostArgs is appended after the image name: it is the container's COMMAND LINE, and a shell
 # command there can export anything over the values asserted in this file. tldw-redis is
-# the one template that legitimately needs it — that is how the redis image is configured.
-POSTARGS_BY_DESIGN = frozenset({"tldw-redis"})
+# tldw-redis needs it (how the redis image is configured); gambit-loop needs it because it runs the
+# gambit image with the paper-lab loop as its command.
+POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop"})
 
 # The attribute set every Config must carry. `sync-templates.py` keys on Type/Target/Name and
 # refreshes the rest from the repo copy; Unraid renders all nine. A Config missing one is
