@@ -140,5 +140,19 @@
       "ALPACA_PAPER_KEY_ID_3": "reads ALPACA_PAPER_KEY_ID_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
       "ALPACA_PAPER_SECRET_KEY_3": "reads ALPACA_PAPER_SECRET_KEY_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged"
     }
+  },
+  "gambit-loop": {
+    "no_local_consumer": false,
+    "vars": {
+      "TAPE_BASE_URL": "reads TAPE_BASE_URL via env() (os.getenv) in TapeConfig.base_url_from_env(), gambit/config.py:67-68, falling back to DEFAULT_TAPE_BASE_URL (gambit/config.py:38); gambit/data/tape.py builds its httpx client on it",
+      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via env() (os.getenv) in TapeConfig.from_env(), gambit/config.py:73-74 and tape_configured() over TAPE_ENV_KEYS (gambit/config.py:39,44); scripts/run_paper_loop.py exits at start when tape_configured() is false",
+      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via env() (os.getenv) in TapeConfig.from_env(), gambit/config.py:73-74 and tape_configured() over TAPE_ENV_KEYS (gambit/config.py:39,44); scripts/run_paper_loop.py exits at start when tape_configured() is false",
+      "ALPACA_PAPER_KEY_ID": "reads ALPACA_PAPER_KEY_ID via env() (os.getenv) over key_env_names(1) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
+      "ALPACA_PAPER_SECRET_KEY": "reads ALPACA_PAPER_SECRET_KEY via env() (os.getenv) over key_env_names(1) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
+      "ALPACA_PAPER_KEY_ID_2": "reads ALPACA_PAPER_KEY_ID_2 via env() (os.getenv) over key_env_names(2) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
+      "ALPACA_PAPER_SECRET_KEY_2": "reads ALPACA_PAPER_SECRET_KEY_2 via env() (os.getenv) over key_env_names(2) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
+      "ALPACA_PAPER_KEY_ID_3": "reads ALPACA_PAPER_KEY_ID_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
+      "ALPACA_PAPER_SECRET_KEY_3": "reads ALPACA_PAPER_SECRET_KEY_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged"
+    }
   }
 }
