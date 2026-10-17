@@ -136,8 +136,11 @@ FLEET_PINNED_BY_DESIGN = frozenset(
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
 #   tldw-redis  redis:7-alpine              — upstream's own compose choice; the blast radius is
 #                                             a cache and a queue, stated in the template.
+#   kb-redis    redis:7.4-alpine        — the 7.4 patch line: an Update takes security fixes and never
+#                                         a new minor; the blast radius is a cache and a budget
+#                                         counter, stated in the template.
 ROLLING_TAG_EXCEPTIONS = frozenset(
-    {("tldw-redis", "redis:7-alpine")}
+    {("tldw-redis", "redis:7-alpine"), ("kb-redis", "redis:7.4-alpine")}
 )
 
 # No template in this repo currently needs Privileged by design. When one does, name it here
@@ -147,8 +150,10 @@ PRIVILEGED_BY_DESIGN = frozenset()
 # PostArgs is appended after the image name: it is the container's COMMAND LINE, and a shell
 # command there can export anything over the values asserted in this file. tldw-redis is
 # tldw-redis needs it (how the redis image is configured); gambit-loop needs it because it runs the
-# gambit image with the paper-lab loop as its command.
-POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop"})
+# gambit image with the paper-lab loop as its command. kb-redis runs an sh wrapper so the
+# password comes from its REDIS_PASSWORD Variable instead of a template field; kb-litellm
+# points the proxy at its mounted config file (PostArgs replaces the image's CMD).
+POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop", "kb-redis", "kb-litellm"})
 
 # The attribute set every Config must carry. `sync-templates.py` keys on Type/Target/Name and
 # refreshes the rest from the repo copy; Unraid renders all nine. A Config missing one is
@@ -536,6 +541,26 @@ def test_the_rolling_tag_exceptions_are_all_live():
     assert not stale, f"a tag exception names references no template carries: {stale}"
     assert PRIVILEGED_BY_DESIGN <= set(NAMES), f"PRIVILEGED_BY_DESIGN names a missing template"
     assert POSTARGS_BY_DESIGN <= set(NAMES), f"POSTARGS_BY_DESIGN names a missing template"
+
+
+SHELL_VARIABLE_REFERENCE = re.compile(r"\$(?:\{(\w+)\}|(\w+))")
+
+
+def shell_variables_in(text):
+    return {a or b for a, b in SHELL_VARIABLE_REFERENCE.findall(text)}
+
+
+@pytest.mark.parametrize("name", sorted(POSTARGS_BY_DESIGN & set(NAMES)))
+def test_a_shell_reference_in_postargs_names_a_variable_the_template_declares(name):
+    # A secret reaches the container's command line as "$NAME", expanded inside the container.
+    # A misspelt NAME expands to nothing and silently ships the command without its secret.
+    declared = {var_name(c) for c in configs(template(name)) if is_variable(c)}
+    undeclared = shell_variables_in(template(name).findtext("PostArgs") or "") - declared
+    assert not undeclared, f"{name}: PostArgs expands {sorted(undeclared)}, which no Variable sets"
+
+
+def test_the_postargs_reference_check_bites_on_a_misspelt_variable():
+    assert shell_variables_in('sh -c \'exec x --pw "$REDIS_PASWORD" ${OTHER}\'') == {"REDIS_PASWORD", "OTHER"}
 
 
 @pytest.mark.parametrize("name", NAMES)

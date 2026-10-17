@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<!--
+  kb-redis - the Redis behind the knowledge stack's model router (kb-litellm): its provider
+  spend counters and its response cache. Stock image from Docker Hub; nothing here is specific
+  to any host or operator.
+
+  START ORDER FOR THE WHOLE SET:
+      kb-postgres -> kb-redis -> kb-litellm -> kb-service -> kb-webui
+  Unraid templates have no equivalent of compose's depends_on or healthchecks, so nothing
+  starts these in order for you. This one starts before kb-litellm, which needs it for budgets.
+
+  NETWORK WIRING (the same for the whole set). The kb containers share ONE user-defined Docker
+  network named kb, which the operator creates once, by hand, before the first start - a
+  network is a host-side object a template cannot create, so every template here keeps
+  Network bridge and empty Extra Parameters, and you set the Network field to kb when you
+  create each container. On that network this container is reachable by its own container
+  name, kb-redis, on Redis's port 6379. Docker must be set to preserve user-defined networks
+  across updates (Unraid: Settings > Docker, "Preserve user defined networks" = Yes); without
+  it the network is removed by a Docker restart and the containers fall back to bridge, where
+  that name does not resolve.
+
+  NO HOST PORT IS PUBLISHED, AND THERE IS NO PORT CONFIG AT ALL. Blanking a Port Config's host
+  value still republishes its Default, so the only way to publish nothing is to declare no
+  Port. Redis is reachable only from a container on the kb network.
+
+  THE PASSWORD NEVER APPEARS IN A TEMPLATE FIELD. The official image cannot read a password
+  from an environment variable, so Post Arguments runs a short sh wrapper: sh expands
+  "$REDIS_PASSWORD" inside the container (the single quotes keep Unraid's host-side shell from
+  expanding it first), refuses to start when it is empty - an empty requirepass setting would turn
+  authentication OFF - and then execs the image's own docker-entrypoint.sh, so the data
+  directory is still chowned and redis-server still drops to the redis user. The password is
+  the REDIS_PASSWORD Variable below, applied on every start (not only the first), and it must
+  match the REDIS_PASSWORD given to kb-litellm. Post Arguments is split at its first ';' when
+  Unraid's Tailscale option is on (Unraid's Helpers.php xmlToCommand), so leave Tailscale
+  off for this container.
+
+  PERSISTENCE IS ON (appendonly yes). kb-litellm's spend counters live here, so a lost /data
+  resets the monthly counts the provider caps are measured against. Put the Data path on a pool
+  and under backup.
+
+  THE IMAGE TAG IS THE 7.4 PATCH LINE, not one pinned patch release: redis:7.4-alpine moves
+  to each 7.4.x release, so an Update takes upstream's security fixes without a template
+  change and never a new minor version. It is declared in ROLLING_TAG_EXCEPTIONS in
+  tests/test_template_invariants.py with that reason; the blast radius is a cache and a
+  budget counter, stated above.
+-->
+<Container version="2">
+  <Name>kb-redis</Name>
+  <Repository>redis:7.4-alpine</Repository>
+  <Registry>https://hub.docker.com/_/redis</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/redis/redis</Project>
+  <Overview>Redis for the knowledge stack's model router - the provider spend counters and the response cache kb-litellm keeps here. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you; kb-litellm needs this one up for its budgets. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). On that network this container is reachable by its container name, kb-redis, on port 6379. Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and that name stops resolving. EXPOSURE: this template publishes no host port, so Redis is reachable only from a container on the kb network. PASSWORD: set the REDIS_PASSWORD Variable and give the same value to kb-litellm. It is not written into Post Arguments or Extra Parameters: Post Arguments is a small sh wrapper that reads the Variable inside the container and refuses to start without it. Leave Post Arguments as shipped and leave Tailscale off for this container. STORAGE: Redis runs with append-only persistence and the spend counters live in the Data mount, so set it to a path on a pool and put it under backup; losing it resets the counts the spend caps are measured against. IMAGE TAG: redis:7.4-alpine follows the 7.4 patch releases, so an Update takes security fixes but never a new minor version.</Overview>
+  <Category>Database:</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-redis.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-redis.png</Icon>
+  <ExtraParams/>
+  <PostArgs>sh -c 'test -n "$REDIS_PASSWORD" || { echo "kb-redis: REDIS_PASSWORD is empty, refusing to start"; exit 1; }; exec docker-entrypoint.sh redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes'</PostArgs>
+  <DateInstalled/>
+  <Description>Redis for the model router's budgets and cache. Start after kb-postgres, before kb-litellm. Password-protected; publishes no host port.</Description>
+
+  <Config Name="Data" Target="/data" Default="" Mode="rw" Description="REQUIRED. The append-only file; the model router's spend counters live here. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-redis/data. Put it under backup. The official Redis image sets the ownership of this directory itself before dropping privileges." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="REDIS_PASSWORD" Target="REDIS_PASSWORD" Default="" Mode="" Description="REQUIRED. Password clients must give. Use a long random value and give the same one to kb-litellm. The container refuses to start when this is empty." Type="Variable" Display="always" Required="true" Mask="true"/>
+</Container>

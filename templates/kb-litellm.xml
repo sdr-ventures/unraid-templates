@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<!--
+  kb-litellm - LiteLLM (github.com/BerriAI/litellm), the model router for the knowledge stack:
+  one OpenAI-style endpoint in front of local models and paid providers, with fallbacks,
+  virtual keys and per-provider spend caps. Third-party image; nothing here is specific to any
+  host or operator.
+
+  START ORDER FOR THE WHOLE SET:
+      kb-postgres -> kb-redis -> kb-litellm -> kb-service -> kb-webui
+  Unraid templates have no equivalent of compose's depends_on or healthchecks, so nothing
+  starts these in order for you. This one needs kb-postgres (its own database) and kb-redis
+  (its budgets) up first.
+
+  NETWORK WIRING (the same for the whole set). The kb containers share ONE user-defined Docker
+  network named kb, which the operator creates once, by hand, before the first start - a
+  network is a host-side object a template cannot create, so every template here keeps
+  Network bridge and empty Extra Parameters, and you set the Network field to kb when you
+  create each container. On that network the other containers are reachable by container name
+  (kb-postgres, kb-redis). Docker must be set to preserve user-defined networks across updates
+  (Unraid: Settings > Docker, "Preserve user defined networks" = Yes); without it the network
+  is removed by a Docker restart and the containers fall back to bridge, where the container
+  names do not resolve.
+
+  THE HOST PORT SHIPS BLANK AND IS REQUIRED. LiteLLM listens on 4000 inside the container and
+  is LAN-exposed through the host port the operator picks: no default is offered, so a port
+  already taken on the host is never silently reused.
+
+  NOTHING WORKS UNTIL THREE THINGS EXIST:
+    1. A config.yaml that lists models. LiteLLM routes nothing until it does. Models are
+       read from this file, not from the database (see check 3 below).
+    2. A database named litellm on kb-postgres. kb-postgres creates only the one database its
+       own POSTGRES_DB names, so create litellm by hand first (the DATABASE_URL user must be
+       able to create tables in it). LiteLLM migrates its own schema at start.
+    3. kb-redis running, with the same password as REDIS_PASSWORD here. Budgets and the
+       response cache are read from it; they are switched on in config.yaml, which names these
+       variables as os.environ/REDIS_HOST, os.environ/REDIS_PORT and os.environ/REDIS_PASSWORD.
+
+  THE IMAGE TAG IS PINNED to one release; an Update is a deliberate bump of that pin. The
+  release's multi-arch index digest, for System Admin's verification, is
+      sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802
+  The Repository is pinned by tag, not tag@digest, so Unraid's own update check keeps working.
+
+  THE FIVE CHECKS, answered from upstream at tag v1.105.1 (github.com/BerriAI/litellm):
+    1. Config flag and path. The CLI takes a config option, spelled with two dashes or as -c
+       (litellm/proxy/proxy_cli.py:781-786); the image runs docker/prod_entrypoint.sh, which is
+       `exec litellm "$@"` (line 10), with a default CMD that sets the port option to 4000
+       (Dockerfile:168-169). There is NO built-in default path: the proxy reads whatever file
+       the config option names. This template mounts the file read-only at /app/config.yaml
+       (WORKDIR /app) and Post Arguments gives the config option that path plus the port option
+       4000. Post Arguments REPLACES the image's CMD, which is why the port is repeated.
+    2. UI login variables: UI_USERNAME (default admin) and UI_PASSWORD
+       (litellm/proxy/auth/login_utils.py:134-135). When UI_PASSWORD is UNSET the master key
+       is the password (:136-137); a BLANK Variable is an empty string, not unset, so
+       UI_PASSWORD is Required here.
+    3. Models in the config file versus STORE_MODEL_IN_DB. The flag defaults to false
+       (litellm/proxy/proxy_server.py:2654, :6763) and is switched on by the environment
+       variable STORE_MODEL_IN_DB=True (proxy_server.py:10703). This template does not carry
+       that variable, so models come from config.yaml only and the admin UI's add-model
+       feature answers "Set STORE_MODEL_IN_DB='True' in your env"
+       (litellm/proxy/management_endpoints/model_management_endpoints.py:2291). Keys, teams
+       and spend still live in the database.
+    4. Telemetry opt-out. None exists at this tag, so nothing is shipped: the telemetry
+       option is a hidden, deprecated no-op (litellm/proxy/proxy_cli.py:793-800), and no
+       environment variable for it is read anywhere under litellm/. The one name containing
+       TELEMETRY, DISABLE_TELEMETRY at litellm/llms/claude_code/harness/transformation.py:109,
+       is a setting LiteLLM hands to a Claude Code harness it manages, not a switch for the
+       proxy.
+    5. The user the image runs as: root. Dockerfile:120 is `USER root` in the final stage and
+       the published image's config reads User = root; there is no non-root build at this tag
+       and ExtraParams stays empty, so no user override is applied. The only host path mounted is the
+       config file, read-only, so nothing here is written as root on the host.
+
+  UPSTREAM REFERENCE (names verified at tag v1.105.1; lines are in that tag's tree):
+      litellm/proxy/proxy_server.py                 LITELLM_MASTER_KEY :1286, :1326;
+                                                    REDIS_HOST :6319, REDIS_PORT :6320,
+                                                    REDIS_PASSWORD :6330-6331
+      litellm/proxy/auth/master_key_boot_check.py   refuses to start on a blank or unset master
+                                                    key, or sk-1234 (:19, :200-208);
+                                                    upstream's own generated key is sk- plus
+                                                    64 hex digits (:21-22)
+      litellm/proxy/common_utils/encrypt_decrypt_utils.py:29   LITELLM_SALT_KEY
+      litellm/proxy/schema.prisma:3                 DATABASE_URL, via env("DATABASE_URL")
+      litellm/_redis.py:485-500                     REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
+      litellm/llms/anthropic/common_utils.py:1137   ANTHROPIC_API_KEY
+      litellm/llms/xai/common_utils.py:73-75        XAI_API_KEY
+      litellm/llms/gemini/common_utils.py:380,471   GEMINI_API_KEY
+      litellm/llms/perplexity/chat/transformation.py:30   PERPLEXITYAI_API_KEY
+      litellm/proxy/health_endpoints/_health_endpoints.py:1959-1967   GET /health/liveness,
+                                                    unauthenticated (public route,
+                                                    litellm/proxy/_types.py:827-828)
+-->
+<Container version="2">
+  <Name>kb-litellm</Name>
+  <Repository>ghcr.io/berriai/litellm:v1.105.1</Repository>
+  <Registry>https://github.com/BerriAI/litellm/pkgs/container/litellm</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/BerriAI/litellm</Project>
+  <Overview>The model router for the knowledge stack: one OpenAI-style endpoint in front of local models and paid providers, with fallbacks, virtual keys and per-provider spend caps. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NOTHING WORKS UNTIL: (1) config.yaml lists models - LiteLLM does nothing useful until it does, and models are read from that file, not from the database; (2) a database named litellm exists on kb-postgres, created by hand first, because kb-postgres only creates the one database its own settings name; (3) kb-redis is up with the same password, because the budgets need it. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose, behind the master key and virtual keys; anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. The admin UI is at /ui on that port; the link above is the unauthenticated liveness route. CONFIG: the config file is mounted read-only at /app/config.yaml and Post Arguments points the proxy at it; leave Post Arguments as shipped. A change to config.yaml takes effect when the container is restarted. KEYS: LITELLM_SALT_KEY encrypts the provider credentials stored in the database - set it once and never change it. Provider keys are optional and masked; leave a provider blank until you add it to config.yaml. The process runs as root inside the container (the image has no non-root build). IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:4000]/health/liveness</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-litellm.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-litellm.png</Icon>
+  <ExtraParams/>
+  <PostArgs>--config /app/config.yaml --port 4000</PostArgs>
+  <DateInstalled/>
+  <Description>Model router for the knowledge stack (local models plus paid providers, with spend caps). Start after kb-postgres and kb-redis, before kb-service. LAN-exposed; needs a config.yaml that lists models and its own litellm database.</Description>
+
+  <Config Name="HTTP Port" Target="4000" Default="" Mode="tcp" Description="REQUIRED. Host port for LiteLLM (API, /ui admin page and /health/liveness); the container always listens on 4000 internally - change the host side only. No default is offered: pick a free port." Type="Port" Display="always" Required="true" Mask="false"/>
+  <Config Name="config.yaml" Target="/app/config.yaml" Default="" Mode="ro" Description="REQUIRED. The proxy configuration file: the model list, routing, budgets and cache settings. Set an absolute path to the FILE, e.g. /mnt/&lt;pool&gt;/appdata/kb-litellm/config.yaml. Mounted read-only; edit it on the host and restart the container. LiteLLM does nothing until it lists models. Reference a secret as os.environ/&lt;VARIABLE&gt;, never as a literal." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="LITELLM_MASTER_KEY" Target="LITELLM_MASTER_KEY" Default="" Mode="" Description="REQUIRED. Administrator key for the proxy API. Use a long random value starting sk- (upstream's own generator makes sk- plus 64 hex digits). The proxy refuses to start when this is blank or the published example sk-1234." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="" Mode="" Description="REQUIRED. PostgreSQL connection URL, format postgresql://&lt;user&gt;:&lt;password&gt;@kb-postgres:5432/litellm - the user and password set on kb-postgres, the host being its container name on the kb network, and the litellm database created by hand beforehand. Percent-encode any reserved character in the password." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="LITELLM_SALT_KEY" Target="LITELLM_SALT_KEY" Default="" Mode="" Description="REQUIRED. Encrypts the provider credentials stored in the database. Set it once and NEVER change it: after a change those credentials can no longer be decrypted. Use a long random value and keep a copy." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="REDIS_HOST" Target="REDIS_HOST" Default="kb-redis" Mode="" Description="Redis host for budgets and cache: the container name of kb-redis on the kb network. Leave kb-redis." Type="Variable" Display="always" Required="true" Mask="false">kb-redis</Config>
+  <Config Name="REDIS_PORT" Target="REDIS_PORT" Default="6379" Mode="" Description="Redis port. Leave 6379." Type="Variable" Display="always" Required="true" Mask="false">6379</Config>
+  <Config Name="REDIS_PASSWORD" Target="REDIS_PASSWORD" Default="" Mode="" Description="REQUIRED. The password set on kb-redis; the same value." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="UI_USERNAME" Target="UI_USERNAME" Default="admin" Mode="" Description="Username for the admin UI at /ui. Upstream's own default is admin; a blank value would be an empty username, so it ships admin." Type="Variable" Display="always" Required="true" Mask="false">admin</Config>
+  <Config Name="UI_PASSWORD" Target="UI_PASSWORD" Default="" Mode="" Description="REQUIRED. Password for the admin UI at /ui. Use a long random value. Never leave it blank: a blank Variable is an EMPTY password, not an unset one, so the master key would not be the fallback." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="ANTHROPIC_API_KEY" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="Anthropic API key. Optional; leave blank until an Anthropic model is listed in config.yaml, which then names it as os.environ/ANTHROPIC_API_KEY." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="XAI_API_KEY" Target="XAI_API_KEY" Default="" Mode="" Description="xAI (Grok) API key. Optional; leave blank until an xAI model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="GEMINI_API_KEY" Target="GEMINI_API_KEY" Default="" Mode="" Description="Google Gemini API key. Optional; leave blank until a Gemini model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="PERPLEXITYAI_API_KEY" Target="PERPLEXITYAI_API_KEY" Default="" Mode="" Description="Perplexity API key. Optional; leave blank until a Perplexity model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
+</Container>

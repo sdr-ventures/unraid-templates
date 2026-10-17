@@ -197,5 +197,28 @@
       "KB_EMBED_MODEL": "reads KB_EMBED_MODEL: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync",
       "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync"
     }
+  },
+  "kb-redis": {
+    "no_local_consumer": false,
+    "vars": {
+      "REDIS_PASSWORD": "reads REDIS_PASSWORD in the kb-redis template's own Post Arguments wrapper (templates/kb-redis.xml): sh expands \"$REDIS_PASSWORD\" inside the container into redis-server --requirepass, and exits 1 first when it is empty; the stock redis:7.4-alpine image's docker-entrypoint.sh has no environment-variable password option, which is why the wrapper exists"
+    }
+  },
+  "kb-litellm": {
+    "no_local_consumer": false,
+    "vars": {
+      "LITELLM_MASTER_KEY": "reads LITELLM_MASTER_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/proxy/proxy_server.py:1286 get_secret_str(\"LITELLM_MASTER_KEY\") and :1326 os.getenv(MASTER_KEY_ENV_VAR); litellm/proxy/auth/master_key_boot_check.py:200-208 refuses to start on an unset, blank or sk-1234 value",
+      "DATABASE_URL": "reads DATABASE_URL in https://github.com/BerriAI/litellm at v1.105.1: litellm/proxy/schema.prisma:3 url = env(\"DATABASE_URL\") (the Prisma datasource); litellm/proxy/db/check_migration.py:114 os.getenv(\"DATABASE_URL\"); litellm/proxy/auth/login_utils.py:338 os.getenv(\"DATABASE_URL\") gates the database-backed login",
+      "LITELLM_SALT_KEY": "reads LITELLM_SALT_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/proxy/common_utils/encrypt_decrypt_utils.py:29 os.getenv(\"LITELLM_SALT_KEY\", None), the key that encrypts the provider credentials stored in the database",
+      "REDIS_HOST": "reads REDIS_HOST in https://github.com/BerriAI/litellm at v1.105.1: litellm/_redis.py:485-486 requires REDIS_HOST and REDIS_PORT in os.environ when REDIS_URL is unset and :500 builds the connection URL from them; litellm/proxy/proxy_server.py:6319 get_secret(\"REDIS_HOST\", None) for the cache",
+      "REDIS_PORT": "reads REDIS_PORT in https://github.com/BerriAI/litellm at v1.105.1: litellm/_redis.py:485-486 requires REDIS_HOST and REDIS_PORT in os.environ when REDIS_URL is unset and :500 builds the connection URL from them; litellm/proxy/proxy_server.py:6320 get_secret(\"REDIS_PORT\", None) for the cache",
+      "REDIS_PASSWORD": "reads REDIS_PASSWORD in https://github.com/BerriAI/litellm at v1.105.1: litellm/_redis.py:495-497 puts it in the connection URL when it is in os.environ; litellm/proxy/proxy_server.py:6330-6331 get_secret(\"REDIS_PASSWORD\", None) for the cache",
+      "UI_USERNAME": "reads UI_USERNAME in https://github.com/BerriAI/litellm at v1.105.1: litellm/proxy/auth/login_utils.py:134 os.getenv(\"UI_USERNAME\", \"admin\") in get_ui_credentials; the default is upstream's own",
+      "UI_PASSWORD": "reads UI_PASSWORD in https://github.com/BerriAI/litellm at v1.105.1: litellm/proxy/auth/login_utils.py:135 os.getenv(\"UI_PASSWORD\", None) in get_ui_credentials; :136-137 fall back to the master key only when it is None, so a blank Variable is an empty password, not the fallback",
+      "ANTHROPIC_API_KEY": "reads ANTHROPIC_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/anthropic/common_utils.py:1137 get_secret_str(\"ANTHROPIC_API_KEY\") when no per-model api_key is set in config.yaml",
+      "XAI_API_KEY": "reads XAI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/xai/common_utils.py:73-75 get_secret_str(\"XAI_API_KEY\") when no per-model api_key is set in config.yaml",
+      "GEMINI_API_KEY": "reads GEMINI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/gemini/common_utils.py:380 and :471 get_secret_str(\"GEMINI_API_KEY\") after GOOGLE_API_KEY, when no per-model api_key is set in config.yaml",
+      "PERPLEXITYAI_API_KEY": "reads PERPLEXITYAI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/perplexity/chat/transformation.py:30 get_secret_str(\"PERPLEXITYAI_API_KEY\") when no per-model api_key is set in config.yaml"
+    }
   }
 }
