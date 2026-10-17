@@ -33,6 +33,8 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kb-litellm (start 3rd, after kb-redis; needs a `litellm` database and a `config.yaml`) | `icons/kb-litellm.png` | `templates/kb-litellm.xml` |
 | kb-service (start 4th, after kb-litellm) | `icons/kb-service.png` | `templates/kb-service.xml` |
 | kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
+| kw-ingress (KW edge, dev side; publishes one port, `internal` network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
+| kw-proxy (KW edge, dev side; publishes no port, `internal` network) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
 
 Every template + icon in this repo must have a row here — keep this table in sync when adding either (the reauth-bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.
 

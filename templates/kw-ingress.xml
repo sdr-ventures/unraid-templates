@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<!--
+  kw-ingress - the inbound gateway of the KW edge: a stock Caddy that routes the two KW hostnames
+  (keystone-web and tape) behind the public reverse proxy. Stock digest-pinned image; the config is
+  a host-mounted Caddyfile and every site value is a Variable the operator fills in. Nothing here is
+  specific to any host or operator.
+
+  The Caddyfile this container mounts is kw-edge's config/caddy/Caddyfile (its README is the
+  contract). The file reads its operator values from the environment variables below; every one
+  ships blank, and a blank value answers the route it guards with a refusal, never with an open route.
+
+  NETWORK WIRING. kw-ingress attaches to the internal Docker network that the operator creates once,
+  by hand, before the first start (a template cannot create a network, so Network stays bridge here;
+  set the Network field to the internal network's name when you create the container). Its second
+  leg is the host's br0: that address is re-attached by System Admin's host watcher (network.md rule 7),
+  not by this template, because Unraid's update and recreate drop a second network. No other KW
+  container has a second network.
+
+  ONE PORT IS PUBLISHED. The Published port is blank and Required: the port register is System
+  Admin's to assign. kw-ingress is the only KW container with a published port; kw-proxy publishes
+  none.
+
+  HEALTH CHECK. Set the container health check by hand (Extra Parameters, System Admin's per-instance
+  value), not in this template: the template carries no health check field and ships Extra Parameters
+  empty. The check is: wget -q -O /dev/null http://127.0.0.1/kw-health (answered to loopback only).
+
+  RESOURCE LIMITS. CPU and memory limits are System Admin's per-instance values, set on the container
+  and recorded in its Overview, not in this template.
+
+  IMAGE. caddy:2.11.7 pinned by digest, the same pin as kw-edge's pins.json. An Update does not move it;
+  a new release is a reviewed change to this template.
+-->
+<Container version="2">
+  <Name>kw-ingress</Name>
+  <Repository>caddy:2.11.7@sha256:f2a1290d0463aad60660d4ec134943f183ee2a5f6c3eb7bf32dd984f2f020772</Repository>
+  <Registry>https://hub.docker.com/_/caddy</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://caddyserver.com</Project>
+  <Overview>Inbound gateway for the KW edge (kw-ingress): a stock Caddy that serves the keystone and tape hostnames behind the public reverse proxy, and refuses everything it does not name. PUBLISHED PORT: exactly one, blank and Required; System Admin assigns it. NETWORK: Network stays bridge in this template, because a template cannot create a network; set Network to the internal Docker network the operator created by hand before the first start. Its second leg is the host's br0, re-attached by System Admin's host watcher (network.md rule 7), not by this template. No other KW container has a second network. CONFIG: the Caddyfile is mounted read-only from the host, and the environment Variables below carry every site value (hostnames, origins, client ranges, the trusted proxy, the peer allowance). All of them ship blank and must be set before the gateway can serve anything; a blank value refuses the route it guards. HEALTH CHECK: set it by hand in Extra Parameters, System Admin's value: wget -q -O /dev/null http://127.0.0.1/kw-health, answered to loopback only. RESOURCE LIMITS: CPU and memory are System Admin's per-instance values, recorded in this Overview. IMAGE: caddy:2.11.7 pinned by digest, the same pin as kw-edge's pins.json.</Overview>
+  <Category>Network:Proxy</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-ingress.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kw-ingress.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Description>Inbound gateway for the KW edge: routes the keystone and tape hostnames, refuses the rest. Publishes one port (System Admin assigns it). Every site value is a blank Variable set at creation.</Description>
+
+  <Config Name="Published port" Target="80" Default="" Mode="tcp" Description="REQUIRED. The host port that reaches kw-ingress's listener on container port 80, assigned by System Admin's port register. Leave it to System Admin's value; it is the only port this container publishes." Type="Port" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="Caddyfile directory" Target="/etc/caddy" Default="" Mode="ro" Description="REQUIRED. Host directory holding kw-edge's config/caddy/Caddyfile, mounted read-only at /etc/caddy. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kw-ingress/caddy. The gateway reads the file at start; reload it with caddy reload, not by restarting." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_TRUSTED_PROXY" Target="KW_TRUSTED_PROXY" Default="" Mode="" Description="REQUIRED. Space-separated addresses whose X-Forwarded-For is believed: the public reverse proxy and every tunnel connector that can carry the route, e.g. &lt;reverse-proxy-address&gt; &lt;connector-address&gt;. Read each from the ingress's own log, never from docker inspect. Blank: no forwarded address is trusted and every browser is refused (403)." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_REMOTE_ALLOW" Target="KW_REMOTE_ALLOW" Default="" Mode="" Description="REQUIRED. Space-separated TCP peers that may reach the published port at all: the public reverse proxy, the legacy LAN apps and the workstation, e.g. &lt;peer-address-or-range&gt;. Blank: every request is refused (403) except the loopback health path." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_KEYSTONE_HOST" Target="KW_KEYSTONE_HOST" Default="" Mode="" Description="REQUIRED. Host header name(s) of the keystone hostname, space separated, e.g. &lt;keystone-host-name&gt;. Blank: the keystone routes answer 404." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_TAPE_HOST" Target="KW_TAPE_HOST" Default="" Mode="" Description="REQUIRED. Host header name(s) of tape, space separated: the public name and any LAN name the legacy apps use, e.g. &lt;tape-public-name&gt; &lt;tape-lan-name&gt;. Blank: the tape routes answer 404." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_WEB_ORIGIN" Target="KW_WEB_ORIGIN" Default="" Mode="" Description="REQUIRED. keystone-web's origin as address:port, e.g. &lt;keystone-web-address&gt;:&lt;port&gt;. Blank: the keystone routes answer 503." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_API_ORIGIN" Target="KW_API_ORIGIN" Default="" Mode="" Description="REQUIRED. tape's origin as address:port, e.g. &lt;tape-address&gt;:&lt;port&gt;. Blank: the tape routes answer 503." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_WEB_CLIENTS" Target="KW_WEB_CLIENTS" Default="" Mode="" Description="REQUIRED. Client ranges allowed on the keystone pages and tape's public paths, matched on the real browser address, e.g. &lt;client-range&gt;. Blank: those routes answer 403 to every client." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_ADMIN_CLIENTS" Target="KW_ADMIN_CLIENTS" Default="" Mode="" Description="REQUIRED. Client ranges allowed on tape's /v1/admin, matched on the real browser address, e.g. &lt;admin-client-range&gt;. Blank: those routes answer 403 to every client." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KW_API_CLIENTS" Target="KW_API_CLIENTS" Default="" Mode="" Description="REQUIRED. Client ranges allowed on tape's credentialed consumer API (the legacy apps, the Finances client) and on keystone-web's /api/health (LAN monitoring), e.g. &lt;lan-client-range&gt;. Blank: those routes answer 403 to every client." Type="Variable" Display="always" Required="true" Mask="false"/>
+</Container>

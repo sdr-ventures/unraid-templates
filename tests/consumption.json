@@ -244,5 +244,23 @@
       "CLOUDFLARE_API_KEY": "reads CLOUDFLARE_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:16 api_key_env = (\"CLOUDFLARE_API_KEY\",), the key the decisions provider reads; litellm/constants.py:1964 lists it in SENTRY_DENYLIST, the names kept out of error reports",
       "CLOUDFLARE_ACCOUNT_ID": "reads CLOUDFLARE_ACCOUNT_ID in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:20 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the endpoint; litellm/llms/cloudflare/chat/transformation.py:51 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the chat endpoint when no api_base is given"
     }
+  },
+  "kw-ingress": {
+    "no_local_consumer": false,
+    "vars": {
+      "KW_TRUSTED_PROXY": "reads KW_TRUSTED_PROXY via {$KW_TRUSTED_PROXY} in config/caddy/Caddyfile:34 (trusted_proxies static: the forwarders whose X-Forwarded-For is believed)",
+      "KW_REMOTE_ALLOW": "reads KW_REMOTE_ALLOW via {$KW_REMOTE_ALLOW} in config/caddy/Caddyfile:73 (@peer_denied not remote_ip: the peer gate on the published port)",
+      "KW_KEYSTONE_HOST": "reads KW_KEYSTONE_HOST via {$KW_KEYSTONE_HOST} in config/caddy/Caddyfile:79 (@keystone host matcher: the keystone Host header)",
+      "KW_TAPE_HOST": "reads KW_TAPE_HOST via {$KW_TAPE_HOST} in config/caddy/Caddyfile:109 (@tape host matcher: the tape Host headers)",
+      "KW_WEB_ORIGIN": "reads KW_WEB_ORIGIN via {$KW_WEB_ORIGIN} in config/caddy/Caddyfile:87,97 (reverse_proxy to keystone-web on the health and page routes)",
+      "KW_API_ORIGIN": "reads KW_API_ORIGIN via {$KW_API_ORIGIN} in config/caddy/Caddyfile:118,131,150 (reverse_proxy to tape on the public, admin and consumer routes)",
+      "KW_WEB_CLIENTS": "reads KW_WEB_CLIENTS via {$KW_WEB_CLIENTS} in config/caddy/Caddyfile:95,116 (client_ip matcher for the keystone pages and tape's public paths)",
+      "KW_ADMIN_CLIENTS": "reads KW_ADMIN_CLIENTS via {$KW_ADMIN_CLIENTS} in config/caddy/Caddyfile:129 (client_ip matcher for tape's /v1/admin)",
+      "KW_API_CLIENTS": "reads KW_API_CLIENTS via {$KW_API_CLIENTS} in config/caddy/Caddyfile:85,148 (client_ip matcher for keystone-web's /api/health and tape's consumer API)"
+    }
+  },
+  "kw-proxy": {
+    "no_local_consumer": false,
+    "vars": {}
   }
 }
