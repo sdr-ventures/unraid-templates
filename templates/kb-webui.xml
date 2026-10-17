@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<!--
+  kb-webui - Open WebUI (github.com/open-webui/open-webui), the chat window over the shared
+  knowledge library. Third-party image; nothing here is specific to any host or operator.
+
+  THE LAST TO START:
+      kb-postgres -> kb-service -> kb-webui
+  Unraid templates have no equivalent of compose's depends_on or healthchecks, so nothing
+  starts these in order for you.
+
+  NETWORK WIRING (the same for the whole set). The kb containers share ONE user-defined Docker
+  network named kb, which the operator creates once, by hand, before the first start - a
+  network is a host-side object a template cannot create, so every template here keeps
+  Network bridge and empty Extra Parameters, and you set the Network field to kb when you
+  create each container. On that network the other containers are reachable by container name
+  (kb-postgres, kb-service). Docker must be set to preserve user-defined networks across
+  updates (Unraid: Settings > Docker, "Preserve user defined networks" = Yes); without it the
+  network is removed by a Docker restart and the containers fall back to bridge.
+
+  THE HOST PORT SHIPS BLANK AND IS REQUIRED. Open WebUI listens on 8080 inside the container;
+  8080 is commonly taken on an Unraid host, so no default is offered and the operator picks a
+  free one.
+
+  PLAIN HTTP. This deployment serves the UI over plain HTTP on the LAN, so
+  WEBUI_SESSION_COOKIE_SECURE ships false (a Secure cookie is never sent over HTTP, so true
+  would make login silently fail). Turn it on the day a TLS front end exists.
+
+  SETTINGS THAT PERSIST. Open WebUI stores some settings (sign-up among them) in its own
+  database after the first start, and from then on the stored value wins over the Variable
+  until changed in the admin UI. The first administrator can always be created on an empty
+  database; ENABLE_SIGNUP=false only closes registration for everyone after that.
+
+  UPSTREAM REFERENCE (names verified at tag v0.11.4):
+      backend/open_webui/env.py     WEBUI_AUTH, WEBUI_SECRET_KEY, WEBUI_SESSION_COOKIE_SECURE,
+                                    ENABLE_VERSION_UPDATE_CHECK
+      backend/open_webui/config.py  ENABLE_SIGNUP, OLLAMA_BASE_URL, OPENAI_API_BASE_URL,
+                                    OPENAI_API_KEY
+      Dockerfile                    SCARF_NO_ANALYTICS, DO_NOT_TRACK, ANONYMIZED_TELEMETRY
+      backend/open_webui/main.py    GET /health returns {"status": true}
+-->
+<Container version="2">
+  <Name>kb-webui</Name>
+  <Repository>ghcr.io/open-webui/open-webui:v0.11.4</Repository>
+  <Registry>https://github.com/open-webui/open-webui/pkgs/container/open-webui</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/open-webui/open-webui</Project>
+  <Overview>Open WebUI - the chat window over the shared knowledge library. STARTED IN ORDER: kb-postgres first, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose; unlike kb-postgres it is meant to be reached from the wider network. Anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. COOKIES: the UI is served over plain HTTP, so the secure-cookie setting ships off; turn WEBUI_SESSION_COOKIE_SECURE on when a TLS front end exists, or login breaks the other way round. ACCOUNTS: authentication is on and sign-up is off; the first administrator is created on the first visit to an empty database, after which registration stays closed. STORAGE: the data mount holds the chat database and uploaded files - put it under backup. The update check and the analytics switches are off. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-webui.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-webui.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <DateInstalled/>
+  <Description>Open WebUI chat window over the knowledge library. Start this last. LAN-exposed; set a free host port and a secret key.</Description>
+
+  <Config Name="HTTP Port" Target="8080" Default="" Mode="tcp" Description="REQUIRED. Host port for the web UI; the container always listens on 8080 internally - change the host side only. No default is offered because 8080 is taken on the usual host: pick a free port." Type="Port" Display="always" Required="true" Mask="false"/>
+  <Config Name="Data" Target="/app/backend/data" Default="" Mode="rw" Description="REQUIRED. Chat database, uploaded files and model caches. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-webui/data. Put it under backup." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="WEBUI_SECRET_KEY" Target="WEBUI_SECRET_KEY" Default="" Mode="" Description="REQUIRED. Signing key for login sessions; the app refuses to start with authentication on and no key. Use a long random value and keep it stable - changing it signs everyone out." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="WEBUI_AUTH" Target="WEBUI_AUTH" Default="true" Mode="" Description="Require login. Leave true." Type="Variable" Display="always" Required="true" Mask="false">true</Config>
+  <Config Name="ENABLE_SIGNUP" Target="ENABLE_SIGNUP" Default="false" Mode="" Description="Allow self-registration. false: only the first administrator, created on an empty database, and accounts an administrator adds." Type="Variable" Display="always" Required="true" Mask="false">false</Config>
+  <Config Name="WEBUI_SESSION_COOKIE_SECURE" Target="WEBUI_SESSION_COOKIE_SECURE" Default="false" Mode="" Description="Mark the login cookies Secure. false while the UI is served over plain HTTP (a Secure cookie is never sent over HTTP and login fails). Set true when a TLS front end exists." Type="Variable" Display="always" Required="true" Mask="false">false</Config>
+  <Config Name="OLLAMA_BASE_URL" Target="OLLAMA_BASE_URL" Default="" Mode="" Description="Ollama endpoint, format http://&lt;host&gt;:&lt;port&gt; . Blank: the app falls back to its own built-in address, which reaches nothing useful from this container." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="OPENAI_API_BASE_URL" Target="OPENAI_API_BASE_URL" Default="" Mode="" Description="OpenAI-compatible endpoint, format http://&lt;host&gt;:&lt;port&gt;/v1 . Blank: the app falls back to the public OpenAI address, which without a key does nothing." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="OPENAI_API_KEY" Target="OPENAI_API_KEY" Default="" Mode="" Description="Key for the OpenAI-compatible endpoint above. Blank if the endpoint takes none." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="ENABLE_VERSION_UPDATE_CHECK" Target="ENABLE_VERSION_UPDATE_CHECK" Default="false" Mode="" Description="Ask the upstream project whether a newer version exists. false: no outbound check." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="SCARF_NO_ANALYTICS" Target="SCARF_NO_ANALYTICS" Default="true" Mode="" Description="Opt out of Scarf package analytics. Leave true." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="DO_NOT_TRACK" Target="DO_NOT_TRACK" Default="true" Mode="" Description="Standard do-not-track switch read by bundled libraries. Leave true." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="ANONYMIZED_TELEMETRY" Target="ANONYMIZED_TELEMETRY" Default="false" Mode="" Description="Anonymized usage telemetry of the bundled vector-store library. Leave false." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+</Container>

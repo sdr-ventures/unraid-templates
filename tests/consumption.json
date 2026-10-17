@@ -160,5 +160,29 @@
       "ALPACA_PAPER_KEY_ID_3": "reads ALPACA_PAPER_KEY_ID_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
       "ALPACA_PAPER_SECRET_KEY_3": "reads ALPACA_PAPER_SECRET_KEY_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged"
     }
+  },
+  "kb-postgres": {
+    "no_local_consumer": false,
+    "vars": {
+      "POSTGRES_PASSWORD": "reads POSTGRES_PASSWORD in the stock postgres image's docker-entrypoint.sh (docker_setup_env / docker_setup_db, first start of an empty data directory); upstream reference https://github.com/docker-library/docs/blob/master/postgres/README.md#postgres_password; pgvector/pgvector is a thin layer over that image",
+      "POSTGRES_USER": "reads POSTGRES_USER in the stock postgres image's docker-entrypoint.sh (docker_setup_env, first start only); upstream reference https://github.com/docker-library/docs/blob/master/postgres/README.md#postgres_user",
+      "POSTGRES_DB": "reads POSTGRES_DB in the stock postgres image's docker-entrypoint.sh (docker_setup_env / docker_setup_db, first start only); upstream reference https://github.com/docker-library/docs/blob/master/postgres/README.md#postgres_db"
+    }
+  },
+  "kb-webui": {
+    "no_local_consumer": false,
+    "vars": {
+      "WEBUI_SECRET_KEY": "reads WEBUI_SECRET_KEY in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/env.py:762 os.getenv('WEBUI_SECRET_KEY'); env.py:780 exits at startup when WEBUI_AUTH is on and it is empty",
+      "WEBUI_AUTH": "reads WEBUI_AUTH in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/env.py:751 os.getenv('WEBUI_AUTH', 'True')",
+      "ENABLE_SIGNUP": "reads ENABLE_SIGNUP in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/config.py:1664 os.getenv('ENABLE_SIGNUP', 'True'); routers/auths.py:912 does not gate the first administrator on it",
+      "WEBUI_SESSION_COOKIE_SECURE": "reads WEBUI_SESSION_COOKIE_SECURE in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/env.py:770 os.getenv('WEBUI_SESSION_COOKIE_SECURE', 'false'); env.py:772 uses it as the fallback for WEBUI_AUTH_COOKIE_SECURE",
+      "OLLAMA_BASE_URL": "reads OLLAMA_BASE_URL in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/config.py:241 os.getenv('OLLAMA_BASE_URL', ''); config.py:292 replaces blank and '/ollama' with a built-in address",
+      "OPENAI_API_BASE_URL": "reads OPENAI_API_BASE_URL in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/config.py:323 os.getenv('OPENAI_API_BASE_URL', ''); config.py:329 falls back to the public OpenAI address when blank",
+      "OPENAI_API_KEY": "reads OPENAI_API_KEY in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/config.py:322 os.getenv('OPENAI_API_KEY', '')",
+      "ENABLE_VERSION_UPDATE_CHECK": "reads ENABLE_VERSION_UPDATE_CHECK in https://github.com/open-webui/open-webui at v0.11.4: backend/open_webui/env.py:1202 os.getenv('ENABLE_VERSION_UPDATE_CHECK', 'true')",
+      "SCARF_NO_ANALYTICS": "reads SCARF_NO_ANALYTICS in the bundled Scarf analytics library, not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.11.4: Dockerfile:92 ENV SCARF_NO_ANALYTICS=true, which this Variable overrides",
+      "DO_NOT_TRACK": "reads DO_NOT_TRACK in bundled libraries, not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.11.4: Dockerfile:93 ENV DO_NOT_TRACK=true, which this Variable overrides",
+      "ANONYMIZED_TELEMETRY": "reads ANONYMIZED_TELEMETRY in the bundled vector-store library (chromadb), not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.11.4: Dockerfile:94 ENV ANONYMIZED_TELEMETRY=false, which this Variable overrides"
+    }
   }
 }
