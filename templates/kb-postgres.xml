@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!--
+  kb-postgres - the PostgreSQL (with the pgvector extension) behind the knowledge library.
+  Stock image from Docker Hub; nothing here is specific to any host or operator.
+
+  THE FIRST TO START:
+      kb-postgres -> kb-service -> kb-webui
+  Unraid templates have no equivalent of compose's depends_on or healthchecks, so nothing
+  starts these in order for you. kb-service expects the database to be reachable when it
+  comes up, which is why this one goes first.
+
+  NETWORK WIRING (the same for the whole set). The kb containers share ONE user-defined Docker
+  network named kb, which the operator creates once, by hand, before the first start - a
+  network is a host-side object a template cannot create, so every template here keeps
+  Network bridge and empty Extra Parameters, and you set the Network field to kb when you
+  create each container. On that network this container is reachable by its own container
+  name, kb-postgres, on PostgreSQL's port 5432. Docker must be set to preserve user-defined
+  networks across updates (Unraid: Settings > Docker, "Preserve user defined networks" = Yes);
+  without it the network is removed by a Docker restart and the containers fall back to
+  bridge, where that name does not resolve.
+
+  NO HOST PORT IS PUBLISHED, AND THERE IS NO PORT CONFIG AT ALL. Blanking a Port Config's host
+  value still republishes its Default, so the only way to publish nothing is to declare no
+  Port. The database is reachable only from a container on the kb network.
+
+  THE IMAGE TAG IS PINNED to a pgvector release on PostgreSQL 17. A major-version change of
+  the data directory is a dump and restore, not an Update: back up, bump the pin, verify the
+  service reconnects.
+
+  POSTGRES_PASSWORD, POSTGRES_USER and POSTGRES_DB are read by the upstream postgres image's
+  entrypoint on the FIRST start of an empty data directory only; changing them afterwards
+  does not change an existing database.
+-->
+<Container version="2">
+  <Name>kb-postgres</Name>
+  <Repository>pgvector/pgvector:0.8.7-pg17</Repository>
+  <Registry>https://hub.docker.com/r/pgvector/pgvector</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/pgvector/pgvector</Project>
+  <Overview>PostgreSQL 17 with the pgvector extension - the database behind the shared knowledge library. STARTED IN ORDER: kb-postgres first, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). On that network this container is reachable by its container name, kb-postgres, on port 5432. Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and that name stops resolving. EXPOSURE: this template publishes no host port, so the database is reachable only from a container on the kb network, not from the wider network this host is on. STORAGE: the data mount holds the whole database - set it to a path on a pool and put it under backup. CREDENTIALS: the password is set once, at the first start of an empty data directory, and must match what kb-service is given. IMAGE TAG: pinned to one pgvector release on PostgreSQL 17; a major-version change is a dump and restore, not an Update.</Overview>
+  <Category>Database:</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-postgres.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-postgres.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <DateInstalled/>
+  <Description>PostgreSQL 17 with pgvector for the knowledge library. Start this first. Reachable only on the kb network; publishes no host port.</Description>
+
+  <Config Name="Data" Target="/var/lib/postgresql/data" Default="" Mode="rw" Description="REQUIRED. The database files. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-postgres/data - not the user-share FUSE overlay. Put it under backup." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="POSTGRES_PASSWORD" Target="POSTGRES_PASSWORD" Default="" Mode="" Description="REQUIRED. Password of the database user, set at the first start of an empty data directory. Use a long random value and give the same one to kb-service." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="POSTGRES_USER" Target="POSTGRES_USER" Default="kb" Mode="" Description="Database user created at the first start." Type="Variable" Display="always" Required="true" Mask="false">kb</Config>
+  <Config Name="POSTGRES_DB" Target="POSTGRES_DB" Default="kb" Mode="" Description="Database created at the first start." Type="Variable" Display="always" Required="true" Mask="false">kb</Config>
+</Container>
