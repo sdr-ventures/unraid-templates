@@ -25,29 +25,49 @@
   WEBUI_SESSION_COOKIE_SECURE ships false (a Secure cookie is never sent over HTTP, so true
   would make login silently fail). Turn it on the day a TLS front end exists.
 
+  BLANK VALUES. Unraid passes a blank Variable as an empty string. Two names ship with a value
+  because a blank one stops the app: CORS_ALLOW_ORIGIN (an empty origin fails validation at
+  start) and JWT_EXPIRES_IN (an empty duration fails sign-in). FORWARDED_ALLOW_IPS ships blank
+  and the app then trusts every sender, which is its own default.
+
   SETTINGS THAT PERSIST. Open WebUI stores some settings (sign-up among them) in its own
   database after the first start, and from then on the stored value wins over the Variable
   until changed in the admin UI. The first administrator can always be created on an empty
   database; ENABLE_SIGNUP=false only closes registration for everyone after that.
 
-  UPSTREAM REFERENCE (names verified at tag v0.11.4):
-      backend/open_webui/env.py     WEBUI_AUTH, WEBUI_SECRET_KEY, WEBUI_SESSION_COOKIE_SECURE,
-                                    ENABLE_VERSION_UPDATE_CHECK
-      backend/open_webui/config.py  ENABLE_SIGNUP, OLLAMA_BASE_URL, OPENAI_API_BASE_URL,
-                                    OPENAI_API_KEY
-      Dockerfile                    SCARF_NO_ANALYTICS, DO_NOT_TRACK, ANONYMIZED_TELEMETRY
-      backend/open_webui/main.py    GET /health returns {"status": true}
+  UPSTREAM REFERENCE (names verified at tag v0.12.3):
+      backend/open_webui/env.py                      WEBUI_AUTH, WEBUI_SECRET_KEY,
+                                                     WEBUI_SESSION_COOKIE_SECURE,
+                                                     WEBUI_SESSION_COOKIE_SAME_SITE,
+                                                     ENABLE_VERSION_UPDATE_CHECK, REDIS_URL,
+                                                     WEBSOCKET_MANAGER, ENABLE_ADMIN_CHAT_ACCESS,
+                                                     ENABLE_FORWARD_USER_INFO_HEADERS
+      backend/open_webui/config.py                   ENABLE_SIGNUP, OLLAMA_BASE_URL,
+                                                     OPENAI_API_BASE_URL, OPENAI_API_KEY,
+                                                     ENABLE_MFA, JWT_EXPIRES_IN,
+                                                     CORS_ALLOW_ORIGIN, ENABLE_ADMIN_EXPORT,
+                                                     ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
+                                                     ENABLE_COMMUNITY_SHARING
+      backend/open_webui/utils/mfa.py                MFA_ENCRYPTION_KEY
+      backend/open_webui/utils/security_headers.py   HSTS, XFRAME_OPTIONS, XCONTENT_TYPE,
+                                                     REFERRER_POLICY, PERMISSIONS_POLICY,
+                                                     CONTENT_SECURITY_POLICY,
+                                                     CONTENT_SECURITY_POLICY_REPORT_ONLY
+      backend/start.sh                               FORWARDED_ALLOW_IPS
+      Dockerfile                                     SCARF_NO_ANALYTICS, DO_NOT_TRACK,
+                                                     ANONYMIZED_TELEMETRY
+      backend/open_webui/main.py                     GET /health returns {"status": true}
 -->
 <Container version="2">
   <Name>kb-webui</Name>
-  <Repository>ghcr.io/open-webui/open-webui:v0.11.4</Repository>
+  <Repository>ghcr.io/open-webui/open-webui:v0.12.3</Repository>
   <Registry>https://github.com/open-webui/open-webui/pkgs/container/open-webui</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/open-webui/open-webui</Project>
-  <Overview>Open WebUI - the chat window over the shared knowledge library. STARTED IN ORDER: kb-postgres first, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose; unlike kb-postgres it is meant to be reached from the wider network. Anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. COOKIES: the UI is served over plain HTTP, so the secure-cookie setting ships off; turn WEBUI_SESSION_COOKIE_SECURE on when a TLS front end exists, or login breaks the other way round. ACCOUNTS: authentication is on and sign-up is off; the first administrator is created on the first visit to an empty database, after which registration stays closed. STORAGE: the data mount holds the chat database and uploaded files - put it under backup. The update check and the analytics switches are off. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
+  <Overview>Open WebUI - the chat window over the shared knowledge library. STARTED IN ORDER: kb-postgres first, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose; unlike kb-postgres it is meant to be reached from the wider network. Anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. COOKIES: the UI is served over plain HTTP, so the secure-cookie setting ships off; turn WEBUI_SESSION_COOKIE_SECURE on when a TLS front end exists, or login breaks the other way round. ACCOUNTS: authentication is on and sign-up is off; the first administrator is created on the first visit to an empty database, after which registration stays closed. MFA: multi-factor sign-in is on by default, so every user also needs an authenticator app. A user who loses both the authenticator and the recovery codes needs the operator to run open-webui mfa reset --email EMAIL --reason TEXT inside this container. SCOPE: these settings limit access through the application only; whoever has host or database access is inside the trust boundary, and encryption at rest is not configured. STORAGE: the data mount holds the chat database and uploaded files - put it under backup. The update check and the analytics switches are off. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-webui.xml</TemplateURL>
@@ -63,9 +83,29 @@
   <Config Name="WEBUI_AUTH" Target="WEBUI_AUTH" Default="true" Mode="" Description="Require login. Leave true." Type="Variable" Display="always" Required="true" Mask="false">true</Config>
   <Config Name="ENABLE_SIGNUP" Target="ENABLE_SIGNUP" Default="false" Mode="" Description="Allow self-registration. false: only the first administrator, created on an empty database, and accounts an administrator adds." Type="Variable" Display="always" Required="true" Mask="false">false</Config>
   <Config Name="WEBUI_SESSION_COOKIE_SECURE" Target="WEBUI_SESSION_COOKIE_SECURE" Default="false" Mode="" Description="Mark the login cookies Secure. false while the UI is served over plain HTTP (a Secure cookie is never sent over HTTP and login fails). Set true when a TLS front end exists." Type="Variable" Display="always" Required="true" Mask="false">false</Config>
+  <Config Name="WEBUI_SESSION_COOKIE_SAME_SITE" Target="WEBUI_SESSION_COOKIE_SAME_SITE" Default="lax" Mode="" Description="SameSite attribute of the login cookies: lax, strict or none. Leave lax. none is refused by browsers unless WEBUI_SESSION_COOKIE_SECURE is true." Type="Variable" Display="advanced" Required="false" Mask="false">lax</Config>
+  <Config Name="ENABLE_MFA" Target="ENABLE_MFA" Default="true" Mode="" Description="Require a second sign-in factor (an authenticator app) from every user. Leave true." Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+  <Config Name="MFA_ENCRYPTION_KEY" Target="MFA_ENCRYPTION_KEY" Default="" Mode="" Description="Fernet key (44 URL-safe base64 characters) that encrypts the stored MFA secrets. Blank: derived from WEBUI_SECRET_KEY. Set once; changing it later makes existing authenticators unusable." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="JWT_EXPIRES_IN" Target="JWT_EXPIRES_IN" Default="4w" Mode="" Description="How long a login lasts, as a duration such as 12h, 7d or 4w. Must not be blank: a blank value stops sign-in. -1 never expires and is not recommended." Type="Variable" Display="advanced" Required="false" Mask="false">4w</Config>
+  <Config Name="CORS_ALLOW_ORIGIN" Target="CORS_ALLOW_ORIGIN" Default="*" Mode="" Description="Browser origins allowed to call the API, semicolon-separated, each as &lt;scheme&gt;://&lt;host&gt;:&lt;port&gt;. Leave * (any origin; the app logs a warning). Must not be blank: a blank value stops the app from starting." Type="Variable" Display="advanced" Required="false" Mask="false">*</Config>
+  <Config Name="FORWARDED_ALLOW_IPS" Target="FORWARDED_ALLOW_IPS" Default="" Mode="" Description="Address of the reverse proxy whose forwarded client headers the app trusts, format &lt;proxy-ip&gt;. Blank: every sender is trusted, which is the app's own default. Set it once a proxy is in front of this container." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="OLLAMA_BASE_URL" Target="OLLAMA_BASE_URL" Default="" Mode="" Description="Ollama endpoint, format http://&lt;host&gt;:&lt;port&gt; . Blank: the app falls back to its own built-in address, which reaches nothing useful from this container." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="OPENAI_API_BASE_URL" Target="OPENAI_API_BASE_URL" Default="" Mode="" Description="OpenAI-compatible endpoint, format http://&lt;host&gt;:&lt;port&gt;/v1 . Blank: the app falls back to the public OpenAI address, which without a key does nothing." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="OPENAI_API_KEY" Target="OPENAI_API_KEY" Default="" Mode="" Description="Key for the OpenAI-compatible endpoint above. Blank if the endpoint takes none." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="REDIS_URL" Target="REDIS_URL" Default="" Mode="" Description="Redis connection shared by instances, format redis://&lt;user&gt;:&lt;password&gt;@&lt;host&gt;:&lt;port&gt;/&lt;db&gt;. Blank: no Redis." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="WEBSOCKET_MANAGER" Target="WEBSOCKET_MANAGER" Default="" Mode="" Description="Socket manager. redis when Redis is used (needs REDIS_URL); blank for a single instance." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="HSTS" Target="HSTS" Default="" Mode="" Description="Strict-Transport-Security header, format max-age=&lt;seconds&gt;. Blank: not sent. Browsers ignore it over plain HTTP." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="XFRAME_OPTIONS" Target="XFRAME_OPTIONS" Default="" Mode="" Description="X-Frame-Options header: DENY or SAMEORIGIN. Blank: not sent." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="XCONTENT_TYPE" Target="XCONTENT_TYPE" Default="" Mode="" Description="Set to nosniff to send the X-Content-Type-Options header. Blank: not sent." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="REFERRER_POLICY" Target="REFERRER_POLICY" Default="" Mode="" Description="Referrer-Policy header, for example strict-origin-when-cross-origin. Blank: not sent." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="PERMISSIONS_POLICY" Target="PERMISSIONS_POLICY" Default="" Mode="" Description="Permissions-Policy header, a comma-separated list such as camera=(), microphone=(). Blank: not sent." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="CONTENT_SECURITY_POLICY" Target="CONTENT_SECURITY_POLICY" Default="" Mode="" Description="Content-Security-Policy header, a semicolon-separated directive list. Blank: not sent. An enforced policy can break the UI; try the report-only variable first." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="CONTENT_SECURITY_POLICY_REPORT_ONLY" Target="CONTENT_SECURITY_POLICY_REPORT_ONLY" Default="" Mode="" Description="Content-Security-Policy-Report-Only header, same format. Blank: not sent. Violations are reported to the browser, not blocked." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="ENABLE_ADMIN_EXPORT" Target="ENABLE_ADMIN_EXPORT" Default="true" Mode="" Description="Allow the administrator export feature. Upstream default is true." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="ENABLE_ADMIN_CHAT_ACCESS" Target="ENABLE_ADMIN_CHAT_ACCESS" Default="" Mode="" Description="Let administrators read other users' chats. Blank: off, so chats stay private to each user. Set true only where the operator must see chats." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS" Target="ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS" Default="" Mode="" Description="Let administrators read workspace content owned by other users. Blank: off." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="ENABLE_COMMUNITY_SHARING" Target="ENABLE_COMMUNITY_SHARING" Default="" Mode="" Description="Allow users to publish content to the upstream community sharing feature. Blank: off." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="ENABLE_FORWARD_USER_INFO_HEADERS" Target="ENABLE_FORWARD_USER_INFO_HEADERS" Default="" Mode="" Description="Forward the signed-in user's identity headers to the model endpoints. Blank: off, so they are not sent." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="ENABLE_VERSION_UPDATE_CHECK" Target="ENABLE_VERSION_UPDATE_CHECK" Default="false" Mode="" Description="Ask the upstream project whether a newer version exists. false: no outbound check." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
   <Config Name="SCARF_NO_ANALYTICS" Target="SCARF_NO_ANALYTICS" Default="true" Mode="" Description="Opt out of Scarf package analytics. Leave true." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="DO_NOT_TRACK" Target="DO_NOT_TRACK" Default="true" Mode="" Description="Standard do-not-track switch read by bundled libraries. Leave true." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
