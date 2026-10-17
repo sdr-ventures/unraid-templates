@@ -126,6 +126,12 @@ TWO_COMPONENT_TAG = re.compile(r"^\d+\.\d+(?:[.\-+][\w.\-]*)?$")   # 16.14, 16.1
 # still deploy from texasdaddy while everything already republished deploys from sdr-ventures.
 FLEET_IMAGE_PREFIX = ("ghcr.io/texasdaddy/", "ghcr.io/sdr-ventures/")
 FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
+# Fleet images that are version-pinned on purpose, each a visible decision: they ship a
+# (v-prefixed) release tag, never a channel, and an Update is a deliberate bump of that pin.
+#   kb-service  the knowledge stack's three containers move together, one release at a time.
+FLEET_PINNED_BY_DESIGN = frozenset(
+    {("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.1.0")}
+)
 
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
 #   tldw-redis  redis:7-alpine              — upstream's own compose choice; the blast radius is
@@ -485,6 +491,11 @@ def test_no_value_ships_a_working_password_inside_a_url(name):
 def test_the_image_reference_is_pinned_or_a_declared_fleet_channel(name):
     repository = (template(name).findtext("Repository") or "").strip()
     assert repository, f"{name}: no Repository"
+    if (name, repository) in FLEET_PINNED_BY_DESIGN:
+        assert PINNED_TAG.match(repository.rsplit(":", 1)[-1]), (
+            f"{name}: {repository!r} is declared pinned by design but its tag is not a release"
+        )
+        return
     if repository.startswith(FLEET_IMAGE_PREFIX):
         # The fleet's own release channel, by design — see FLEET_CHANNEL_TAGS. Checked FIRST,
         # before the digest arm: a fleet image frozen on a digest is exactly the defect.
@@ -521,8 +532,8 @@ def test_the_rolling_tag_exceptions_are_all_live():
     # An exception that no longer matches a template is a stale decision, and the next
     # person to hit the rule will add a second entry rather than notice this one.
     live = {(n, (template(n).findtext("Repository") or "").strip()) for n in NAMES}
-    stale = ROLLING_TAG_EXCEPTIONS - live
-    assert not stale, f"ROLLING_TAG_EXCEPTIONS names references no template carries: {stale}"
+    stale = (ROLLING_TAG_EXCEPTIONS | FLEET_PINNED_BY_DESIGN) - live
+    assert not stale, f"a tag exception names references no template carries: {stale}"
     assert PRIVILEGED_BY_DESIGN <= set(NAMES), f"PRIVILEGED_BY_DESIGN names a missing template"
     assert POSTARGS_BY_DESIGN <= set(NAMES), f"POSTARGS_BY_DESIGN names a missing template"
 

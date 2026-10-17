@@ -29,6 +29,7 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | tldw-server (start 2nd) | `icons/tldw-server.png` | `templates/tldw-server.xml` |
 | tldw-webui (start 3rd, needs manual network-alias setup) | `icons/tldw-webui.png` | `templates/tldw-webui.xml` |
 | kb-postgres (start 1st, `kb` network only) | `icons/kb-postgres.png` | `templates/kb-postgres.xml` |
+| kb-service (start 2nd, after kb-postgres) | `icons/kb-service.png` | `templates/kb-service.xml` |
 | kb-webui (start 3rd, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
 
 Every template + icon in this repo must have a row here — keep this table in sync when adding either (the reauth-bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.

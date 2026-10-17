@@ -184,5 +184,18 @@
       "DO_NOT_TRACK": "reads DO_NOT_TRACK in bundled libraries, not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.11.4: Dockerfile:93 ENV DO_NOT_TRACK=true, which this Variable overrides",
       "ANONYMIZED_TELEMETRY": "reads ANONYMIZED_TELEMETRY in the bundled vector-store library (chromadb), not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.11.4: Dockerfile:94 ENV ANONYMIZED_TELEMETRY=false, which this Variable overrides"
     }
+  },
+  "kb-service": {
+    "no_local_consumer": false,
+    "vars": {
+      "KB_PERSONA_TOKENS": "reads KB_PERSONA_TOKENS in https://github.com/sdr-ventures/kb-service at v0.1.0: kb_service/config.py:33 env.get('KB_PERSONA_TOKENS', ''); config.py:34-35 raises ConfigError when blank, config.py:44 rejects a token under 32 characters, and kb_service/__main__.py:14-16 turns that into exit 2",
+      "KB_STACK": "reads KB_STACK in https://github.com/sdr-ventures/kb-service at v0.1.0: kb_service/config.py:26 env.get('KB_STACK', 'global'); config.py:27-28 raises ConfigError for any value but global",
+      "KB_DATABASE_URL": "reads KB_DATABASE_URL: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync",
+      "KB_EXPORT_DIR": "reads KB_EXPORT_DIR: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; the value matches the VOLUME /export at Dockerfile:27",
+      "KB_ASSETS_DIR": "reads KB_ASSETS_DIR: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; the value matches the VOLUME /assets at Dockerfile:27",
+      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync",
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync",
+      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync"
+    }
   }
 }
