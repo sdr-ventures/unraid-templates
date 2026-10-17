@@ -218,7 +218,10 @@
       "ANTHROPIC_API_KEY": "reads ANTHROPIC_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/anthropic/common_utils.py:1137 get_secret_str(\"ANTHROPIC_API_KEY\") when no per-model api_key is set in config.yaml",
       "XAI_API_KEY": "reads XAI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/xai/common_utils.py:73-75 get_secret_str(\"XAI_API_KEY\") when no per-model api_key is set in config.yaml",
       "GEMINI_API_KEY": "reads GEMINI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/gemini/common_utils.py:380 and :471 get_secret_str(\"GEMINI_API_KEY\") after GOOGLE_API_KEY, when no per-model api_key is set in config.yaml",
-      "PERPLEXITYAI_API_KEY": "reads PERPLEXITYAI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/perplexity/chat/transformation.py:30 get_secret_str(\"PERPLEXITYAI_API_KEY\") when no per-model api_key is set in config.yaml"
+      "PERPLEXITYAI_API_KEY": "reads PERPLEXITYAI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/perplexity/chat/transformation.py:30 get_secret_str(\"PERPLEXITYAI_API_KEY\") when no per-model api_key is set in config.yaml",
+      "GROQ_API_KEY": "reads GROQ_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/groq/chat/transformation.py:166 get_secret_str(\"GROQ_API_KEY\") when no per-model api_key is set in config.yaml; litellm/litellm_core_utils/get_llm_provider_logic.py:277 get_secret_str(\"GROQ_API_KEY\") for an api.groq.com endpoint",
+      "CLOUDFLARE_API_KEY": "reads CLOUDFLARE_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:16 api_key_env = (\"CLOUDFLARE_API_KEY\",), the key the decisions provider reads; litellm/constants.py:1964 lists it in SENTRY_DENYLIST, the names kept out of error reports",
+      "CLOUDFLARE_ACCOUNT_ID": "reads CLOUDFLARE_ACCOUNT_ID in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:20 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the endpoint; litellm/llms/cloudflare/chat/transformation.py:51 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the chat endpoint when no api_base is given"
     }
   }
 }

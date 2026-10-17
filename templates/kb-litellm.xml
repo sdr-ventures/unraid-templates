@@ -85,6 +85,11 @@
       litellm/llms/xai/common_utils.py:73-75        XAI_API_KEY
       litellm/llms/gemini/common_utils.py:380,471   GEMINI_API_KEY
       litellm/llms/perplexity/chat/transformation.py:30   PERPLEXITYAI_API_KEY
+      litellm/llms/groq/chat/transformation.py:166  GROQ_API_KEY (also
+                                                    litellm_core_utils/get_llm_provider_logic.py:277)
+      litellm/llms/cloudflare/decisions/transformation.py:16,20  CLOUDFLARE_API_KEY (api_key_env),
+                                                    CLOUDFLARE_ACCOUNT_ID; the chat path reads
+                                                    CLOUDFLARE_ACCOUNT_ID at chat/transformation.py:51
       litellm/proxy/health_endpoints/_health_endpoints.py:1959-1967   GET /health/liveness,
                                                     unauthenticated (public route,
                                                     litellm/proxy/_types.py:827-828)
@@ -122,4 +127,7 @@
   <Config Name="XAI_API_KEY" Target="XAI_API_KEY" Default="" Mode="" Description="xAI (Grok) API key. Optional; leave blank until an xAI model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
   <Config Name="GEMINI_API_KEY" Target="GEMINI_API_KEY" Default="" Mode="" Description="Google Gemini API key. Optional; leave blank until a Gemini model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
   <Config Name="PERPLEXITYAI_API_KEY" Target="PERPLEXITYAI_API_KEY" Default="" Mode="" Description="Perplexity API key. Optional; leave blank until a Perplexity model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="GROQ_API_KEY" Target="GROQ_API_KEY" Default="" Mode="" Description="Groq API key. Optional; leave blank until a Groq model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="CLOUDFLARE_API_KEY" Target="CLOUDFLARE_API_KEY" Default="" Mode="" Description="Cloudflare API token for Workers AI. Optional; leave blank until a Cloudflare model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="CLOUDFLARE_ACCOUNT_ID" Target="CLOUDFLARE_ACCOUNT_ID" Default="" Mode="" Description="Cloudflare account ID, the path segment of the Workers AI endpoint. Optional; leave blank until a Cloudflare model is listed in config.yaml." Type="Variable" Display="always" Required="false" Mask="false"/>
 </Container>
