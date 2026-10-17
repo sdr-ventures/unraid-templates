@@ -41,7 +41,8 @@
                                                      WEBUI_SESSION_COOKIE_SAME_SITE,
                                                      ENABLE_VERSION_UPDATE_CHECK, REDIS_URL,
                                                      WEBSOCKET_MANAGER, ENABLE_ADMIN_CHAT_ACCESS,
-                                                     ENABLE_FORWARD_USER_INFO_HEADERS
+                                                     ENABLE_FORWARD_USER_INFO_HEADERS,
+                                                     BYPASS_MODEL_ACCESS_CONTROL
       backend/open_webui/config.py                   ENABLE_SIGNUP, OLLAMA_BASE_URL,
                                                      OPENAI_API_BASE_URL, OPENAI_API_KEY,
                                                      ENABLE_MFA, JWT_EXPIRES_IN,
@@ -106,6 +107,7 @@
   <Config Name="ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS" Target="ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS" Default="" Mode="" Description="Let administrators read workspace content owned by other users. Blank: off." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="ENABLE_COMMUNITY_SHARING" Target="ENABLE_COMMUNITY_SHARING" Default="" Mode="" Description="Allow users to publish content to the upstream community sharing feature. Blank: off." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="ENABLE_FORWARD_USER_INFO_HEADERS" Target="ENABLE_FORWARD_USER_INFO_HEADERS" Default="" Mode="" Description="Forward the signed-in user's identity headers to the model endpoints. Blank: off, so they are not sent." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="BYPASS_MODEL_ACCESS_CONTROL" Target="BYPASS_MODEL_ACCESS_CONTROL" Default="" Mode="" Description="When true, model access control is off: every signed-in user can use every model the connection offers, with no per-model registration or access grants. Blank: off, and each model must be registered in the app's Workspace with access grants before anyone, an administrator included, can chat with it. Set true when all connected models are meant for all users." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="ENABLE_VERSION_UPDATE_CHECK" Target="ENABLE_VERSION_UPDATE_CHECK" Default="false" Mode="" Description="Ask the upstream project whether a newer version exists. false: no outbound check." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
   <Config Name="SCARF_NO_ANALYTICS" Target="SCARF_NO_ANALYTICS" Default="true" Mode="" Description="Opt out of Scarf package analytics. Leave true." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="DO_NOT_TRACK" Target="DO_NOT_TRACK" Default="true" Mode="" Description="Standard do-not-track switch read by bundled libraries. Leave true." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
