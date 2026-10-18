@@ -326,5 +326,24 @@
       "/etc/squid/kw/operator-destinations.conf": "reads /etc/squid/kw/operator-destinations.conf via kw-edge config/squid/squid.conf:60 (include)",
       "/var/log/squid": "reads /var/log/squid via kw-edge config/squid/squid.conf:86 (access_log stdio:/var/log/squid/destination.log)"
     }
+  },
+  "clamav-updater": {
+    "no_local_consumer": false,
+    "vars": {
+      "CLAMAV_NO_CLAMD": "reads CLAMAV_NO_CLAMD via the clamav/clamav 1.5.4-debian image entrypoint (clamav-docker clamav/README-debian.md, 'Controlling the container': default false; true stops clamd from starting)"
+    },
+    "paths": {
+      "/var/lib/clamav": "reads /var/lib/clamav via the clamav/clamav image: freshclam writes the signature databases to the database directory (clamav-docker clamav/README-debian.md, 'Controlling the container')"
+    }
+  },
+  "clamav-scanner": {
+    "no_local_consumer": false,
+    "vars": {
+      "CLAMAV_NO_FRESHCLAMD": "reads CLAMAV_NO_FRESHCLAMD via the clamav/clamav 1.5.4-debian image entrypoint (clamav-docker clamav/README-debian.md, 'Controlling the container': default false; true stops the freshclam daemon from starting)"
+    },
+    "paths": {
+      "/var/lib/clamav": "reads /var/lib/clamav via the clamav/clamav image: clamd loads the signature databases from the database directory (clamav-docker clamav/README-debian.md, 'Controlling the container'); mounted read-only here",
+      "/tmp": "reads /tmp via clamd's scratch and socket paths: the image keeps clamd.sock in /tmp (clamav-docker clamav/README-debian.md, default socket /tmp/clamd.sock); the README does not name the scratch directory itself"
+    }
   }
 }
