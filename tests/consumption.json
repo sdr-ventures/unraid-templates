@@ -49,10 +49,12 @@
       "LOG_LEVEL": "reads LOG_LEVEL via pydantic-settings field log_level in app/config.py (no env_prefix, case-insensitive); app/main.py: logging.basicConfig level",
       "WEB_CONCURRENCY": "reads WEB_CONCURRENCY via the shell in docker-entrypoint.sh; docker-entrypoint.sh:117 -> gunicorn --workers \"${WEB_CONCURRENCY:-2}\"; app/core/throttle.py notes it governs worker count for the shared-state design",
       "BACKUP_DB_USER": "reads BACKUP_DB_USER via pydantic-settings field backup_db_user in app/config.py:63 (no env_prefix, case-insensitive), on origin/dev only: origin/main has no backup code yet; app/config.py:372-373 effective_backup_database_url assembles the pg_dump URL from it; app/main.py:81-85 starts the nightly backup loop only when that URL is non-empty",
-      "BACKUP_DB_PASSWORD": "reads BACKUP_DB_PASSWORD via pydantic-settings field backup_db_password in app/config.py:64 (no env_prefix, case-insensitive), on origin/dev only; app/config.py:373 passes it into the same pg_dump URL; blank with BACKUP_DB_USER set, the loop still starts and each dump fails to log in"
+      "BACKUP_DB_PASSWORD": "reads BACKUP_DB_PASSWORD via pydantic-settings field backup_db_password in app/config.py:64 (no env_prefix, case-insensitive), on origin/dev only; app/config.py:373 passes it into the same pg_dump URL; blank with BACKUP_DB_USER set, the loop still starts and each dump fails to log in",
+      "DEPLOY_ENV": "reads DEPLOY_ENV via os.environ.get(DEPLOY_ENV_VAR) at app/alerting.py:46 on origin/dev only (kw-common's constant, DEPLOY_ENV_VAR = \"DEPLOY_ENV\", src/kw_common/alerting_env.py:143); unset or blank raises inside configure_alerting, which logs one WARNING and leaves alerts log-only"
     },
     "paths": {
-      "/backups": "reads /backups via BACKUP_DIR = Path('/backups') at app/backup.py:49 (nightly pg_dump target)"
+      "/backups": "reads /backups via BACKUP_DIR = Path('/backups') at app/backup.py:49 (nightly pg_dump target)",
+      "/kw_shared": "reads /kw_shared via SHARED_ROOT = \"/kw_shared\" at app/alerting.py:35 on origin/dev only; config_file_for(SHARED_ROOT) reads configs/alerting.env under it"
     },
     "declared_for": {
       "/data": "keystone: no release or branch reads it; origin/dev has no code path under /data (the template Description describes a file vault that origin/dev does not read)"
