@@ -52,6 +52,19 @@ jobs:
       # emits nothing is indistinguishable from a slow one until the runner's 6-hour limit.
       - run: python -u -m pytest tests -q --timeout=300
 
+  # Lint the whole repo. The ruff version is pinned to kw-common's: an unpinned install takes
+  # whatever release is newest, and a new rule can fail a tree that did not change.
+  ruff:
+    name: Ruff
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install "ruff==0.16.1"
+      - run: ruff check .
+
   # ⛔ REQUIRED STATUS CHECK — do not rename. See the note above `jobs:`.
   templates:
     name: Templates are well-formed XML

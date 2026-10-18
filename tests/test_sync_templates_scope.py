@@ -262,7 +262,7 @@ def test_the_run_names_its_scope_before_acting(sync, tmp_path, capsys, dry):
     before = snap(tmp_path)
     sync.TEMPLATE = "tape-db"
     sync.DRY_RUN = dry
-    code, out, _ = run(sync, tmp_path, capsys)
+    _code, out, _ = run(sync, tmp_path, capsys)
     head = out.split("\n\n")[0]
     assert "scope: TEMPLATE='tape-db'" in head, head
     assert "the other 2 repo template(s) are left alone" in head
@@ -397,7 +397,7 @@ def test_the_stub_refusal_compares_files_not_names_on_any_filesystem(sync, tmp_p
         pytest.skip(f"no hard links here: {e}")
     before = snap(tmp_path)
     sync.TEMPLATE = "tape"
-    code, out, _ = run(sync, tmp_path, capsys)
+    code, _out, _ = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "is not from these templates" in code, code
     assert snap(tmp_path) == before
 
@@ -426,7 +426,7 @@ def test_a_scoped_run_refuses_when_it_cannot_list_the_templates_dir(
 
     monkeypatch.setattr(sync.os, "listdir", flaky)
     sync.TEMPLATE = "tape"
-    code, out, _ = run(sync, tmp_path, capsys)
+    code, _out, _ = run(sync, tmp_path, capsys)
     monkeypatch.undo()
     assert isinstance(code, str) and "could not list the directory" in code, code
     assert "cannot tell its own instances apart" in code and "Nothing changed" in code

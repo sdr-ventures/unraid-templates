@@ -186,7 +186,7 @@ def var_name(cfg):
     """The environment variable a Config actually sets: `Target`, else `Name` — the same
     fallback `sync-templates.py` uses, so a Config with no Target is the same variable here
     that it is there. Stripped, because that script strips too."""
-    return ((cfg.get("Target") or cfg.get("Name") or "")).strip()
+    return (cfg.get("Target") or cfg.get("Name") or "").strip()
 
 
 def is_variable(cfg):
@@ -539,8 +539,8 @@ def test_the_rolling_tag_exceptions_are_all_live():
     live = {(n, (template(n).findtext("Repository") or "").strip()) for n in NAMES}
     stale = (ROLLING_TAG_EXCEPTIONS | FLEET_PINNED_BY_DESIGN) - live
     assert not stale, f"a tag exception names references no template carries: {stale}"
-    assert PRIVILEGED_BY_DESIGN <= set(NAMES), f"PRIVILEGED_BY_DESIGN names a missing template"
-    assert POSTARGS_BY_DESIGN <= set(NAMES), f"POSTARGS_BY_DESIGN names a missing template"
+    assert PRIVILEGED_BY_DESIGN <= set(NAMES), "PRIVILEGED_BY_DESIGN names a missing template"
+    assert POSTARGS_BY_DESIGN <= set(NAMES), "POSTARGS_BY_DESIGN names a missing template"
 
 
 SHELL_VARIABLE_REFERENCE = re.compile(r"\$(?:\{(\w+)\}|(\w+))")

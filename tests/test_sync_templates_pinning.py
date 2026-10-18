@@ -106,7 +106,7 @@ def test_the_run_reads_the_listing_and_the_body_at_the_resolved_commit(sync, htt
 def test_the_listing_is_the_commits_not_the_branchs(sync, http, tmp_path, capsys):
     """`stale-only` is in the branch listing only: a run listing by branch would accept it."""
     sync.TEMPLATE = "stale-only"
-    code, out = run(sync, tmp_path, capsys)
+    code, _out = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "is not a template" in code and SHA in code, code
     assert not any(tmp_path.iterdir())
 
@@ -118,7 +118,7 @@ def test_an_answer_that_is_not_a_commit_sha_refuses_before_any_write(
     http.routes[f"https://api.github.com/repos/{sync.REPO}/commits/main"] = answer
     (tmp_path / "my-app.xml").write_text(container([cfg("NEW_NAME", "applied")]), encoding="utf-8")
     before = (tmp_path / "my-app.xml").read_bytes()
-    code, out = run(sync, tmp_path, capsys)
+    code, _out = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "did not return a commit sha" in code and "Nothing changed" in code
     assert (tmp_path / "my-app.xml").read_bytes() == before
     assert len(http.seen) == 1, "nothing may be read after a failed resolve"
@@ -145,7 +145,7 @@ def test_the_rate_limit_is_named_with_its_reset_and_nothing_changes(
     monkeypatch.setattr(sync.urllib.request, "urlopen", _limited(headers, code, body))
     (tmp_path / "my-app.xml").write_text(container([cfg("NEW_NAME", "applied")]), encoding="utf-8")
     before = (tmp_path / "my-app.xml").read_bytes()
-    code, out = run(sync, tmp_path, capsys)
+    code, _out = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "rate limit reached" in code and "60 unauthenticated" in code, code
     assert expect in code and "Nothing changed" in code, code
     assert (tmp_path / "my-app.xml").read_bytes() == before
@@ -155,5 +155,5 @@ def test_the_rate_limit_is_named_with_its_reset_and_nothing_changes(
 def test_an_error_that_is_not_the_rate_limit_is_not_called_one(sync, tmp_path, capsys, monkeypatch, code):
     monkeypatch.setattr(sync.urllib.request, "urlopen",
                         _limited({"X-RateLimit-Remaining": "59"}, code, b'{"message": "Not Found"}'))
-    code_, out = run(sync, tmp_path, capsys)
+    code_, _out = run(sync, tmp_path, capsys)
     assert isinstance(code_, str) and f"HTTP Error {code}" in code_ and "rate limit" not in code_

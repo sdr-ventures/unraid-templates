@@ -20,7 +20,6 @@ repo template is dropped whatever it holds. Each one was checked by mutating
 
 import importlib.util
 import pathlib
-import sys
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -658,7 +657,7 @@ def test_a_masked_field_whose_ONLY_content_is_a_child_still_counts_as_holding_a_
     """The `len(el) > 0` branch, isolated. A mutation returning False there survived the test
     above, because that fixture had text before the child and was caught by the text branch."""
     root = ET.fromstring(instance_xml(extra=NESTED_SECRET_NO_TEXT))
-    nested = [c for c in root.findall("Config") if c.get("Target") == "NESTED2"][0]
+    nested = next(c for c in root.findall("Config") if c.get("Target") == "NESTED2")
     assert not (nested.text or "").strip(), "precondition: no text, the value is in the child"
     assert sync._element_holds_a_secret(nested), (
         "a masked field whose only content is a child element was judged empty — its secret "
@@ -697,7 +696,7 @@ def test_an_EMPTY_masked_field_is_not_marked_as_holding_a_secret(sync, inst, tmp
     operator reading a backup to see what was configured."""
     root = ET.fromstring(instance_xml(extra=EMPTY_SECRET))
     assert sync.redact_secrets(root) == 1, "only the ONE non-empty masked value is redacted"
-    spare = [c for c in root.findall("Config") if c.get("Target") == "SPARE_KEY"][0]
+    spare = next(c for c in root.findall("Config") if c.get("Target") == "SPARE_KEY")
     assert not (spare.text or "").strip(), "an empty masked field must stay empty"
 
 

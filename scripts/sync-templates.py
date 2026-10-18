@@ -157,14 +157,14 @@ def _get(url, accept=None):
         if e.code in (403, 429):
             try:
                 body = e.read()[:2000].lower()
-            except Exception:
+            except Exception:  # noqa: BLE001 - an unreadable error body falls back to empty, it is not a failure
                 body = b""
             if h.get("X-RateLimit-Remaining") == "0" or h.get("Retry-After") or b"rate limit" in body:
                 when = "later"
                 reset, after = h.get("X-RateLimit-Reset") or "", h.get("Retry-After") or ""
                 if reset.isdigit():
                     try:
-                        when = "after " + datetime.fromtimestamp(int(reset)).strftime(
+                        when = "after " + datetime.fromtimestamp(int(reset)).strftime(  # noqa: DTZ006 - reset is a host-local epoch, the message says host time
                             "%Y-%m-%d %H:%M:%S") + " host time"
                     except (OverflowError, OSError, ValueError):
                         pass
@@ -535,7 +535,7 @@ def _unused_backup_path(backup_dir, base):
     second is arbitrary, which is fine: they are simultaneous. Ordering against OTHER seconds is
     preserved, which is what "keep the newest N" actually depends on.
     """
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")  # noqa: DTZ005 - the backup name is host-local by design, changing it changes names
     dest = os.path.join(backup_dir, f"{base}.{stamp}.bak")
     n = 1
     while os.path.exists(dest):
@@ -816,7 +816,7 @@ def load_template(name, sha):
     or (None, why)."""
     try:
         tpl_root = ET.fromstring(fetch_template(name, sha))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - any fetch failure is reported as a result, not raised
         return None, f"could not fetch/parse repo template: {e}"
     err = validate(tpl_root)
     if err:
@@ -895,7 +895,7 @@ def main():
         sha = resolve_sha()
         all_repo = list_repo_templates(sha)
         why = ""
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - any listing failure is reported as a result, not raised
         all_repo, why = [], f" ({e})"
     if not all_repo:
         sys.exit(f"error: could not list repo templates from {REPO}@{BRANCH}"

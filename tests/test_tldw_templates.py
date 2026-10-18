@@ -118,7 +118,7 @@ def configs(root):
 def var_name(cfg):
     """The environment variable a Config actually sets — Target, else Name, stripped, the
     same fallback `sync-templates.py` uses."""
-    return ((cfg.get("Target") or cfg.get("Name") or "")).strip()
+    return (cfg.get("Target") or cfg.get("Name") or "").strip()
 
 
 def is_variable(cfg):
