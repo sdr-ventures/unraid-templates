@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!--
+  clamav-updater - the one ClamAV signature updater for a host. It runs the official clamav/clamav
+  image with the scanning daemon switched off, so it only downloads virus signatures into a host
+  folder. Every stack's clamav-scanner reads that folder read-only. Stock image from Docker Hub;
+  nothing here is specific to any host or operator.
+
+  NO HOST PORT IS PUBLISHED, AND THERE IS NO PORT CONFIG AT ALL. This container serves nothing;
+  it has no reason to be reached from any other container.
+
+  IMAGE TAG: clamav/clamav:1.5.4-debian is a pinned release, as the repo requires for third-party
+  images. The Debian variant is the one whose README was read for the switch below. The
+  pinned-tag rule forbids :latest, so an Update does not move the image to a new ClamAV release
+  until this template changes.
+-->
+<Container version="2">
+  <Name>clamav-updater</Name>
+  <Repository>clamav/clamav:1.5.4-debian</Repository>
+  <Registry>https://hub.docker.com/r/clamav/clamav</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Cisco-Talos/clamav-docker/issues</Support>
+  <Project>https://github.com/Cisco-Talos/clamav-docker</Project>
+  <Overview>ClamAV signature updater, one per host. It downloads the virus signatures that every keystone scanner on this host reads, and writes them to the Signatures folder. It runs no scanning daemon: CLAMAV_NO_CLAMD is true, which the image's own README (Controlling the container) documents as the switch that stops clamd from starting. The image's freshclam daemon checks for updates once a day by default. NETWORK: leave Network bridge. This container needs direct internet access to the ClamAV mirrors and must not join the internal network. EXPOSURE: this template publishes no port. SIGNATURES: set the Signatures Path to a folder on a pool, and mount the same folder read-only in each clamav-scanner on this host. HEALTH: the image's own HEALTHCHECK runs clamdcheck.sh and reports healthy here because CLAMAV_NO_CLAMD is true, so it proves nothing about freshness. To check freshness, run: docker exec clamav-updater sh -c 'find /var/lib/clamav -name "daily.*" -mmin -2880 | grep -q .' and echo $? . Zero means a daily signature file was written within the last 48 hours, the same limit keystone applies. Nonzero means stale; then check the container log.</Overview>
+  <Category>Security:</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/clamav-updater.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/clamav.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Description>ClamAV signature updater for the host's keystone scanners. Downloads virus signatures to a shared folder; runs no scanner. Publishes no port.</Description>
+
+  <Config Name="Signatures" Target="/var/lib/clamav" Default="" Mode="rw" Description="REQUIRED. Host folder the signatures are written to, read by every clamav-scanner on this host. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/clamav-signatures. Mount the same folder read-only in each scanner. The image's own README names /var/lib/clamav as the database directory." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="CLAMAV_NO_CLAMD" Target="CLAMAV_NO_CLAMD" Default="true" Mode="" Description="Leave true. true stops the scanning daemon from starting, so this container only refreshes signatures. false would start clamd on this host as well." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+</Container>
