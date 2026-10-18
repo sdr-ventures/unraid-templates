@@ -3,10 +3,10 @@
   kb-service - the one door to the shared knowledge library (github.com/sdr-ventures/kb-service).
   Nothing here is specific to any host or operator.
 
-  THE MIDDLE TO START:
-      kb-postgres -> kb-service -> kb-webui
+  START ORDER FOR THE WHOLE SET:
+      kb-postgres -> kb-redis -> kb-litellm -> kb-service -> kb-webui
   Unraid templates have no equivalent of compose's depends_on or healthchecks, so nothing
-  starts these in order for you. Start kb-postgres first; start kb-webui after this one.
+  starts these in order for you. This one starts after kb-litellm; kb-webui starts after this one.
 
   NETWORK WIRING (the same for the whole set). The kb containers share ONE user-defined Docker
   network named kb, which the operator creates once, by hand, before the first start - a
@@ -48,7 +48,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/sdr-ventures/kb-service</Project>
-  <Overview>The one door to the shared knowledge library. STARTED IN ORDER: kb-postgres first, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose, behind bearer tokens; anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. RELEASE: v0.1.0 is the Stage 0 skeleton - it answers health and whoami only, and it ignores the database and embedding settings until a later release. Those variables are carried now because adding them later would need a template sync. REQUIRED: the service refuses to start (exit code 2) without KB_PERSONA_TOKENS, a JSON object of caller name to token with every token at least 32 characters. STORAGE: /assets holds original files and /export the plain-file export; put both on a pool and /assets under backup. The process runs as user 99:100. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
+  <Overview>The one door to the shared knowledge library. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose, behind bearer tokens; anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. RELEASE: v0.1.0 is the Stage 0 skeleton - it answers health and whoami only, and it ignores the database and embedding settings until a later release. Those variables are carried now because adding them later would need a template sync. REQUIRED: the service refuses to start (exit code 2) without KB_PERSONA_TOKENS, a JSON object of caller name to token with every token at least 32 characters. STORAGE: /assets holds original files and /export the plain-file export; put both on a pool and /assets under backup. The process runs as user 99:100. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:8000]/health</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-service.xml</TemplateURL>
@@ -56,7 +56,7 @@
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>Knowledge service for the shared library. Start after kb-postgres, before kb-webui. LAN-exposed; set a free host port, the caller tokens and the database URL.</Description>
+  <Description>Knowledge service for the shared library. Start after kb-litellm, before kb-webui. LAN-exposed; set a free host port, the caller tokens and the database URL.</Description>
 
   <Config Name="HTTP Port" Target="8000" Default="" Mode="tcp" Description="REQUIRED. Host port for the service (REST at /, MCP at /mcp, health at /health); the container always listens on 8000 internally - change the host side only. No default is offered: pick a free port." Type="Port" Display="always" Required="true" Mask="false"/>
   <Config Name="Assets" Target="/assets" Default="" Mode="rw" Description="REQUIRED. Original files and derived images; losing this loses the originals. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/assets. Put it under backup." Type="Path" Display="always" Required="true" Mask="false"/>

@@ -3,8 +3,8 @@
   kb-postgres - the PostgreSQL (with the pgvector extension) behind the knowledge library.
   Stock image from Docker Hub; nothing here is specific to any host or operator.
 
-  THE FIRST TO START:
-      kb-postgres -> kb-service -> kb-webui
+  START ORDER FOR THE WHOLE SET:
+      kb-postgres -> kb-redis -> kb-litellm -> kb-service -> kb-webui
   Unraid templates have no equivalent of compose's depends_on or healthchecks, so nothing
   starts these in order for you. kb-service expects the database to be reachable when it
   comes up, which is why this one goes first.
@@ -40,7 +40,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/pgvector/pgvector</Project>
-  <Overview>PostgreSQL 17 with the pgvector extension - the database behind the shared knowledge library. STARTED IN ORDER: kb-postgres first, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). On that network this container is reachable by its container name, kb-postgres, on port 5432. Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and that name stops resolving. EXPOSURE: this template publishes no host port, so the database is reachable only from a container on the kb network, not from the wider network this host is on. STORAGE: the data mount holds the whole database - set it to a path on a pool and put it under backup. CREDENTIALS: the password is set once, at the first start of an empty data directory, and must match what kb-service is given. IMAGE TAG: pinned to one pgvector release on PostgreSQL 17; a major-version change is a dump and restore, not an Update.</Overview>
+  <Overview>PostgreSQL 17 with the pgvector extension - the database behind the shared knowledge library. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). On that network this container is reachable by its container name, kb-postgres, on port 5432. Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and that name stops resolving. EXPOSURE: this template publishes no host port, so the database is reachable only from a container on the kb network, not from the wider network this host is on. STORAGE: the data mount holds the whole database - set it to a path on a pool and put it under backup. CREDENTIALS: the password is set once, at the first start of an empty data directory, and must match what kb-service is given. IMAGE TAG: pinned to one pgvector release on PostgreSQL 17; a major-version change is a dump and restore, not an Update.</Overview>
   <Category>Database:</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-postgres.xml</TemplateURL>
