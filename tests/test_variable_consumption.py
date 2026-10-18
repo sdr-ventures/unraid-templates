@@ -240,7 +240,7 @@ def _citation_problems(var, citation):
     problems = []
     if not re.match(rf"reads {re.escape(var)}\b", citation):
         problems.append(f"does not start `reads {var}`")
-    pydantic = re.search("pydantic", citation, re.I)
+    pydantic = re.search("pydantic", citation, re.IGNORECASE)
     fields = re.findall(r"\bfield `?(\w+)", citation) if pydantic else []
     if pydantic and not fields:
         problems.append("says pydantic but names no `field <name>`")
@@ -309,8 +309,8 @@ def test_every_citation_names_the_env_var_the_code_reads(name):
     ("DB_USER", "reads DB_USER via the shell; entrypoint.sh exports USER_DB", True),
     ("S3_BUCKET", "reads S3_BUCKET via os.environ.get; app.py passes BUCKET_S3 on", True),
     ("DB_BACKUP_USER", "reads DB_BACKUP_USER via os.environ.get at app/backup.py:12", False),
-    ("BACKUP_DB_USER", "reads BACKUP_DB_USER via pydantic-settings field backup_db_user in app/config.py "
-                       "(no env_prefix, case-insensitive)", False),
+    ("BACKUP_DB_USER", ("reads BACKUP_DB_USER via pydantic-settings field backup_db_user in app/config.py "
+                        "(no env_prefix, case-insensitive)"), False),
 ])
 def test_the_citation_rule_catches_a_citation_that_never_names_what_is_read(var, citation, caught):
     assert bool(_citation_problems(var, citation)) is caught
