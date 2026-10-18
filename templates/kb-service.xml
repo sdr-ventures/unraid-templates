@@ -23,14 +23,12 @@
   port already taken on the host is never silently reused.
 
   v0.1.0 IS THE STAGE 0 SKELETON. It serves GET /health (no token) and GET /whoami (bearer
-  token) and nothing else. KB_DATABASE_URL, KB_EXPORT_DIR, KB_ASSETS_DIR, KB_EMBED_BASE_URL,
-  KB_EMBED_MODEL and KB_EMBED_API_KEY are carried now, and ignored by v0.1.0, because adding
-  a variable to a template later would need a sync. The REST routes at / and the MCP endpoint
-  at /mcp arrive in a later release.
+  token) and nothing else. KB_DATABASE_URL, KB_EMBED_BASE_URL, KB_EMBED_MODEL and
+  KB_EMBED_API_KEY are carried now, and ignored by v0.1.0, because adding a variable to a
+  template later would need a sync. The REST routes at / and the MCP endpoint at /mcp arrive
+  in a later release.
 
-  THE PROCESS RUNS AS 99:100 (nobody:users), the ownership Unraid gives appdata, so the two
-  mounts below are writable when their directories are created the ordinary way. /assets holds
-  the original files: back it up.
+  THE PROCESS RUNS AS 99:100 (nobody:users), the ownership Unraid gives appdata.
 
   THE IMAGE TAG IS PINNED to one release; an Update is a deliberate bump of that pin.
 
@@ -48,7 +46,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/sdr-ventures/kb-service</Project>
-  <Overview>The one door to the shared knowledge library. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose, behind bearer tokens; anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. RELEASE: v0.1.0 is the Stage 0 skeleton - it answers health and whoami only, and it ignores the database and embedding settings until a later release. Those variables are carried now because adding them later would need a template sync. REQUIRED: the service refuses to start (exit code 2) without KB_PERSONA_TOKENS, a JSON object of caller name to token with every token at least 32 characters. STORAGE: /assets holds original files and /export the plain-file export; put both on a pool and /assets under backup. The process runs as user 99:100. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
+  <Overview>The one door to the shared knowledge library. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose, behind bearer tokens; anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. RELEASE: v0.1.0 is the Stage 0 skeleton - it answers health and whoami only, and it ignores the database and embedding settings until a later release. Those variables are carried now because adding them later would need a template sync. REQUIRED: the service refuses to start (exit code 2) without KB_PERSONA_TOKENS, a JSON object of caller name to token with every token at least 32 characters. The process runs as user 99:100. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:8000]/health</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-service.xml</TemplateURL>
@@ -59,14 +57,10 @@
   <Description>Knowledge service for the shared library. Start after kb-litellm, before kb-webui. LAN-exposed; set a free host port, the caller tokens and the database URL.</Description>
 
   <Config Name="HTTP Port" Target="8000" Default="" Mode="tcp" Description="REQUIRED. Host port for the service (REST at /, MCP at /mcp, health at /health); the container always listens on 8000 internally - change the host side only. No default is offered: pick a free port." Type="Port" Display="always" Required="true" Mask="false"/>
-  <Config Name="Assets" Target="/assets" Default="" Mode="rw" Description="REQUIRED. Original files and derived images; losing this loses the originals. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/assets. Put it under backup." Type="Path" Display="always" Required="true" Mask="false"/>
-  <Config Name="Export" Target="/export" Default="" Mode="rw" Description="REQUIRED. The nightly plain-file export of the library. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/export." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="KB_PERSONA_TOKENS" Target="KB_PERSONA_TOKENS" Default="" Mode="" Description="REQUIRED. JSON object of caller name to bearer token, format {&quot;&lt;caller&gt;&quot;:&quot;&lt;token&gt;&quot;}. Every token is at least 32 characters, no two callers share one, and the object is not empty; otherwise the service exits 2 at start. Use long random values." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KB_DATABASE_URL" Target="KB_DATABASE_URL" Default="" Mode="" Description="REQUIRED. PostgreSQL connection URL, format postgresql://&lt;user&gt;:&lt;password&gt;@kb-postgres:5432/&lt;db&gt; - the user, password and database set on kb-postgres, the host being its container name on the kb network. Percent-encode any reserved character in the password. Ignored by v0.1.0." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KB_STACK" Target="KB_STACK" Default="global" Mode="" Description="Which library this service fronts. Only global is accepted; any other value makes the service exit 2 at start. Leave global." Type="Variable" Display="always" Required="true" Mask="false">global</Config>
   <Config Name="KB_EMBED_BASE_URL" Target="KB_EMBED_BASE_URL" Default="" Mode="" Description="Embedding endpoint, format http://&lt;host&gt;:&lt;port&gt; . Blank: embedding is off and search is by keyword only. Ignored by v0.1.0." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="KB_EMBED_MODEL" Target="KB_EMBED_MODEL" Default="" Mode="" Description="Embedding model name, format &lt;model-name&gt; . Blank while KB_EMBED_BASE_URL is blank. Ignored by v0.1.0." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="KB_EMBED_API_KEY" Target="KB_EMBED_API_KEY" Default="" Mode="" Description="Key for the embedding endpoint above. Blank if the endpoint takes none. Ignored by v0.1.0." Type="Variable" Display="always" Required="false" Mask="true"/>
-  <Config Name="KB_EXPORT_DIR" Target="KB_EXPORT_DIR" Default="/export" Mode="" Description="Container path the export is written to. Leave /export: it is the mount above. Ignored by v0.1.0." Type="Variable" Display="advanced" Required="false" Mask="false">/export</Config>
-  <Config Name="KB_ASSETS_DIR" Target="KB_ASSETS_DIR" Default="/assets" Mode="" Description="Container path original files and derived images are stored under. Leave /assets: it is the mount above. Ignored by v0.1.0." Type="Variable" Display="advanced" Required="false" Mask="false">/assets</Config>
 </Container>

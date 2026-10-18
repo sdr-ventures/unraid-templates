@@ -253,11 +253,7 @@
       "KB_DATABASE_URL": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:35 reads it",
       "KB_EMBED_BASE_URL": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:36 reads it",
       "KB_EMBED_MODEL": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:37 reads it",
-      "KB_EMBED_API_KEY": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:38 reads it",
-      "KB_EXPORT_DIR": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention",
-      "KB_ASSETS_DIR": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention",
-      "/assets": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention",
-      "/export": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention"
+      "KB_EMBED_API_KEY": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:38 reads it"
     }
   },
   "kb-redis": {
