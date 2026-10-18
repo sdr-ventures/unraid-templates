@@ -1,5 +1,5 @@
 {
-  "_readme": "Consumption audit trail for UT-N (2026-09-08). Every template with a local consumer repo under C:\\dev must list EVERY Type=\"Variable\" Target it declares, each with a one-line citation of where the consuming repo actually reads and USES it (not just declares it). tests/test_variable_consumption.py enforces that the two lists (template vs. this file) match exactly, and that a template flagged no_local_consumer carries no per-var entries. This file does NOT re-derive consumption on its own (this repo's CI has no checkout of the private consumer repos) — it is the durable record of the audit a human/worker performed, so a Variable added without one is caught structurally instead of silently accreting. Every citation starts `reads <VARIABLE>`: the exact env-var name the code looks up, not just the feature it serves. For a pydantic-settings field that name is env_prefix + the field name (case-insensitive unless case_sensitive=True; an alias / validation_alias replaces it), so field backup_db_user with no prefix reads BACKUP_DB_USER, never DB_BACKUP_USER. A pydantic citation names a `field <name>`, and the test checks that every `field <name>` in a citation, and every lookup written as ${NAME}, os.environ.get('NAME'), os.environ['NAME'], getenv('NAME') or process.env.NAME, spells the Variable; other shapes, such as a project's own _env('NAME') wrapper, are not checked, and neither are env_prefix, aliases or case_sensitive=True, since no consumer uses them. If the name the code looks up is not the Variable, the Variable is read by nothing: fix the template, not the citation. Re-measure and update the citation whenever the corresponding line in the consumer repo moves.",
+  "_readme": "Consumption audit trail for UT-N (2026-09-08). Every template with a local consumer repo under C:\\dev must list EVERY Type=\"Variable\" Target it declares, each with a one-line citation of where the consuming repo actually reads and USES it (not just declares it). tests/test_variable_consumption.py enforces that the two lists (template vs. this file) match exactly, and that a template flagged no_local_consumer carries no per-var entries. This file does NOT re-derive consumption on its own (this repo's CI has no checkout of the private consumer repos) — it is the durable record of the audit a human/worker performed, so a Variable added without one is caught structurally instead of silently accreting. Every citation starts `reads <VARIABLE>`: the exact env-var name the code looks up, not just the feature it serves. For a pydantic-settings field that name is env_prefix + the field name (case-insensitive unless case_sensitive=True; an alias / validation_alias replaces it), so field backup_db_user with no prefix reads BACKUP_DB_USER, never DB_BACKUP_USER. A pydantic citation names a `field <name>`, and the test checks that every `field <name>` in a citation, and every lookup written as ${NAME}, os.environ.get('NAME'), os.environ['NAME'], getenv('NAME') or process.env.NAME, spells the Variable; other shapes, such as a project's own _env('NAME') wrapper, are not checked, and neither are env_prefix, aliases or case_sensitive=True, since no consumer uses them. If the name the code looks up is not the Variable, the Variable is read by nothing: fix the template, not the citation. Re-measure and update the citation whenever the corresponding line in the consumer repo moves. Each template entry may also carry `paths` (one citation per Type=\"Path\" Target, opening `reads <PATH>`, checked exactly like Variables) and `declared_for` (a Variable or Path the template declares for a later release or branch: the value names that package and what it reads, and does not claim a read today).",
   "cef-tracker": {
     "no_local_consumer": false,
     "vars": {
@@ -15,6 +15,11 @@
       "TAPE_BASE_URL": "reads TAPE_BASE_URL via os.environ.get in config.py; config.py:205; tape_client.py:41 -> request URL, read-only dual-run NAV parity report only (CT-TAPE-CLIENT-1); all three TAPE_* required together via config.TAPE_ENABLED (config.py:211) or the client returns 'tape not configured'",
       "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via os.environ.get in config.py; config.py:206; tape_client.py:46 -> X-Client-Id header",
       "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via os.environ.get in config.py; config.py:207; tape_client.py:47 -> X-Client-Secret header"
+    },
+    "paths": {
+      "/data": "reads /data via DB_PATH, whose default is /data/cef_tracker.db (config.py:92); db.py:22 sqlite3.connect(config.DB_PATH)",
+      "/data/backups": "reads /data/backups via scheduler.py:1835 (backup_dir under the directory of db_path, /data by default)",
+      "/kw_shared": "reads /kw_shared via alerting_config.py:45 (_SHARED_ROOT; alerting.env under /kw_shared/configs)"
     }
   },
   "keystone": {
@@ -45,6 +50,12 @@
       "WEB_CONCURRENCY": "reads WEB_CONCURRENCY via the shell in docker-entrypoint.sh; docker-entrypoint.sh:117 -> gunicorn --workers \"${WEB_CONCURRENCY:-2}\"; app/core/throttle.py notes it governs worker count for the shared-state design",
       "BACKUP_DB_USER": "reads BACKUP_DB_USER via pydantic-settings field backup_db_user in app/config.py:63 (no env_prefix, case-insensitive), on origin/dev only: origin/main has no backup code yet; app/config.py:372-373 effective_backup_database_url assembles the pg_dump URL from it; app/main.py:81-85 starts the nightly backup loop only when that URL is non-empty",
       "BACKUP_DB_PASSWORD": "reads BACKUP_DB_PASSWORD via pydantic-settings field backup_db_password in app/config.py:64 (no env_prefix, case-insensitive), on origin/dev only; app/config.py:373 passes it into the same pg_dump URL; blank with BACKUP_DB_USER set, the loop still starts and each dump fails to log in"
+    },
+    "paths": {
+      "/backups": "reads /backups via BACKUP_DIR = Path('/backups') at app/backup.py:49 (nightly pg_dump target)"
+    },
+    "declared_for": {
+      "/data": "keystone: no release or branch reads it; origin/dev has no code path under /data (the template Description describes a file vault that origin/dev does not read)"
     }
   },
   "reauth-bot": {
@@ -64,6 +75,10 @@
       "SEED_MODE": "reads SEED_MODE via the shell in entrypoint.sh and os.environ.get in reauth.py; entrypoint.sh branches on it; reauth.py seed() vs loop()",
       "SEED_VNC_PASSWORD": "reads SEED_VNC_PASSWORD via the shell in entrypoint.sh; entrypoint.sh required check, written to VNC pass file, then unset",
       "REAUTH_SEED_HOLD_SECONDS": "reads REAUTH_SEED_HOLD_SECONDS via _numeric_setting() -> _env() in reauth.py; reauth.py:325 SEED_HOLD_S gates how long the headed browser stays open in seed()"
+    },
+    "paths": {
+      "/profile": "reads /profile via Dockerfile:69 (ALERT_STATE_FILE=/profile/alerting-state.json) and .env.example:73 (ALERT_ERROR_LOG under /profile/logs)",
+      "/kw_shared": "reads /kw_shared via alerting.py:241 (_SHARED_ROOT, the shared alerting config)"
     }
   },
   "tape": {
@@ -77,6 +92,11 @@
       "DB_NAME": "reads DB_NAME via pydantic-settings field db_name in app/config.py (no env_prefix, case-insensitive); same sqlalchemy_url property",
       "DATABASE_URL": "reads DATABASE_URL via pydantic-settings field database_url in app/config.py (no env_prefix, case-insensitive); app/config.py:474 Settings.database_url; sqlalchemy_url property (~537-539) uses it as the override that wins over the discrete DB_* vars when set",
       "DEPLOY_ENV": "reads DEPLOY_ENV via _env(DEPLOY_ENV_VAR) in app/alerting.py (kw-common's constant, = \"DEPLOY_ENV\"); app/alerting.py:configure_alerting -> kw_common.alerting_env.load_alert_settings; picks the ntfy topic and gates boot (T12 retired the old NTFY_URL Variable this replaces)"
+    },
+    "paths": {
+      "/data": "reads /data via token_store_path, default /data/schwab_tokens.enc (app/config.py:480), opened at app/core/tokens.py:186",
+      "/backups": "reads /backups via settings.backup_dir (app/api/market.py:2762), seeded to /backups by alembic/versions/0052_seed_app_config.py:97",
+      "/kw_shared": "reads /kw_shared via app/alerting.py:60 (_SHARED_ROOT, the shared alerting config)"
     }
   },
   "the-desk": {
@@ -92,6 +112,11 @@
       "DESK_STALE_AMBER_HOURS": "reads DESK_STALE_AMBER_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:151; app/assemble.py:206,381",
       "DESK_STALE_RED_HOURS": "reads DESK_STALE_RED_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:152; app/assemble.py:207,382",
       "DESK_LOG_LEVEL": "reads DESK_LOG_LEVEL via log_level_env() -> _env() (os.environ.get) in app/config.py; app/config.py:82 log_level_env(); app/intake.py:335,337 logging.basicConfig"
+    },
+    "paths": {
+      "/data": "reads /data via inbox_path under data_dir (app/config.py:254); Dockerfile:7 documents /data as the wallet and inbox volume",
+      "/backups": "reads /backups via backup_dir, default /backups (app/config.py:184); app/backup.py:19 names it the fixed mount",
+      "/kw_shared": "reads /kw_shared via Dockerfile:99 (ENV SHARED_ROOT=/kw_shared), read through app/alerting.py:78"
     }
   },
   "iron-tide": {
@@ -144,6 +169,9 @@
       "ALPACA_PAPER_SECRET_KEY_2": "reads ALPACA_PAPER_SECRET_KEY_2 via env() (os.getenv) over key_env_names(2) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
       "ALPACA_PAPER_KEY_ID_3": "reads ALPACA_PAPER_KEY_ID_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
       "ALPACA_PAPER_SECRET_KEY_3": "reads ALPACA_PAPER_SECRET_KEY_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged"
+    },
+    "paths": {
+      "/data": "reads /data via Dockerfile:36 (--db /data/gambit.db) and Dockerfile:14 (GAMBIT_TAPE_CACHE_DIR=/data/tape-cache)"
     }
   },
   "gambit-loop": {
@@ -158,6 +186,9 @@
       "ALPACA_PAPER_SECRET_KEY_2": "reads ALPACA_PAPER_SECRET_KEY_2 via env() (os.getenv) over key_env_names(2) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
       "ALPACA_PAPER_KEY_ID_3": "reads ALPACA_PAPER_KEY_ID_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged",
       "ALPACA_PAPER_SECRET_KEY_3": "reads ALPACA_PAPER_SECRET_KEY_3 via env() (os.getenv) over key_env_names(3) in gambit/paper/alpaca_paper.py:62-65 (AlpacaPaper.from_env); also checked by gambit/ui/app.py /paper to show whether the slot is configured; sent only as request headers to the paper trading host, never logged"
+    },
+    "paths": {
+      "/data": "reads /data via the --db /data/gambit.db argument in the template's PostArgs (templates/gambit-loop.xml), which scripts/run_paper_loop.py:67 parses"
     }
   },
   "kb-postgres": {
@@ -166,6 +197,9 @@
       "POSTGRES_PASSWORD": "reads POSTGRES_PASSWORD in the stock postgres image's docker-entrypoint.sh (docker_setup_env / docker_setup_db, first start of an empty data directory); upstream reference https://github.com/docker-library/docs/blob/master/postgres/README.md#postgres_password; pgvector/pgvector is a thin layer over that image",
       "POSTGRES_USER": "reads POSTGRES_USER in the stock postgres image's docker-entrypoint.sh (docker_setup_env, first start only); upstream reference https://github.com/docker-library/docs/blob/master/postgres/README.md#postgres_user",
       "POSTGRES_DB": "reads POSTGRES_DB in the stock postgres image's docker-entrypoint.sh (docker_setup_env / docker_setup_db, first start only); upstream reference https://github.com/docker-library/docs/blob/master/postgres/README.md#postgres_db"
+    },
+    "paths": {
+      "/var/lib/postgresql/data": "reads /var/lib/postgresql/data as PGDATA in the stock postgres 17 image: docker-library/postgres 17/bookworm/Dockerfile:184"
     }
   },
   "kb-webui": {
@@ -203,25 +237,36 @@
       "SCARF_NO_ANALYTICS": "reads SCARF_NO_ANALYTICS in the bundled Scarf analytics library, not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.12.3: Dockerfile:95 ENV SCARF_NO_ANALYTICS=true, which this Variable overrides",
       "DO_NOT_TRACK": "reads DO_NOT_TRACK in bundled libraries, not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.12.3: Dockerfile:96 ENV DO_NOT_TRACK=true, which this Variable overrides",
       "ANONYMIZED_TELEMETRY": "reads ANONYMIZED_TELEMETRY in the bundled vector-store library (chromadb), not in Open WebUI's own Python; set by https://github.com/open-webui/open-webui at v0.12.3: Dockerfile:97 ENV ANONYMIZED_TELEMETRY=false, which this Variable overrides"
+    },
+    "paths": {
+      "/app/backend/data": "reads /app/backend/data as the default DATA_DIR in open-webui v0.12.3: backend/open_webui/env.py:228"
     }
   },
   "kb-service": {
     "no_local_consumer": false,
     "vars": {
       "KB_PERSONA_TOKENS": "reads KB_PERSONA_TOKENS in https://github.com/sdr-ventures/kb-service at v0.1.0: kb_service/config.py:33 env.get('KB_PERSONA_TOKENS', ''); config.py:34-35 raises ConfigError when blank, config.py:44 rejects a token under 32 characters, and kb_service/__main__.py:14-16 turns that into exit 2",
-      "KB_STACK": "reads KB_STACK in https://github.com/sdr-ventures/kb-service at v0.1.0: kb_service/config.py:26 env.get('KB_STACK', 'global'); config.py:27-28 raises ConfigError for any value but global",
-      "KB_DATABASE_URL": "reads KB_DATABASE_URL: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync",
-      "KB_EXPORT_DIR": "reads KB_EXPORT_DIR: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; the value matches the VOLUME /export at Dockerfile:27",
-      "KB_ASSETS_DIR": "reads KB_ASSETS_DIR: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; the value matches the VOLUME /assets at Dockerfile:27",
-      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync",
-      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync",
-      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY: declared for a later release, not read at https://github.com/sdr-ventures/kb-service v0.1.0, where kb_service/config.py:22 load_settings builds Settings from KB_STACK and KB_PERSONA_TOKENS only; carried now so a later release needs no template sync"
+      "KB_STACK": "reads KB_STACK in https://github.com/sdr-ventures/kb-service at v0.1.0: kb_service/config.py:26 env.get('KB_STACK', 'global'); config.py:27-28 raises ConfigError for any value but global"
+    },
+    "paths": {},
+    "declared_for": {
+      "KB_DATABASE_URL": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:35 reads it",
+      "KB_EMBED_BASE_URL": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:36 reads it",
+      "KB_EMBED_MODEL": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:37 reads it",
+      "KB_EMBED_API_KEY": "kb-service branch library-slice-1 (unreleased, not in v0.1.0): kb_service/config.py:38 reads it",
+      "KB_EXPORT_DIR": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention",
+      "KB_ASSETS_DIR": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention",
+      "/assets": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention",
+      "/export": "kb-service: no release or branch reads it; origin/main Dockerfile:27 VOLUME is the only mention"
     }
   },
   "kb-redis": {
     "no_local_consumer": false,
     "vars": {
       "REDIS_PASSWORD": "reads REDIS_PASSWORD in the kb-redis template's own Post Arguments wrapper (templates/kb-redis.xml): sh expands \"$REDIS_PASSWORD\" inside the container into redis-server --requirepass, and exits 1 first when it is empty; the stock redis:7.4-alpine image's docker-entrypoint.sh has no environment-variable password option, which is why the wrapper exists"
+    },
+    "paths": {
+      "/data": "reads /data as the working directory of the stock redis image: docker-library/redis 7.4/alpine/Dockerfile:135 (WORKDIR /data), where the --appendonly file is written"
     }
   },
   "kb-litellm": {
@@ -242,6 +287,9 @@
       "GROQ_API_KEY": "reads GROQ_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/groq/chat/transformation.py:166 get_secret_str(\"GROQ_API_KEY\") when no per-model api_key is set in config.yaml; litellm/litellm_core_utils/get_llm_provider_logic.py:277 get_secret_str(\"GROQ_API_KEY\") for an api.groq.com endpoint",
       "CLOUDFLARE_API_KEY": "reads CLOUDFLARE_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:16 api_key_env = (\"CLOUDFLARE_API_KEY\",), the key the decisions provider reads; litellm/constants.py:1964 lists it in SENTRY_DENYLIST, the names kept out of error reports",
       "CLOUDFLARE_ACCOUNT_ID": "reads CLOUDFLARE_ACCOUNT_ID in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:20 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the endpoint; litellm/llms/cloudflare/chat/transformation.py:51 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the chat endpoint when no api_base is given"
+    },
+    "paths": {
+      "/app/config.yaml": "reads /app/config.yaml via the --config argument in the template's PostArgs; litellm v1.105.1 litellm/proxy/proxy_cli.py:364-365 opens the --config path"
     }
   },
   "kw-ingress": {
@@ -256,13 +304,21 @@
       "KW_WEB_CLIENTS": "reads KW_WEB_CLIENTS via {$KW_WEB_CLIENTS} in config/caddy/Caddyfile:95,116 (client_ip matcher for the keystone pages and tape's public paths)",
       "KW_ADMIN_CLIENTS": "reads KW_ADMIN_CLIENTS via {$KW_ADMIN_CLIENTS} in config/caddy/Caddyfile:129 (client_ip matcher for tape's /v1/admin)",
       "KW_API_CLIENTS": "reads KW_API_CLIENTS via {$KW_API_CLIENTS} in config/caddy/Caddyfile:85,148 (client_ip matcher for keystone-web's /api/health and tape's consumer API)"
+    },
+    "paths": {
+      "/etc/caddy": "reads /etc/caddy via the Caddyfile inside it (/etc/caddy/Caddyfile): kw-edge config/caddy/README.md:7; scripts/validate_configs.sh:62"
     }
   },
   "kw-proxy": {
     "no_local_consumer": false,
     "vars": {},
     "paths": {
-      "/etc/squid/kw/operator-resolver.conf": "reads /etc/squid/kw/operator-resolver.conf (a Path, not a Variable) via kw-edge config/squid/squid.conf:23 (include: the dns_nameservers line the proxy resolves through; an empty file keeps the container resolver)"
+      "/etc/squid/kw/operator-resolver.conf": "reads /etc/squid/kw/operator-resolver.conf (a Path, not a Variable) via kw-edge config/squid/squid.conf:23 (include: the dns_nameservers line the proxy resolves through; an empty file keeps the container resolver)",
+      "/etc/squid/squid.conf": "reads /etc/squid/squid.conf via kw-edge scripts/validate_configs.sh:86 (squid -N -f /etc/squid/squid.conf)",
+      "/etc/squid/kw/destinations": "reads /etc/squid/kw/destinations via kw-edge config/squid/squid.conf:50 (the per-source allowlist files, e.g. keystone.allow)",
+      "/etc/squid/kw/operator-sources.conf": "reads /etc/squid/kw/operator-sources.conf via kw-edge config/squid/squid.conf:46 (include)",
+      "/etc/squid/kw/operator-destinations.conf": "reads /etc/squid/kw/operator-destinations.conf via kw-edge config/squid/squid.conf:60 (include)",
+      "/var/log/squid": "reads /var/log/squid via kw-edge config/squid/squid.conf:86 (access_log stdio:/var/log/squid/destination.log)"
     }
   }
 }
