@@ -118,7 +118,8 @@
     "no_local_consumer": false,
     "vars": {
       "KEYSTONE_API_URL": "reads KEYSTONE_API_URL via process.env in lib/keystone.ts and app/api/health/route.ts (origin/dev; origin/main has no app code yet); lib/keystone.ts baseUrl(): every Route Handler upstream fetch; throws if unset; app/api/health/route.ts reachability probe",
-      "SESSION_COOKIE_MAX_AGE": "reads SESSION_COOKIE_MAX_AGE via process.env in lib/session-cookie.ts (origin/dev; origin/main has no app code yet); lib/session-cookie.ts maxAge(): Max-Age of the httpOnly refresh cookie (default 43200)"
+      "SESSION_COOKIE_MAX_AGE": "reads SESSION_COOKIE_MAX_AGE via process.env in lib/session-cookie.ts (origin/dev; origin/main has no app code yet); lib/session-cookie.ts maxAge(): Max-Age of the httpOnly refresh cookie (default 43200)",
+      "HEALTHCHECKS_API_KEY_RO": "reads HEALTHCHECKS_API_KEY_RO via process.env in lib/healthchecks.ts (origin/dev; origin/main has no app code yet); lib/healthchecks.ts monitorView(): x-api-key header of the checks request; unset returns the unconfigured state with no call made"
     }
   },
   "tldw-webui": {

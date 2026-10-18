@@ -30,4 +30,7 @@
 
   <!-- Runtime tuning -->
   <Config Name="SESSION_COOKIE_MAX_AGE" Target="SESSION_COOKIE_MAX_AGE" Default="43200" Mode="" Description="Lifetime in seconds of the httpOnly refresh cookie. Keep equal to the API's refresh-token TTL (its JWT_REFRESH_TTL_SECONDS, default 43200 = 12 h): the API's session row is authoritative, so a longer value only leaves a dead cookie behind." Type="Variable" Display="advanced" Required="false" Mask="false">43200</Config>
+
+  <!-- Optional. Read by the server only (the System health page's Route Handler), never shipped to the browser. -->
+  <Config Name="HEALTHCHECKS_API_KEY_RO" Target="HEALTHCHECKS_API_KEY_RO" Default="" Mode="" Description="Read-only API key for the hosted health monitor, used by the administrator's System health page. Sent to the monitor's checks endpoint and to no other host; never returned to the browser. Blank (default): the page makes no monitor call and shows 'Monitor unreachable' with no checks. Alerts are not affected." Type="Variable" Display="advanced" Required="false" Mask="true"/>
 </Container>
