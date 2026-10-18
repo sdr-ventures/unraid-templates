@@ -38,6 +38,11 @@ that actually uses it. This file enforces that the record is COMPLETE and never 
     or case_sensitive=True, since no consumer uses them; extend it when one does. Any
     identifier in the citation made of the Variable's words in another order
     (`backup_db_user` under `DB_BACKUP_USER`) fails too: that is a Variable nothing reads.
+  * every Type="Path" Target gets the same exact check under `paths`, with citations that
+    open `reads <PATH>` (the path itself, not a file under it).
+  * a Variable or Path a release has not wired yet goes under `declared_for`, never under
+    `vars` or `paths`: its value names the package or branch that will read it and does not
+    claim a read today. A name is cited or declared_for, never both.
 This is a structural gate, not a semantic one: it cannot itself prove a citation is true.
 That proof is the one-time job the accompanying RETURN records; ⚠️ re-run the grep behind a
 citation before trusting it if the cited consumer file has moved on since.
@@ -70,6 +75,19 @@ def _template_vars(name):
     }
 
 
+def _template_paths(name):
+    root = ET.parse(TEMPLATES / f"{name}.xml").getroot()
+    return {
+        (c.get("Target") or "").strip()
+        for c in root.iter("Config")
+        if (c.get("Type") or "").strip().lower() == "path"
+    }
+
+
+def _declared_for(manifest):
+    return manifest.get("declared_for") or {}
+
+
 def test_manifest_exists_and_parses():
     assert MANIFEST_PATH.is_file(), f"{MANIFEST_PATH} is missing"
     manifest = _manifest()
@@ -92,14 +110,14 @@ def test_every_template_has_a_manifest_entry():
 def test_declared_variables_match_the_audited_variables_exactly(name):
     manifest = _manifest()[name]
     if manifest.get("no_local_consumer"):
-        assert not manifest.get("vars"), (
+        assert not manifest.get("vars") and not _declared_for(manifest), (
             f"{name}: flagged no_local_consumer but still carries per-variable citations — "
             f"either the consumer showed up under C:\\dev (audit it and clear the flag) or "
             f"these citations are stale (delete them)"
         )
         return
     declared = _template_vars(name)
-    audited = set(manifest.get("vars") or {})
+    audited = set(manifest.get("vars") or {}) | (set(_declared_for(manifest)) & declared)
     missing = declared - audited
     assert not missing, (
         f"{name}: template declares Variable(s) with no consumption.json citation: "
@@ -124,6 +142,97 @@ def test_every_citation_is_non_trivial(name):
             f"{name}: {var}'s citation {citation!r} is too thin to mean anything — "
             f"name the file (and ideally line) that reads it"
         )
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_declared_paths_match_the_audited_paths_exactly(name):
+    manifest = _manifest()[name]
+    declared = _template_paths(name)
+    cited = manifest.get("paths") or {}
+    if manifest.get("no_local_consumer"):
+        assert not cited, f"{name}: flagged no_local_consumer but still carries path citations"
+        return
+    audited = set(cited) | (set(_declared_for(manifest)) & declared)
+    missing = declared - audited
+    assert not missing, (
+        f"{name}: template declares Path(s) with no consumption.json citation: {sorted(missing)} "
+        f"— cite where the consumer reads each one under `paths`, or record it under "
+        f"`declared_for` if no release reads it yet"
+    )
+    stale = set(cited) - declared
+    assert not stale, f"{name}: consumption.json cites Path(s) the template no longer declares: {sorted(stale)}"
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_every_declared_for_names_a_declared_variable_or_path(name):
+    manifest = _manifest()[name]
+    declared = _template_vars(name) | _template_paths(name)
+    stale = set(_declared_for(manifest)) - declared
+    assert not stale, f"{name}: declared_for names {sorted(stale)}, which the template does not declare"
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_a_name_is_cited_or_declared_for_never_both(name):
+    manifest = _manifest()[name]
+    both = (set(manifest.get("vars") or {}) | set(manifest.get("paths") or {})) & set(_declared_for(manifest))
+    assert not both, f"{name}: {sorted(both)} is both cited and declared_for — keep one"
+
+
+def _declared_for_problems(value):
+    """What is wrong with a declared_for value ([] = nothing): it must name a package, not claim a read."""
+    if not isinstance(value, str) or len(value.strip()) < 8:
+        return ["is too thin to name the package or branch that will read it"]
+    if re.match(r"reads\b", value.strip()):
+        return ["opens `reads`, a read claim: it belongs under vars or paths"]
+    return []
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_every_declared_for_says_what_will_read_it(name):
+    for target, value in _declared_for(_manifest()[name]).items():
+        problems = _declared_for_problems(value)
+        assert not problems, f"{name}: declared_for {target} {'; '.join(problems)} ({value!r})"
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_every_path_citation_is_non_trivial_and_opens_reads_its_path(name):
+    for path, citation in (_manifest()[name].get("paths") or {}).items():
+        assert isinstance(citation, str) and len(citation.strip()) >= 8, (
+            f"{name}: {path}'s citation {citation!r} is too thin to mean anything — name the file "
+            f"(and ideally line) that reads it"
+        )
+        problems = _path_problems(path, citation)
+        assert not problems, (
+            f"{name}: {path}'s citation {'; '.join(problems)}. A citation for a directory names "
+            f"that directory, not a file under it: a file under it is a different Path entry."
+        )
+
+
+def _path_problems(path, citation):
+    """What is wrong with `citation` as the record of where `path` is read ([] = nothing)."""
+    if re.match(rf"reads {re.escape(path)}(?![\w/.-])", citation):
+        return []
+    return [f"does not start `reads {path}`"]
+
+
+@pytest.mark.parametrize("path, citation, caught", [
+    ("/data", "reads /data via DB_PATH, the default /data/cef_tracker.db (config.py:92)", False),
+    ("/data", "reads /data/backups via scheduler.py:1835", True),
+    ("/data", "the container reads /data via config.py:92", True),
+    ("/kw_shared", "reads /kw_shared via alerting_config.py:45", False),
+    ("/etc/squid/kw/destinations", "reads /etc/squid/kw/destinations/keystone.allow via squid.conf:50", True),
+])
+def test_the_path_rule_catches_a_citation_for_a_different_path(path, citation, caught):
+    assert bool(_path_problems(path, citation)) is caught
+
+
+@pytest.mark.parametrize("value, caught", [
+    ("kb-service branch library-slice-1 (unreleased): kb_service/config.py:35 reads it", False),
+    ("reads KB_DATABASE_URL at kb_service/config.py:35 on a later release", True),
+    ("later", True),
+])
+def test_the_declared_for_rule_catches_a_read_claim_or_an_empty_reason(value, caught):
+    assert bool(_declared_for_problems(value)) is caught
 
 
 def _citation_problems(var, citation):
