@@ -39,7 +39,7 @@
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-extractor.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kw-extractor.png</Icon>
   <ExtraParams/>
   <DateInstalled/>
   <Description>Statement reader for Keystone Wealth. No data kept.</Description>

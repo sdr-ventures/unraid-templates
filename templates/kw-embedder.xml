@@ -37,7 +37,7 @@
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-embedder.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kw-embedder.png</Icon>
   <ExtraParams/>
   <DateInstalled/>
   <Description>Embedding engine for Keystone Wealth. No data kept.</Description>
