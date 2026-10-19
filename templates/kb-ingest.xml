@@ -24,7 +24,7 @@
 -->
 <Container version="2">
   <Name>kb-ingest</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-ingest:v0.5.1</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-ingest:latest</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-ingest</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -36,7 +36,7 @@
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-ingest.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
-  <ExtraParams>--cpus=4 --memory=4g --memory-swap=4g</ExtraParams>
+  <ExtraParams/>
   <DateInstalled/>
   <Description>Ingest worker for the knowledge library. CPU only, one job at a time, no database access. Start after kb-service.</Description>
   <Config Name="Models" Target="/models" Default="" Mode="rw" Description="REQUIRED. Speech model cache. Re-downloadable: losing it costs a download, not data. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-ingest/models." Type="Path" Display="always" Required="true" Mask="false"></Config>

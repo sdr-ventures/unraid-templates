@@ -16,10 +16,11 @@
 
   NETWORK. Set the Network field to the internal Docker network the Keystone containers share
   (no route out) and give it a fixed address there. It publishes no port. If the router is outside
-  that network, send the call through the network's egress proxy via HTTP_PROXY and allow that one
-  destination there.
+  that network, send the call through the network's egress proxy: add HTTP_PROXY and NO_PROXY as extra
+  Variables after import and allow that one destination there.
 
-  HARDENING. Keep Extra Parameters as shipped: read-only root, RAM scratch, all capabilities
+  HARDENING. Extra Parameters ships empty (repo rule). After import, add these docker run options (each begins with two dashes): read-only; tmpfs /tmp:size=256m; tmpfs /export:size=1m; tmpfs /assets:size=1m; cap-drop=ALL; security-opt no-new-privileges; cpus=2; memory=1g
+  It gives: read-only root, RAM scratch, all capabilities
   dropped, no new privileges, CPU and memory caps.
 
   THE TOKEN. KB_EXTRACTOR_TOKEN ships blank. Use 32 or more random characters and give the same
@@ -27,7 +28,7 @@
 -->
 <Container version="2">
   <Name>kw-extractor</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.6.1</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:latest</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -39,7 +40,7 @@
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-extractor.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
-  <ExtraParams>--read-only --tmpfs /tmp:size=256m --tmpfs /export:size=1m --tmpfs /assets:size=1m --cap-drop=ALL --security-opt no-new-privileges --cpus=2 --memory=1g</ExtraParams>
+  <ExtraParams/>
   <DateInstalled/>
   <Description>Statement reader for Keystone Wealth. No data kept.</Description>
   <Config Name="KB_MODE" Target="KB_MODE" Default="extractor" Mode="" Description="REQUIRED. Run the extractor engine only. Leave extractor." Type="Variable" Display="always" Required="true" Mask="false">extractor</Config>
@@ -47,6 +48,4 @@
   <Config Name="LITELLM_URL" Target="LITELLM_URL" Default="" Mode="" Description="REQUIRED. Base URL of the model router, for example http://router:4000." Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="LITELLM_KEY" Target="LITELLM_KEY" Default="" Mode="" Description="REQUIRED. Router key that allows local models only." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KB_EXTRACT_MODEL" Target="KB_EXTRACT_MODEL" Default="large" Mode="" Description="Router group that reads statements." Type="Variable" Display="always" Required="false" Mask="false">large</Config>
-  <Config Name="HTTP_PROXY" Target="HTTP_PROXY" Default="" Mode="" Description="Optional. Egress proxy the router call goes through." Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="NO_PROXY" Target="NO_PROXY" Default="" Mode="" Description="Optional. Addresses never sent through the proxy, comma separated." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 </Container>

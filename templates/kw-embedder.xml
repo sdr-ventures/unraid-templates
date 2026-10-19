@@ -13,7 +13,8 @@
   (no route out) and give it a fixed address there. It publishes no port. The model server named
   in KB_EMBED_BASE_URL must be reachable on that same network.
 
-  HARDENING. Keep Extra Parameters as shipped: read-only root, RAM scratch over the two paths the
+  HARDENING. Extra Parameters ships empty (repo rule). After import, add these docker run options (each begins with two dashes): read-only; tmpfs /tmp:size=64m; tmpfs /export:size=1m; tmpfs /assets:size=1m; cap-drop=ALL; security-opt no-new-privileges; cpus=2; memory=512m
+  It gives: read-only root, RAM scratch over the two paths the
   image declares as volumes (so no anonymous volume is created), all capabilities dropped, no new
   privileges, and CPU and memory caps.
 
@@ -22,7 +23,7 @@
 -->
 <Container version="2">
   <Name>kw-embedder</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.5.1</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:latest</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -34,7 +35,7 @@
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-embedder.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
-  <ExtraParams>--read-only --tmpfs /tmp:size=64m --tmpfs /export:size=1m --tmpfs /assets:size=1m --cap-drop=ALL --security-opt no-new-privileges --cpus=2 --memory=512m</ExtraParams>
+  <ExtraParams/>
   <DateInstalled/>
   <Description>Embedding engine for Keystone Wealth. No data kept.</Description>
   <Config Name="KB_MODE" Target="KB_MODE" Default="embedder" Mode="" Description="REQUIRED. Run the embedder engine only. Leave embedder." Type="Variable" Display="always" Required="true" Mask="false">embedder</Config>

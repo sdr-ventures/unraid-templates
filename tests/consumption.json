@@ -371,5 +371,41 @@
       "/var/lib/clamav": "reads /var/lib/clamav via the clamav/clamav image: clamd loads the signature databases from the database directory (clamav-docker clamav/README-debian.md, 'Controlling the container'); mounted read-only here",
       "/tmp": "reads /tmp via clamd's scratch and socket paths: the image keeps clamd.sock in /tmp (clamav-docker clamav/README-debian.md, default socket /tmp/clamd.sock); the README does not name the scratch directory itself"
     }
+  },
+  "kb-ingest": {
+    "no_local_consumer": false,
+    "vars": {
+      "KB_URL": "reads KB_URL in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:17 os.environ[\"KB_URL\"] (the service base URL; the worker exits if missing)",
+      "KB_TOKEN": "reads KB_TOKEN in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:18 os.environ[\"KB_TOKEN\"] (the bearer sent on every claim/result/fail call)",
+      "POLL_SECONDS": "reads POLL_SECONDS in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:19 os.environ.get(\"POLL_SECONDS\", \"30\") (wait between empty claims)",
+      "MAX_MINUTES": "reads MAX_MINUTES in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:21 os.environ.get(\"MAX_MINUTES\", \"240\") (longest video accepted)"
+    },
+    "paths": {
+      "/models": "reads /models in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/Dockerfile:7 HF_HOME=/models (the speech model downloads there on first start so it survives updates)"
+    },
+    "declared_for": {}
+  },
+  "kw-embedder": {
+    "no_local_consumer": false,
+    "vars": {
+      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") (embedder selects the embedder app)",
+      "KB_EMBEDDER_TOKEN": "reads KB_EMBEDDER_TOKEN in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:58 env.get(\"KB_EMBEDDER_TOKEN\", \"\"); config.py:59-60 refuses a short token",
+      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:61 env.get(\"KB_EMBED_BASE_URL\", \"\") (the model server)",
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:67 env.get(\"KB_EMBED_MODEL\") (the model name)"
+    },
+    "paths": {},
+    "declared_for": {}
+  },
+  "kw-extractor": {
+    "no_local_consumer": false,
+    "vars": {
+      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") (extractor selects the extractor app)",
+      "KB_EXTRACTOR_TOKEN": "reads KB_EXTRACTOR_TOKEN in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:116 env.get(\"KB_EXTRACTOR_TOKEN\", \"\"); config.py:117 refuses a short token",
+      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:119 env.get(\"LITELLM_URL\", \"\") (the model router)",
+      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:120 env.get(\"LITELLM_KEY\") (the router key)",
+      "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:126 env.get(\"KB_EXTRACT_MODEL\") (the router group)"
+    },
+    "paths": {},
+    "declared_for": {}
   }
 }
