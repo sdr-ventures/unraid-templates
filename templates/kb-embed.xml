@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+  kb-embed - Ollama (github.com/ollama/ollama), the embedding model server for the knowledge
+  stack. It runs one embedding model, qwen3-embedding:0.6b, and answers only the model router
+  (kb-litellm) on the kb network. Stock image, pinned by digest; nothing here is specific to any
+  host or operator.
+
+  START ORDER FOR THE WHOLE SET:
+      kb-postgres -> kb-redis -> kb-litellm -> kb-embed -> kb-service -> kb-webui
+  Unraid templates have no depends_on, so nothing starts these in order for you.
+
+  NETWORK WIRING. The kb containers share one user-defined Docker network named kb, created by
+  hand once before the first start. A template cannot create a network, so Network stays bridge
+  and Extra Parameters stay empty; set the Network field to kb when you create the container.
+  Ollama listens on 11434 inside the container. Nothing publishes it to the LAN: kb-litellm
+  reaches it as kb-embed:11434 on the kb network.
+
+  LIMITS ARE SET ON THE HOST. A template cannot carry docker run limits (ExtraParams must stay
+  empty), so the host sets them on the container: cpus=4, memory=3g, memory-swap=3g. See the
+  Overview.
+
+  IMAGE PIN. Pinned by digest, so an Update is a deliberate change of the digest.
+-->
+<Container version="2">
+  <Name>kb-embed</Name>
+  <Repository>ollama/ollama@sha256:265409e1d931028a8f7d5a32bcbafddd7bffbc6cc629d77efe9560adf692a5e7</Repository>
+  <Registry>https://hub.docker.com/r/ollama/ollama</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/ollama/ollama/issues</Support>
+  <Project>https://github.com/ollama/ollama</Project>
+  <Overview>The embedding model server for the knowledge stack: it turns text into vectors for kb-service's search, through kb-litellm. STARTED IN ORDER: after kb-litellm, before kb-service. NETWORK: set Network to kb, the user-defined network the knowledge stack shares, created once by hand before the first start. Docker must preserve user-defined networks across updates (Unraid: Settings &gt; Docker, Preserve user defined networks = Yes), or the container falls back to bridge and kb-litellm can no longer resolve kb-embed. EXPOSURE: none. No host port is published; the only caller is kb-litellm on the kb network. ONE-TIME MODEL PULL: after the first start, run docker exec kb-embed ollama pull qwen3-embedding:0.6b and wait for it to finish. The model store is on the Models path; the pull repeats after a rebuild of that folder. CONFIG: kb-litellm must route the embed model name to http://kb-embed:11434 with the model qwen3-embedding:0.6b. KEEP ALIVE: OLLAMA_KEEP_ALIVE=-1 keeps the model in memory, so an upload never waits for a model load. PARALLEL: OLLAMA_NUM_PARALLEL=2 is the most requests served at once inside the limits below. LIMITS (HOST SETS THESE, NOT THIS TEMPLATE): --cpus=4 --memory=3g --memory-swap=3g on the container. Without them the model can take the whole host's memory. HEALTH: no health check in the template. To check, run docker exec kb-embed ollama list; the model must be listed. IMAGE: pinned by digest; upstream tags move, so an Update is a deliberate change of the digest in this template.</Overview>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-embed.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-embed.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Description>Embedding model server for the knowledge stack (qwen3-embedding:0.6b), reached only through kb-litellm on the kb network. Start after kb-litellm, before kb-service. No port published.</Description>
+  <Config Name="Models" Target="/root/.ollama" Default="" Mode="rw" Description="REQUIRED. Ollama's model store. Re-pullable: losing it costs a model download, not data. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-embed/models." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="OLLAMA_KEEP_ALIVE" Target="OLLAMA_KEEP_ALIVE" Default="-1" Mode="" Description="How long a loaded model stays in memory after its last request. -1 keeps it loaded, so an upload never waits for a model load. Upstream's default is 5 minutes." Type="Variable" Display="advanced" Required="false" Mask="false">-1</Config>
+  <Config Name="OLLAMA_NUM_PARALLEL" Target="OLLAMA_NUM_PARALLEL" Default="2" Mode="" Description="Requests served at once. Upstream's default is 1. Keep 2 or lower inside the 3 GB memory limit the Overview gives." Type="Variable" Display="advanced" Required="false" Mask="false">2</Config>
+</Container>

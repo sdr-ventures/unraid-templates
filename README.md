@@ -31,6 +31,7 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kb-postgres (start 1st, `kb` network only) | `icons/kb-postgres.png` | `templates/kb-postgres.xml` |
 | kb-redis (start 2nd, after kb-postgres, `kb` network only) | `icons/kb-redis.png` | `templates/kb-redis.xml` |
 | kb-litellm (start 3rd, after kb-redis; needs a `litellm` database and a `config.yaml`) | `icons/kb-litellm.png` | `templates/kb-litellm.xml` |
+| kb-embed (after kb-litellm, before kb-service; `kb` network only, no port) | `icons/kb-embed.png` | `templates/kb-embed.xml` |
 | kb-service (start 4th, after kb-litellm) | `icons/kb-service.png` | `templates/kb-service.xml` |
 | kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
 | kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
