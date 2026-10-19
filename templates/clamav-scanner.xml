@@ -41,7 +41,7 @@
   <Category>Security:</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/clamav-scanner.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/clamav.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/clamav-scanner.png</Icon>
   <ExtraParams/>
   <DateInstalled/>
   <Description>ClamAV daemon that scans uploads for one stack. Reads signatures read-only from the host folder clamav-updater writes; scratch in RAM. Publishes no port.</Description>

@@ -26,7 +26,7 @@
   <Category>Security:</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/clamav-updater.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/clamav.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/clamav-updater.png</Icon>
   <ExtraParams/>
   <DateInstalled/>
   <Description>ClamAV signature updater for the host's keystone scanners. Downloads virus signatures to a shared folder; runs no scanner. Publishes no port.</Description>

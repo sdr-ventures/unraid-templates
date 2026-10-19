@@ -19,7 +19,7 @@
   <Category>Network:Other</Category>
   <WebUI/>                                                            <!-- steady state has no web UI; seed noVNC is at http://CONTAINER-IP:6080/vnc.html only while SEED_MODE=1 -->
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/reauth-bot.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/reauth_bot.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/reauth-bot.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>

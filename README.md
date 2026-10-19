@@ -15,11 +15,11 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | Container | Icon | Template |
 |---|---|---|
 | tape (dev+prod) | `icons/tape.png` | `templates/tape.xml` |
-| tape-db (dev+prod) | `icons/tape_db.png` | `templates/tape-db.xml` |
+| tape-db (dev+prod) | `icons/tape-db.png` | `templates/tape-db.xml` |
 | cef-tracker (prod) | `icons/cef-tracker.png` | `templates/cef-tracker.xml` |
-| reauth-bot | `icons/reauth_bot.png` | `templates/reauth-bot.xml` |
+| reauth-bot | `icons/reauth-bot.png` | `templates/reauth-bot.xml` |
 | keystone | `icons/keystone.png` | `templates/keystone.xml` |
-| keystone-db | `icons/keystone_db.png` | `templates/keystone-db.xml` |
+| keystone-db | `icons/keystone-db.png` | `templates/keystone-db.xml` |
 | keystone-web (dev+prod) | `icons/keystone-web.png` | `templates/keystone-web.xml` |
 | the-desk (prod) | `icons/the-desk.png` | `templates/the-desk.xml` |
 | gambit (prod) | `icons/gambit.png` | `templates/gambit.xml` |
@@ -36,8 +36,8 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
 | kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
 | kw-proxy (KW edge, dev side; publishes no port, `internal` network) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
-| clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav.png` | `templates/clamav-updater.xml` |
-| clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged`) | `icons/clamav.png` | `templates/clamav-scanner.xml` |
+| clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav-updater.png` | `templates/clamav-updater.xml` |
+| clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged`) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
 
 Every template + icon in this repo must have a row here — keep this table in sync when adding either (the reauth-bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.
 
@@ -179,3 +179,6 @@ every copy and re-set each one's `TEMPLATE` line. A copy left at `TEMPLATE = Non
 refuses to run. An older single `sync-templates` copy whose `TEMPLATE = None` still runs every
 template (#102): delete it. Requires python3 ≥ 3.9; stdlib
 only, no dependencies to install.
+
+## Icons
+Every icon follows one style: a navy rounded tile with an outlined glyph, colored by stack (KW app gold `#D4AF37`, tape teal `#3FB8AF`, kb violet `#A78BFA`, edge and security silver `#C9D1D9`). The 256 px PNGs in `icons/` are what templates use; their SVG sources are in `icons/src/`. A new container takes its stack's color and one role glyph.

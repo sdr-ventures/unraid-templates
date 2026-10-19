@@ -15,7 +15,7 @@
   <Category>Database:</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/keystone-db.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/keystone_db.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/keystone-db.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
