@@ -33,6 +33,7 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kb-litellm (start 3rd, after kb-redis; needs a `litellm` database and a `config.yaml`) | `icons/kb-litellm.png` | `templates/kb-litellm.xml` |
 | kb-embed (after kb-litellm, before kb-service; `kb` network only, no port) | `icons/kb-embed.png` | `templates/kb-embed.xml` |
 | kb-service (start 4th, after kb-litellm) | `icons/kb-service.png` | `templates/kb-service.xml` |
+| kb-ingest (after kb-service; `kb` network only, no port, CPU capped; needs an `ingest-worker` token in kb-service) | `icons/kb-service.png` | `templates/kb-ingest.xml` |
 | kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
 | kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
 | kw-proxy (KW edge, dev side; publishes no port, `internal` network) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
