@@ -35,7 +35,7 @@
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-ingest.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-ingest.png</Icon>
   <ExtraParams/>
   <DateInstalled/>
   <Description>Ingest worker for the knowledge library. CPU only, one job at a time, no database access. Start after kb-service.</Description>
