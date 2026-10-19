@@ -10,8 +10,11 @@
   and success.
 
   NETWORK. Set the Network field to the internal Docker network the Keystone containers share
-  (no route out) and give it a fixed address there. It publishes no port. The model server named
-  in KB_EMBED_BASE_URL must be reachable on that same network.
+  (no route out) and give it a fixed address there. It publishes no port. Keep the model server
+  off that shared network: put it and this container on a second internal network of their own
+  (internal, no gateway) and name the model server by container name in KB_EMBED_BASE_URL, so
+  only this container can reach it. Docker attaches one network per template, so the second
+  attachment is a docker network connect that a boot-time script repeats.
 
   HARDENING. Extra Parameters ships empty (repo rule). After import, add these docker run options (each begins with two dashes): read-only; tmpfs /tmp:size=64m; tmpfs /export:size=1m; tmpfs /assets:size=1m; cap-drop=ALL; security-opt no-new-privileges; cpus=2; memory=512m
   It gives: read-only root, RAM scratch over the two paths the
