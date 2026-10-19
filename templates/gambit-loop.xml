@@ -21,7 +21,7 @@
   <Overview>gambit-loop - the paper-lab loop of gambit: every few minutes it runs the simulated rules and, for accounts bound to an Alpaca PAPER slot, places paper orders under the code limits and the kill file. Same image as the gambit dashboard; share its /data folder. Paper only: a live key is refused.</Overview>
   <Category>Productivity: Network:Other</Category>
     <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/gambit-loop.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/gambit.png</Icon>
+  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/gambit.png</Icon>
   <ExtraParams/>
   <PostArgs>python scripts/run_paper_loop.py --broker --interval 300 --db /data/gambit.db</PostArgs>
   <DateInstalled/>
