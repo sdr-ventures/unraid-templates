@@ -128,10 +128,8 @@ FLEET_IMAGE_PREFIX = ("ghcr.io/texasdaddy/", "ghcr.io/sdr-ventures/")
 FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 # Fleet images that are version-pinned on purpose, each a visible decision: they ship a
 # (v-prefixed) release tag, never a channel, and an Update is a deliberate bump of that pin.
-#   kb-service  the knowledge stack's three containers move together, one release at a time.
-FLEET_PINNED_BY_DESIGN = frozenset(
-    {("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.1.0")}
-)
+#   (none: the kb-service templates ship latest; the operator's live template holds the pin)
+FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset()
 
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
 #   tldw-redis  redis:7-alpine              — upstream's own compose choice; the blast radius is

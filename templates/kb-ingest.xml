@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!--
+  kb-ingest - the ingest worker for the knowledge library (github.com/sdr-ventures/kb-service,
+  image built from worker/Dockerfile and released under the same vX.Y.Z tag as kb-service).
+  Nothing here is specific to any host or operator.
+
+  WHAT IT DOES. It claims URL jobs from kb-service over HTTP, gets a timestamped transcript
+  (the video's own captions if it has them, otherwise audio transcribed on CPU), has a local
+  model summarize it through kb-service's router, and posts the text back. It has NO database
+  access and holds no library data: its only credential is one bearer token.
+
+  START ORDER: after kb-service (kb-postgres -> kb-redis -> kb-litellm -> kb-service -> kb-ingest).
+  Same network as the rest of the set: set the Network field to kb when you create it.
+
+  THE TOKEN. KB_TOKEN must equal the value of the "ingest-worker" key in kb-service's
+  KB_PERSONA_TOKENS. Add that key there first (32+ random characters), then paste the same value
+  here. It ships blank on purpose.
+
+  CPU AND MEMORY. Speech-to-text is CPU only and runs one job at a time. Keep Extra Parameters at
+  cpus 4 and memory 4g (swap equal) so a long video cannot starve the host.
+
+  FIRST START. The speech model downloads into the Models path (a few hundred MB) and stays
+  there across updates. Losing it costs a re-download, not data.
+-->
+<Container version="2">
+  <Name>kb-ingest</Name>
+  <Repository>ghcr.io/sdr-ventures/kb-ingest:latest</Repository>
+  <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-ingest</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sdr-ventures/kb-service/issues</Support>
+  <Project>https://github.com/sdr-ventures/kb-service</Project>
+  <Overview>The ingest worker for the knowledge library: turns a URL into a timestamped, summarized transcript and hands it to kb-service. STARTED IN ORDER: after kb-service. It needs the kb network (set the Network field to kb) and a bearer token that is also a key named ingest-worker in kb-service's KB_PERSONA_TOKENS.</Overview>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-ingest.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Description>Ingest worker for the knowledge library. CPU only, one job at a time, no database access. Start after kb-service.</Description>
+  <Config Name="Models" Target="/models" Default="" Mode="rw" Description="REQUIRED. Speech model cache. Re-downloadable: losing it costs a download, not data. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-ingest/models." Type="Path" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="KB_URL" Target="KB_URL" Default="http://kb-service:8000" Mode="" Description="REQUIRED. kb-service&#x27;s address on the kb network. Leave the default." Type="Variable" Display="always" Required="true" Mask="false">http://kb-service:8000</Config>
+  <Config Name="KB_TOKEN" Target="KB_TOKEN" Default="" Mode="" Description="REQUIRED. Bearer token for the ingest-worker persona: the same value as the ingest-worker key in kb-service&#x27;s KB_PERSONA_TOKENS. Blank on purpose; the container exits if it is unset." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="POLL_SECONDS" Target="POLL_SECONDS" Default="30" Mode="" Description="Seconds to wait between claim attempts when the queue is empty." Type="Variable" Display="advanced" Required="false" Mask="false">30</Config>
+  <Config Name="MAX_MINUTES" Target="MAX_MINUTES" Default="240" Mode="" Description="Videos longer than this many minutes are refused." Type="Variable" Display="advanced" Required="false" Mask="false">240</Config>
+</Container>
