@@ -346,11 +346,11 @@
     "vars": {},
     "paths": {
       "/etc/squid/kw/operator-resolver.conf": "reads /etc/squid/kw/operator-resolver.conf (a Path, not a Variable) via kw-edge config/squid/squid.conf:23 (include: the dns_nameservers line the proxy resolves through; an empty file keeps the container resolver)",
-      "/etc/squid/squid.conf": "reads /etc/squid/squid.conf via kw-edge scripts/validate_configs.sh:86 (squid -N -f /etc/squid/squid.conf)",
-      "/etc/squid/kw/destinations": "reads /etc/squid/kw/destinations via kw-edge config/squid/squid.conf:50 (the per-source allowlist files, e.g. keystone.allow)",
-      "/etc/squid/kw/operator-sources.conf": "reads /etc/squid/kw/operator-sources.conf via kw-edge config/squid/squid.conf:46 (include)",
-      "/etc/squid/kw/operator-destinations.conf": "reads /etc/squid/kw/operator-destinations.conf via kw-edge config/squid/squid.conf:60 (include)",
-      "/var/log/squid": "reads /var/log/squid via kw-edge config/squid/squid.conf:86 (access_log stdio:/var/log/squid/destination.log)"
+      "/etc/squid/squid.conf": "reads /etc/squid/squid.conf via kw-edge scripts/validate_configs.sh:88 (squid -N -f /etc/squid/squid.conf)",
+      "/etc/squid/kw/destinations": "reads /etc/squid/kw/destinations via kw-edge config/squid/squid.conf:50 (the per-source destination lists, one host-held file per source named <source>.allow; the lists are not in kw-edge)",
+      "/etc/squid/kw/operator-sources.conf": "reads /etc/squid/kw/operator-sources.conf via kw-edge config/squid/squid.conf:45 (include)",
+      "/etc/squid/kw/operator-destinations.conf": "reads /etc/squid/kw/operator-destinations.conf via kw-edge config/squid/squid.conf:59 (include)",
+      "/var/log/squid": "reads /var/log/squid via kw-edge config/squid/squid.conf:85 (access_log stdio:/var/log/squid/destination.log)"
     }
   },
   "clamav-updater": {
