@@ -38,7 +38,7 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kw-extractor (Keystone Wealth statement reader; kb-service in extractor mode; internal network only, no port, no data volume, read-only root) | `icons/kw-extractor.png` | `templates/kw-extractor.xml` |
 | kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
 | kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
-| kw-proxy (KW edge, dev side; publishes no port, `internal` network) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
+| kw-proxy (KW edge, dev side; publishes no port, `internal` network; host ExtraParams `--entrypoint bash`) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
 | clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav-updater.png` | `templates/clamav-updater.xml` |
 | clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged`) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
 

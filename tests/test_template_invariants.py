@@ -150,8 +150,10 @@ PRIVILEGED_BY_DESIGN = frozenset()
 # tldw-redis needs it (how the redis image is configured); gambit-loop needs it because it runs the
 # gambit image with the paper-lab loop as its command. kb-redis runs an sh wrapper so the
 # password comes from its REDIS_PASSWORD Variable instead of a template field; kb-litellm
-# points the proxy at its mounted config file (PostArgs replaces the image's CMD).
-POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop", "kb-redis", "kb-litellm"})
+# points the proxy at its mounted config file (PostArgs replaces the image's CMD). kw-proxy's
+# PostArgs is the squid arguments behind its sync entry script; the host's --entrypoint bash
+# (ExtraParams, operator-owned) runs it, and the PostArgs holds no shell expansion.
+POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop", "kb-redis", "kb-litellm", "kw-proxy"})
 
 # The attribute set every Config must carry. `sync-templates.py` keys on Type/Target/Name and
 # refreshes the rest from the repo copy; Unraid renders all nine. A Config missing one is
