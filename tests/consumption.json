@@ -343,8 +343,15 @@
   },
   "kw-proxy": {
     "no_local_consumer": false,
-    "vars": {},
+    "vars": {
+      "KW_EGRESS_RULES_URL": "reads KW_EGRESS_RULES_URL via kw-edge config/squid/sync/egress-sync.pl:46 (keystone's rules endpoint; entry.sh:20 starts the sync only when it is set)",
+      "KW_EGRESS_TOKEN": "reads KW_EGRESS_TOKEN via kw-edge config/squid/sync/egress-sync.pl:47 (the bearer token; entry.sh:30 unsets it before squid starts)",
+      "KW_EGRESS_POLL_SECONDS": "reads KW_EGRESS_POLL_SECONDS via kw-edge config/squid/sync/egress-sync.pl:54 (seconds between polls, 1 to 60; blank or out of range uses 30)"
+    },
     "paths": {
+      "/etc/squid/kw/rules": "reads /etc/squid/kw/rules via kw-edge config/squid/squid.conf:107 (include of rules.conf; entry.sh:11 seeds it and egress-sync.pl replaces it by rename)",
+      "/etc/squid/kw/sync": "reads /etc/squid/kw/sync via kw-edge config/squid/sync/entry.sh:23 (runs egress-sync.pl from this directory)",
+      "/etc/squid/kw/exceptions": "reads /etc/squid/kw/exceptions via kw-edge config/squid/squid.conf:117 (include of *.conf; squid fails the parse with no file)",
       "/etc/squid/kw/operator-resolver.conf": "reads /etc/squid/kw/operator-resolver.conf (a Path, not a Variable) via kw-edge config/squid/squid.conf:23 (include: the dns_nameservers line the proxy resolves through; an empty file keeps the container resolver)",
       "/etc/squid/squid.conf": "reads /etc/squid/squid.conf via kw-edge scripts/validate_configs.sh:88 (squid -N -f /etc/squid/squid.conf)",
       "/etc/squid/kw/destinations": "reads /etc/squid/kw/destinations via kw-edge config/squid/squid.conf:50 (the per-source destination lists, one host-held file per source named <source>.allow; the lists are not in kw-edge)",
