@@ -74,20 +74,20 @@
   "reauth-bot": {
     "no_local_consumer": false,
     "vars": {
-      "SCHWAB_USER": "reads SCHWAB_USER via _env() (os.environ.get) in reauth.py; reauth.py:101,945 _fill(SEL_USER, SCHWAB_USER, ...) filled into the login form",
-      "SCHWAB_PASS": "reads SCHWAB_PASS via _env() (os.environ.get) in reauth.py; reauth.py:102,946 _fill(SEL_PASS, SCHWAB_PASS, ...) filled into the password field",
-      "LOGIN_URL": "reads LOGIN_URL via _env() (os.environ.get) in reauth.py; reauth.py:79; :1477 page.goto(LOGIN_URL)",
-      "TOKEN_URL": "reads TOKEN_URL via _env() (os.environ.get) in reauth.py; reauth.py:80; read_token_status()'s urllib.request.Request(TOKEN_URL, ...)",
-      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via _env() (os.environ.get) in reauth.py; reauth.py:85 CLIENT_ID -> X-Client-Id header on the TOKEN_URL read",
-      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via _env() (os.environ.get) in reauth.py; reauth.py:86 CLIENT_SECRET -> X-Client-Secret header on the TOKEN_URL read",
-      "DEPLOY_ENV": "reads DEPLOY_ENV via _env() in alerting.py; alerting.py:404,912 load_alert_settings(...)/validate_boot(...) — the only one of the three ops-alerting env names this module still reads (SHARED_ROOT/CONFIG_PATH are hardcoded module constants); reauth.py:2097 in the boot dump",
-      "ALERT_SELFTEST": "reads ALERT_SELFTEST via _env() (os.environ.get) in reauth.py; reauth.py:97; boot_alerting() sends one-shot test notification on SELFTEST == \"1\"",
-      "REAUTH_INTERVAL_HOURS": "reads REAUTH_INTERVAL_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:281 INTERVAL_H drives cadence/sleep math",
-      "REAUTH_NOW": "reads REAUTH_NOW via _env() (os.environ.get) in reauth.py; reauth.py:100 forces immediate reauth when == \"1\"",
-      "REAUTH_RETRY_HOURS": "reads REAUTH_RETRY_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:282 RETRY_H used for retry sleep bound",
+      "SCHWAB_USER": "reads SCHWAB_USER via _env() (os.environ.get) in reauth.py; reauth.py:104,1021 _fill(SEL_USER, SCHWAB_USER, ...) filled into the login form",
+      "SCHWAB_PASS": "reads SCHWAB_PASS via _env() (os.environ.get) in reauth.py; reauth.py:105,1022 _fill(SEL_PASS, SCHWAB_PASS, ...) filled into the password field",
+      "LOGIN_URL": "reads LOGIN_URL via _env() (os.environ.get) in reauth.py; reauth.py:82; :1551 page.goto(LOGIN_URL)",
+      "TOKEN_URL": "reads TOKEN_URL via _env() (os.environ.get) in reauth.py; reauth.py:83; read_token_status()'s urllib.request.Request(TOKEN_URL, ...)",
+      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via _env() (os.environ.get) in reauth.py; reauth.py:88 CLIENT_ID -> X-Client-Id header on the TOKEN_URL read",
+      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via _env() (os.environ.get) in reauth.py; reauth.py:89 CLIENT_SECRET -> X-Client-Secret header on the TOKEN_URL read",
+      "DEPLOY_ENV": "reads DEPLOY_ENV via _env() in alerting.py; alerting.py:398,906 load_alert_settings(...)/validate_boot(...) — the only one of the three ops-alerting env names this module still reads (SHARED_ROOT/CONFIG_PATH are hardcoded module constants); reauth.py:2186 in the boot dump",
+      "ALERT_SELFTEST": "reads ALERT_SELFTEST via _env() (os.environ.get) in reauth.py; reauth.py:100; boot_alerting() sends one-shot test notification on SELFTEST == \"1\"",
+      "REAUTH_INTERVAL_HOURS": "reads REAUTH_INTERVAL_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:284 INTERVAL_H drives cadence/sleep math",
+      "REAUTH_NOW": "reads REAUTH_NOW via _env() (os.environ.get) in reauth.py; reauth.py:103 forces immediate reauth when == \"1\"",
+      "REAUTH_RETRY_HOURS": "reads REAUTH_RETRY_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:285 RETRY_H used for retry sleep bound",
       "SEED_MODE": "reads SEED_MODE via the shell in entrypoint.sh and os.environ.get in reauth.py; entrypoint.sh branches on it; reauth.py seed() vs loop()",
       "SEED_VNC_PASSWORD": "reads SEED_VNC_PASSWORD via the shell in entrypoint.sh; entrypoint.sh required check, written to VNC pass file, then unset",
-      "REAUTH_SEED_HOLD_SECONDS": "reads REAUTH_SEED_HOLD_SECONDS via _numeric_setting() -> _env() in reauth.py; reauth.py:325 SEED_HOLD_S gates how long the headed browser stays open in seed()"
+      "REAUTH_SEED_HOLD_SECONDS": "reads REAUTH_SEED_HOLD_SECONDS via _numeric_setting() -> _env() in reauth.py; reauth.py:328 SEED_HOLD_S gates how long the headed browser stays open in seed()"
     },
     "paths": {
       "/profile": "reads /profile via Dockerfile:69 (ALERT_STATE_FILE=/profile/alerting-state.json) and .env.example:73 (ALERT_ERROR_LOG under /profile/logs)",
