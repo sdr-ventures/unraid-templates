@@ -30,12 +30,14 @@ that actually uses it. This file enforces that the record is COMPLETE and never 
     just the feature it serves. Find that name before writing the line. For os.environ /
     getenv / a shell `${VAR}` it is the literal string. For a pydantic-settings field it is
     env_prefix + the field name, compared case-insensitively unless case_sensitive=True; an
-    alias / validation_alias replaces it. A citation that says pydantic names a
-    `field <name>`, and every `field <name>` in the citation must spell the Variable, as
-    must every lookup written as `${NAME}`, `os.environ.get("NAME")`, `os.environ["NAME"]`,
-    `getenv("NAME")` or `process.env.NAME`. Other shapes, such as a project's own
-    `_env("NAME")` wrapper, are not checked. The check does not model env_prefix, aliases
-    or case_sensitive=True, since no consumer uses them; extend it when one does. Any
+    alias / validation_alias replaces it. A citation that says pydantic, BaseSettings or
+    settings names a `field <name>`, and every `field <name>` in the citation must spell the
+    Variable, as must every lookup written as `${NAME}`, a bare `$NAME`, `os.environ.get("NAME")`,
+    `os.environ.get(key="NAME")`, `os.environ["NAME"]`, `"NAME" in os.environ`, `getenv("NAME")`,
+    `process.env.NAME`, `process.env["NAME"]` or any call whose first argument is a quoted
+    UPPER_SNAKE name (a project's own `_env("NAME")` wrapper, `setdefault`, `pop`). The check does
+    not model env_prefix, aliases or case_sensitive=True, since no consumer uses them; extend it
+    when one does. Any
     identifier in the citation made of the Variable's words in another order
     (`backup_db_user` under `DB_BACKUP_USER`) fails too: that is a Variable nothing reads.
   * every Type="Path" Target gets the same exact check under `paths`, with citations that
@@ -240,12 +242,20 @@ def _citation_problems(var, citation):
     problems = []
     if not re.match(rf"reads {re.escape(var)}\b", citation):
         problems.append(f"does not start `reads {var}`")
-    pydantic = re.search("pydantic", citation, re.IGNORECASE)
-    fields = re.findall(r"\bfield `?(\w+)", citation) if pydantic else []
-    if pydantic and not fields:
-        problems.append("says pydantic but names no `field <name>`")
+    settings = re.search(r"pydantic|BaseSettings|\bsettings\b", citation, re.IGNORECASE)
+    fields = re.findall(r"\bfield `?(\w+)", citation) if settings else []
+    if settings and not fields:
+        problems.append("names pydantic or a settings class but no `field <name>`")
+    # Every lookup shape a consumer is known to use. The last alternative is any call whose first
+    # argument is a quoted UPPER_SNAKE literal, which covers a project's own `_env("X")` wrapper,
+    # `setdefault`, `pop` and the like without naming each.
     quoted = ["".join(m) for m in re.findall(
-        r"\$\{(\w+)|environ(?:\.get\(|\[)\s*[\"'](\w+)|getenv\(\s*[\"'](\w+)|process\.env\.(\w+)", citation)]
+        r"\$\{(\w+)|\$([A-Za-z_]\w*)"
+        r"|environ(?:\.get\(\s*(?:key\s*=\s*)?|\[\s*)[\"'`](\w+)"
+        r"|getenv\(\s*[\"'`](\w+)"
+        r"|process\.env(?:\.(\w+)|\[\s*[\"'`](\w+))"
+        r"|[\"'`](\w+)[\"'`]\s+in\s+os\.environ"
+        r"|\b\w+\(\s*[\"'`]([A-Z][A-Z0-9_]*)[\"'`]", citation)]
     misread = ([f"field {f} -> {f.upper()}" for f in fields if f.upper() != var]
                + [n for n in quoted if n != var])
     if misread:
@@ -263,11 +273,12 @@ def test_every_citation_names_the_env_var_the_code_reads(name):
     for var, citation in (_manifest()[name].get("vars") or {}).items():
         problems = _citation_problems(var, citation)
         assert not problems, (
-            f"{name}: {var}'s citation {'; '.join(problems)}. Find the env-var name the "
+            f"{name}: {var}'s citation {'; '.join(problems)}. Every `field <name>` and every checked "
+            f"lookup in the citation must spell {var} itself: correct the citation to the name the "
             f"consumer actually looks up (a pydantic field reads env_prefix + its name; this "
-            f"check does not model env_prefix or aliases yet, extend it if a consumer uses one) and "
-            f"start the citation `reads {var}` only if that is it; if it is not, the template "
-            f"declares a Variable nothing reads"
+            f"check does not model env_prefix or aliases yet, extend it if a consumer uses one), "
+            f"and start it `reads {var}` only if that is the name read. If the consumer reads no "
+            f"such name, the Variable is the one to remove."
         )
 
 
@@ -311,6 +322,42 @@ def test_every_citation_names_the_env_var_the_code_reads(name):
     ("DB_BACKUP_USER", "reads DB_BACKUP_USER via os.environ.get at app/backup.py:12", False),
     ("BACKUP_DB_USER", ("reads BACKUP_DB_USER via pydantic-settings field backup_db_user in app/config.py "
                         "(no env_prefix, case-insensitive)"), False),
+    # A project's own wrapper around the lookup: any call whose first argument is a quoted name.
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via _env("BACKUP_USER") in app/config.py', True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via _http_url_env("BACKUP_USER") in app/config.py', True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via env("DB_BACKUP_USER") in app/config.py', False),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.environ.setdefault("BACKUP_USER", "x") in app/backup.py', True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.environ.pop("BACKUP_USER") in app/backup.py', True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.environ.pop("DB_BACKUP_USER") in app/backup.py', False),
+    # Other spellings of a lookup.
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via 'BACKUP_USER' in os.environ at app/backup.py:12", True),
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via 'DB_BACKUP_USER' in os.environ at app/backup.py:12", False),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.environ.get(key="BACKUP_USER") in app/backup.py', True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.environ.get(key="DB_BACKUP_USER") in app/backup.py', False),
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via os.getenv(`BACKUP_USER`) in app/backup.py", True),
+    ("KEYSTONE_API_URL", 'reads KEYSTONE_API_URL via process.env["KEYSTONE_URL"] in lib/keystone.ts', True),
+    ("KEYSTONE_API_URL", 'reads KEYSTONE_API_URL via process.env["KEYSTONE_API_URL"] in lib/keystone.ts', False),
+    ("WEB_CONCURRENCY", "reads WEB_CONCURRENCY via the shell: gunicorn --workers $GUNICORN_WORKERS", True),
+    ("WEB_CONCURRENCY", "reads WEB_CONCURRENCY via the shell: gunicorn --workers $WEB_CONCURRENCY", False),
+    # The field check runs for any settings class, not only when the citation says pydantic.
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via settings field backup_user in app/config.py", True),
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via BaseSettings field backup_user in app/config.py", True),
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via Settings.backup_user in app/config.py", True),
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via BaseSettings field db_backup_user in app/config.py", False),
+    # Every field and every lookup is checked, not only the first or the last.
+    ("APP_DB_USER", "reads APP_DB_USER via pydantic-settings field db_user, then field app_db_user", True),
+    ("APP_DB_USER", "reads APP_DB_USER via pydantic-settings field app_db_user, then field db_user", True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.getenv("BACKUP_USER") then os.getenv("DB_BACKUP_USER")', True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.getenv("DB_BACKUP_USER") then os.getenv("BACKUP_USER")', True),
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via os.getenv("DB_BACKUP_USER") then os.getenv("DB_BACKUP_USER")', False),
+    # A field or a lookup that merely contains the Variable's name is another name.
+    ("DB_USER", "reads DB_USER via pydantic-settings field app_db_user in app/config.py", True),
+    ("DB_USER", "reads DB_USER via the shell: ${APP_DB_USER}", True),
+    # Env-var names are case-sensitive: a lower-case spelling is a different name.
+    ("WEB_CONCURRENCY", "reads WEB_CONCURRENCY via the shell: ${web_concurrency:-2}", True),
+    ("DB_USER", "reads DB_USER via os.environ.get('db_user') in app/config.py", True),
+    ("DB_USER", "reads DB_USER via os.environ['db_user'] in app/config.py", True),
+    ("DB_USER", "reads DB_USER via process.env.db_user in lib/db.ts", True),
 ])
 def test_the_citation_rule_catches_a_citation_that_never_names_what_is_read(var, citation, caught):
     assert bool(_citation_problems(var, citation)) is caught
@@ -319,3 +366,23 @@ def test_the_citation_rule_catches_a_citation_that_never_names_what_is_read(var,
 def test_the_citation_rule_names_the_env_var_a_wrong_field_reads():
     problems = _citation_problems("APP_DB_USER", "reads APP_DB_USER via pydantic-settings field db_user")
     assert "field db_user -> DB_USER" in "; ".join(problems)
+
+
+@pytest.mark.parametrize("var, citation, expected", [
+    # the wrong quoted name is the one reported
+    ("DB_BACKUP_USER", 'reads DB_BACKUP_USER via _env("BACKUP_USER") in app/config.py',
+     "another env var (BACKUP_USER)"),
+    # a swapped token is named, with the Variable it was swapped from
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via os.environ.get at app/backup.py:12; also BACKUP_DB_USER",
+     "names ['BACKUP_DB_USER'], which is DB_BACKUP_USER's words in another order"),
+    # two misreads are both reported
+    ("APP_DB_USER", 'reads APP_DB_USER via pydantic-settings field db_user, then os.getenv("USER")',
+     "another env var (field db_user -> DB_USER, USER)"),
+    # the opening claim
+    ("DB_BACKUP_USER", "nothing reads DB_BACKUP_USER at app/config.py:63", "does not start `reads DB_BACKUP_USER`"),
+    # a settings class with no field named
+    ("DB_BACKUP_USER", "reads DB_BACKUP_USER via pydantic-settings in app/config.py:63",
+     "names pydantic or a settings class but no `field <name>`"),
+])
+def test_the_citation_rule_says_what_it_found(var, citation, expected):
+    assert expected in "; ".join(_citation_problems(var, citation))
