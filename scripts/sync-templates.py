@@ -104,6 +104,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -156,7 +157,7 @@ def _get(url, accept=None):
         h = e.headers or {}
         if e.code in (403, 429):
             try:
-                body = e.read()[:2000].lower()
+                body = e.read(2000).lower()
             except Exception:  # noqa: BLE001 - an unreadable error body falls back to empty, it is not a failure
                 body = b""
             if h.get("X-RateLimit-Remaining") == "0" or h.get("Retry-After") or b"rate limit" in body:
@@ -168,11 +169,13 @@ def _get(url, accept=None):
                             "%Y-%m-%d %H:%M:%S") + " host time"
                     except (OverflowError, OSError, ValueError):
                         pass
-                elif after:
+                if when == "later" and after:
                     when = f"in {after} s" if after.isdigit() else f"after {after}"
-                raise RuntimeError(f"GitHub rate limit reached (api.github.com allows 60 "
-                                   f"unauthenticated requests/hour per IP; a run makes 2); "
-                                   f"retry {when}") from e
+                host = urllib.parse.urlsplit(url).hostname
+                # The 60/hour figure is api.github.com's alone; another host gets no number it did not state.
+                scope = ("api.github.com allows 60 unauthenticated requests/hour per IP; a run makes 2"
+                         if host == "api.github.com" else f"{host} answered the limit")
+                raise RuntimeError(f"GitHub rate limit reached ({scope}); retry {when}") from e
         raise
 
 
