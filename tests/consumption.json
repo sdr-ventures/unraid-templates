@@ -3,18 +3,18 @@
   "cef-tracker": {
     "no_local_consumer": false,
     "vars": {
-      "FLASK_SECRET_KEY": "reads FLASK_SECRET_KEY via os.environ.get in config.py; config.py:82-84 -> Flask SECRET_KEY, session signing; app fails closed (503) if blank",
-      "APP_BASE_URL": "reads APP_BASE_URL via os.environ.get in config.py; config.py:158-179 (OAuth redirect URIs); mailer.py:34; request_trust.py:175 (trusted-host check)",
-      "GOOGLE_CLIENT_ID": "reads GOOGLE_CLIENT_ID via os.environ.get in config.py; config.py:184; auth.py:162,567,571,581,589 (OAuth2Session construction)",
-      "GOOGLE_CLIENT_SECRET": "reads GOOGLE_CLIENT_SECRET via os.environ.get in config.py; config.py:185; auth.py:571,589 (passed into OAuth2Session)",
-      "MICROSOFT_CLIENT_ID": "reads MICROSOFT_CLIENT_ID via os.environ.get in config.py; config.py:188; auth.py:163,630,634,644,652",
-      "MICROSOFT_CLIENT_SECRET": "reads MICROSOFT_CLIENT_SECRET via os.environ.get in config.py; config.py:189; auth.py:634,652",
-      "DB_PATH": "reads DB_PATH via os.environ.get in config.py; config.py:99; db.py:22,270,350,371,382,400 (sqlite3.connect); scheduler.py:363,1957",
-      "FLASK_ENV": "reads FLASK_ENV via os.environ.get in config.py; config.py:95-96 sets DEBUG flag; main.py:57 branches logging behavior on it",
+      "FLASK_SECRET_KEY": "reads FLASK_SECRET_KEY via os.environ.get in config.py; config.py:75-79 -> Flask SECRET_KEY, session signing; app fails closed (503) if blank",
+      "APP_BASE_URL": "reads APP_BASE_URL via os.environ.get in config.py; config.py:161-193 (OAuth redirect URIs); mailer.py:36; request_trust.py:175 (trusted-host check)",
+      "GOOGLE_CLIENT_ID": "reads GOOGLE_CLIENT_ID via os.environ.get in config.py; config.py:187; auth.py:215,654,658,668,678 (OAuth2Session construction)",
+      "GOOGLE_CLIENT_SECRET": "reads GOOGLE_CLIENT_SECRET via os.environ.get in config.py; config.py:188; auth.py:658,678 (passed into OAuth2Session)",
+      "MICROSOFT_CLIENT_ID": "reads MICROSOFT_CLIENT_ID via os.environ.get in config.py; config.py:191; auth.py:216,724,728,738,748",
+      "MICROSOFT_CLIENT_SECRET": "reads MICROSOFT_CLIENT_SECRET via os.environ.get in config.py; config.py:192; auth.py:728,748",
+      "DB_PATH": "reads DB_PATH via os.environ.get in config.py; config.py:92; db.py:22,291,412,433,444,462 (sqlite3.connect); scheduler.py:238,1834",
+      "FLASK_ENV": "reads FLASK_ENV via os.environ.get in config.py; config.py:88-89 sets DEBUG flag; main.py:51 branches logging behavior on it",
       "UI_V2": "reads UI_V2 via os.environ.get('UI_V2') in config.py; config.py:155-156 (blank/unset = ON; 0/false/no/off = OFF); main.py:577 picks the rebuilt Tracker tile grid vs the classic /app page",
-      "TAPE_BASE_URL": "reads TAPE_BASE_URL via os.environ.get in config.py; config.py:205; tape_client.py:41 -> request URL, read-only dual-run NAV parity report only (CT-TAPE-CLIENT-1); all three TAPE_* required together via config.TAPE_ENABLED (config.py:211) or the client returns 'tape not configured'",
-      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via os.environ.get in config.py; config.py:206; tape_client.py:46 -> X-Client-Id header",
-      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via os.environ.get in config.py; config.py:207; tape_client.py:47 -> X-Client-Secret header"
+      "TAPE_BASE_URL": "reads TAPE_BASE_URL via os.environ.get in config.py; config.py:215; tape_client.py:44 -> request URL, read-only dual-run NAV parity report only (CT-TAPE-CLIENT-1); all three TAPE_* required together via config.TAPE_ENABLED (config.py:221) or the client returns 'tape not configured'",
+      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via os.environ.get in config.py; config.py:216; tape_client.py:49 -> X-Client-Id header",
+      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via os.environ.get in config.py; config.py:217; tape_client.py:50 -> X-Client-Secret header"
     },
     "paths": {
       "/data": "reads /data via DB_PATH, whose default is /data/cef_tracker.db (config.py:92); db.py:22 sqlite3.connect(config.DB_PATH)",
@@ -74,20 +74,20 @@
   "reauth-bot": {
     "no_local_consumer": false,
     "vars": {
-      "SCHWAB_USER": "reads SCHWAB_USER via _env() (os.environ.get) in reauth.py; reauth.py:101,945 _fill(SEL_USER, SCHWAB_USER, ...) filled into the login form",
-      "SCHWAB_PASS": "reads SCHWAB_PASS via _env() (os.environ.get) in reauth.py; reauth.py:102,946 _fill(SEL_PASS, SCHWAB_PASS, ...) filled into the password field",
-      "LOGIN_URL": "reads LOGIN_URL via _env() (os.environ.get) in reauth.py; reauth.py:79; :1477 page.goto(LOGIN_URL)",
-      "TOKEN_URL": "reads TOKEN_URL via _env() (os.environ.get) in reauth.py; reauth.py:80; read_token_status()'s urllib.request.Request(TOKEN_URL, ...)",
-      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via _env() (os.environ.get) in reauth.py; reauth.py:85 CLIENT_ID -> X-Client-Id header on the TOKEN_URL read",
-      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via _env() (os.environ.get) in reauth.py; reauth.py:86 CLIENT_SECRET -> X-Client-Secret header on the TOKEN_URL read",
-      "DEPLOY_ENV": "reads DEPLOY_ENV via _env() in alerting.py; alerting.py:404,912 load_alert_settings(...)/validate_boot(...) — the only one of the three ops-alerting env names this module still reads (SHARED_ROOT/CONFIG_PATH are hardcoded module constants); reauth.py:2097 in the boot dump",
-      "ALERT_SELFTEST": "reads ALERT_SELFTEST via _env() (os.environ.get) in reauth.py; reauth.py:97; boot_alerting() sends one-shot test notification on SELFTEST == \"1\"",
-      "REAUTH_INTERVAL_HOURS": "reads REAUTH_INTERVAL_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:281 INTERVAL_H drives cadence/sleep math",
-      "REAUTH_NOW": "reads REAUTH_NOW via _env() (os.environ.get) in reauth.py; reauth.py:100 forces immediate reauth when == \"1\"",
-      "REAUTH_RETRY_HOURS": "reads REAUTH_RETRY_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:282 RETRY_H used for retry sleep bound",
+      "SCHWAB_USER": "reads SCHWAB_USER via _env() (os.environ.get) in reauth.py; reauth.py:104,1021 _fill(SEL_USER, SCHWAB_USER, ...) filled into the login form",
+      "SCHWAB_PASS": "reads SCHWAB_PASS via _env() (os.environ.get) in reauth.py; reauth.py:105,1022 _fill(SEL_PASS, SCHWAB_PASS, ...) filled into the password field",
+      "LOGIN_URL": "reads LOGIN_URL via _env() (os.environ.get) in reauth.py; reauth.py:82; :1551 page.goto(LOGIN_URL)",
+      "TOKEN_URL": "reads TOKEN_URL via _env() (os.environ.get) in reauth.py; reauth.py:83; read_token_status()'s urllib.request.Request(TOKEN_URL, ...)",
+      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via _env() (os.environ.get) in reauth.py; reauth.py:88 CLIENT_ID -> X-Client-Id header on the TOKEN_URL read",
+      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via _env() (os.environ.get) in reauth.py; reauth.py:89 CLIENT_SECRET -> X-Client-Secret header on the TOKEN_URL read",
+      "DEPLOY_ENV": "reads DEPLOY_ENV via _env() in alerting.py; alerting.py:398,906 load_alert_settings(...)/validate_boot(...) — the only one of the three ops-alerting env names this module still reads (SHARED_ROOT/CONFIG_PATH are hardcoded module constants); reauth.py:2186 in the boot dump",
+      "ALERT_SELFTEST": "reads ALERT_SELFTEST via _env() (os.environ.get) in reauth.py; reauth.py:100; boot_alerting() sends one-shot test notification on SELFTEST == \"1\"",
+      "REAUTH_INTERVAL_HOURS": "reads REAUTH_INTERVAL_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:284 INTERVAL_H drives cadence/sleep math",
+      "REAUTH_NOW": "reads REAUTH_NOW via _env() (os.environ.get) in reauth.py; reauth.py:103 forces immediate reauth when == \"1\"",
+      "REAUTH_RETRY_HOURS": "reads REAUTH_RETRY_HOURS via _numeric_setting() -> _env() in reauth.py; reauth.py:285 RETRY_H used for retry sleep bound",
       "SEED_MODE": "reads SEED_MODE via the shell in entrypoint.sh and os.environ.get in reauth.py; entrypoint.sh branches on it; reauth.py seed() vs loop()",
       "SEED_VNC_PASSWORD": "reads SEED_VNC_PASSWORD via the shell in entrypoint.sh; entrypoint.sh required check, written to VNC pass file, then unset",
-      "REAUTH_SEED_HOLD_SECONDS": "reads REAUTH_SEED_HOLD_SECONDS via _numeric_setting() -> _env() in reauth.py; reauth.py:325 SEED_HOLD_S gates how long the headed browser stays open in seed()"
+      "REAUTH_SEED_HOLD_SECONDS": "reads REAUTH_SEED_HOLD_SECONDS via _numeric_setting() -> _env() in reauth.py; reauth.py:328 SEED_HOLD_S gates how long the headed browser stays open in seed()"
     },
     "paths": {
       "/profile": "reads /profile via Dockerfile:69 (ALERT_STATE_FILE=/profile/alerting-state.json) and .env.example:73 (ALERT_ERROR_LOG under /profile/logs)",
@@ -118,16 +118,16 @@
   "the-desk": {
     "no_local_consumer": false,
     "vars": {
-      "TAPE_BASE_URL": "reads TAPE_BASE_URL via _http_url_env() (os.environ.get) in app/config.py; app/config.py:112; app/tape.py:102,144,152; wsgi.py:67-68",
-      "DEPLOY_ENV": "reads DEPLOY_ENV via kw-common's load_alert_settings_from_env()/validate_boot_from_env(), called from app/alerting.py; app/bootlog.py:52 (ALERTING_VARS); read by kw_common.alerting_env (a pinned pip dependency, not vendored) to pick the ntfy topic and gate boot (SHARED_ROOT/CONFIG_PATH are baked Dockerfile ENV values as of the-desk PR#27, no longer template Variables — same pattern as reauth-bot's DEPLOY_ENV citation above)",
-      "TZ": "reads TZ via the runtime (tzlocal under APScheduler's BackgroundScheduler(timezone=None), and libc), no app-code lookup; app/config.py:128 comment + app/rules.py:271 — governs cron's local-timezone behavior at the libc/tzlocal level, not a direct os.environ read in app code",
-      "DESK_NOTIFY_CRON": "reads DESK_NOTIFY_CRON via _cron_env() (os.environ.get) in app/config.py; app/config.py:137; app/scheduler.py:139,155 CronTrigger.from_crontab",
-      "DESK_NOTIFY_ON_BOOT": "reads DESK_NOTIFY_ON_BOOT via _env() (os.environ.get) in app/config.py; app/config.py:139; app/scheduler.py:159",
-      "DESK_INTAKE_INTERVAL_MIN": "reads DESK_INTAKE_INTERVAL_MIN via _int_env() (os.environ.get) in app/config.py; app/config.py:148; app/scheduler.py:157; app/main.py:96",
-      "DESK_INTAKE_SETTLE_SECONDS": "reads DESK_INTAKE_SETTLE_SECONDS via _int_env() (os.environ.get) in app/config.py; app/config.py:196; app/intake.py:452,471,476-478 — a candidate file younger than this is left for a later scan pass",
-      "DESK_STALE_AMBER_HOURS": "reads DESK_STALE_AMBER_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:151; app/assemble.py:206,381",
-      "DESK_STALE_RED_HOURS": "reads DESK_STALE_RED_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:152; app/assemble.py:207,382",
-      "DESK_LOG_LEVEL": "reads DESK_LOG_LEVEL via log_level_env() -> _env() (os.environ.get) in app/config.py; app/config.py:82 log_level_env(); app/intake.py:335,337 logging.basicConfig"
+      "TAPE_BASE_URL": "reads TAPE_BASE_URL via _http_url_env() (os.environ.get) in app/config.py; app/config.py:149; app/tape.py:114,124,137; wsgi.py:67-68",
+      "DEPLOY_ENV": "reads DEPLOY_ENV via kw-common's load_alert_settings_from_env()/validate_boot_from_env(), called from app/alerting.py; app/bootlog.py:59 (ALERTING_VARS); read by kw_common.alerting_env (a pinned pip dependency, not vendored) to pick the ntfy topic and gate boot (SHARED_ROOT/CONFIG_PATH are baked Dockerfile ENV values as of the-desk PR#27, no longer template Variables — same pattern as reauth-bot's DEPLOY_ENV citation above)",
+      "TZ": "reads TZ via the runtime (tzlocal under APScheduler's BackgroundScheduler(timezone=None), and libc), no app-code lookup; app/config.py:189 comment + app/rules.py:271 — governs cron's local-timezone behavior at the libc/tzlocal level, not a direct os.environ read in app code",
+      "DESK_NOTIFY_CRON": "reads DESK_NOTIFY_CRON via _cron_env() (os.environ.get) in app/config.py; app/config.py:198; app/scheduler.py:201,221 CronTrigger.from_crontab",
+      "DESK_NOTIFY_ON_BOOT": "reads DESK_NOTIFY_ON_BOOT via _env() (os.environ.get) in app/config.py; app/config.py:200; app/scheduler.py:226",
+      "DESK_INTAKE_INTERVAL_MIN": "reads DESK_INTAKE_INTERVAL_MIN via _int_env() (os.environ.get) in app/config.py; app/config.py:209; app/scheduler.py:206; app/main.py:108",
+      "DESK_INTAKE_SETTLE_SECONDS": "reads DESK_INTAKE_SETTLE_SECONDS via _int_env() (os.environ.get) in app/config.py; app/config.py:220; app/intake.py:454,473,478-480 — a candidate file younger than this is left for a later scan pass",
+      "DESK_STALE_AMBER_HOURS": "reads DESK_STALE_AMBER_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:223; app/assemble.py:210,385",
+      "DESK_STALE_RED_HOURS": "reads DESK_STALE_RED_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:224; app/assemble.py:211,386",
+      "DESK_LOG_LEVEL": "reads DESK_LOG_LEVEL via log_level_env() -> _env() (os.environ.get) in app/config.py; app/config.py:119 log_level_env(); app/intake.py:576,578 logging.basicConfig"
     },
     "paths": {
       "/data": "reads /data via inbox_path under data_dir (app/config.py:254); Dockerfile:7 documents /data as the wallet and inbox volume",
@@ -159,7 +159,7 @@
     "no_local_consumer": false,
     "vars": {
       "KEYSTONE_API_URL": "reads KEYSTONE_API_URL via process.env in lib/keystone.ts and app/api/health/route.ts (origin/dev; origin/main has no app code yet); lib/keystone.ts baseUrl(): every Route Handler upstream fetch; throws if unset; app/api/health/route.ts reachability probe",
-      "SESSION_COOKIE_MAX_AGE": "reads SESSION_COOKIE_MAX_AGE via process.env in lib/session-cookie.ts (origin/dev; origin/main has no app code yet); lib/session-cookie.ts maxAge(): Max-Age of the httpOnly refresh cookie (default 43200)",
+      "SESSION_COOKIE_MAX_AGE": "reads SESSION_COOKIE_MAX_AGE via process.env in lib/session-cookie.ts (origin/dev; origin/main has no app code yet); lib/session-cookie.ts sessionMaxAge(): Max-Age of the httpOnly refresh cookie (default 43200)",
       "HEALTHCHECKS_API_KEY_RO": "reads HEALTHCHECKS_API_KEY_RO via process.env in lib/healthchecks.ts (origin/dev; origin/main has no app code yet); lib/healthchecks.ts monitorView(): x-api-key header of the checks request; unset returns the unconfigured state with no call made",
       "HTTPS_PROXY": "reads HTTPS_PROXY via the Node runtime, not repo code: lib/keystone.ts:39 and lib/healthchecks.ts:25 call fetch(), and the runtime is node:24.21.0-bookworm-slim (keystone-web Dockerfile:4)",
       "HTTP_PROXY": "reads HTTP_PROXY via the Node runtime, not repo code: lib/keystone.ts:39 and lib/healthchecks.ts:25 call fetch(), and the runtime is node:24.21.0-bookworm-slim (keystone-web Dockerfile:4)",
