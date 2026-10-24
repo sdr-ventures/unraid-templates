@@ -3,18 +3,18 @@
   "cef-tracker": {
     "no_local_consumer": false,
     "vars": {
-      "FLASK_SECRET_KEY": "reads FLASK_SECRET_KEY via os.environ.get in config.py; config.py:82-84 -> Flask SECRET_KEY, session signing; app fails closed (503) if blank",
-      "APP_BASE_URL": "reads APP_BASE_URL via os.environ.get in config.py; config.py:158-179 (OAuth redirect URIs); mailer.py:34; request_trust.py:175 (trusted-host check)",
-      "GOOGLE_CLIENT_ID": "reads GOOGLE_CLIENT_ID via os.environ.get in config.py; config.py:184; auth.py:162,567,571,581,589 (OAuth2Session construction)",
-      "GOOGLE_CLIENT_SECRET": "reads GOOGLE_CLIENT_SECRET via os.environ.get in config.py; config.py:185; auth.py:571,589 (passed into OAuth2Session)",
-      "MICROSOFT_CLIENT_ID": "reads MICROSOFT_CLIENT_ID via os.environ.get in config.py; config.py:188; auth.py:163,630,634,644,652",
-      "MICROSOFT_CLIENT_SECRET": "reads MICROSOFT_CLIENT_SECRET via os.environ.get in config.py; config.py:189; auth.py:634,652",
-      "DB_PATH": "reads DB_PATH via os.environ.get in config.py; config.py:99; db.py:22,270,350,371,382,400 (sqlite3.connect); scheduler.py:363,1957",
-      "FLASK_ENV": "reads FLASK_ENV via os.environ.get in config.py; config.py:95-96 sets DEBUG flag; main.py:57 branches logging behavior on it",
+      "FLASK_SECRET_KEY": "reads FLASK_SECRET_KEY via os.environ.get in config.py; config.py:75-79 -> Flask SECRET_KEY, session signing; app fails closed (503) if blank",
+      "APP_BASE_URL": "reads APP_BASE_URL via os.environ.get in config.py; config.py:161-193 (OAuth redirect URIs); mailer.py:36; request_trust.py:175 (trusted-host check)",
+      "GOOGLE_CLIENT_ID": "reads GOOGLE_CLIENT_ID via os.environ.get in config.py; config.py:187; auth.py:215,654,658,668,678 (OAuth2Session construction)",
+      "GOOGLE_CLIENT_SECRET": "reads GOOGLE_CLIENT_SECRET via os.environ.get in config.py; config.py:188; auth.py:658,678 (passed into OAuth2Session)",
+      "MICROSOFT_CLIENT_ID": "reads MICROSOFT_CLIENT_ID via os.environ.get in config.py; config.py:191; auth.py:216,724,728,738,748",
+      "MICROSOFT_CLIENT_SECRET": "reads MICROSOFT_CLIENT_SECRET via os.environ.get in config.py; config.py:192; auth.py:728,748",
+      "DB_PATH": "reads DB_PATH via os.environ.get in config.py; config.py:92; db.py:22,291,412,433,444,462 (sqlite3.connect); scheduler.py:238,1834",
+      "FLASK_ENV": "reads FLASK_ENV via os.environ.get in config.py; config.py:88-89 sets DEBUG flag; main.py:51 branches logging behavior on it",
       "UI_V2": "reads UI_V2 via os.environ.get('UI_V2') in config.py; config.py:155-156 (blank/unset = ON; 0/false/no/off = OFF); main.py:577 picks the rebuilt Tracker tile grid vs the classic /app page",
-      "TAPE_BASE_URL": "reads TAPE_BASE_URL via os.environ.get in config.py; config.py:205; tape_client.py:41 -> request URL, read-only dual-run NAV parity report only (CT-TAPE-CLIENT-1); all three TAPE_* required together via config.TAPE_ENABLED (config.py:211) or the client returns 'tape not configured'",
-      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via os.environ.get in config.py; config.py:206; tape_client.py:46 -> X-Client-Id header",
-      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via os.environ.get in config.py; config.py:207; tape_client.py:47 -> X-Client-Secret header"
+      "TAPE_BASE_URL": "reads TAPE_BASE_URL via os.environ.get in config.py; config.py:215; tape_client.py:44 -> request URL, read-only dual-run NAV parity report only (CT-TAPE-CLIENT-1); all three TAPE_* required together via config.TAPE_ENABLED (config.py:221) or the client returns 'tape not configured'",
+      "TAPE_CLIENT_ID": "reads TAPE_CLIENT_ID via os.environ.get in config.py; config.py:216; tape_client.py:49 -> X-Client-Id header",
+      "TAPE_CLIENT_SECRET": "reads TAPE_CLIENT_SECRET via os.environ.get in config.py; config.py:217; tape_client.py:50 -> X-Client-Secret header"
     },
     "paths": {
       "/data": "reads /data via DB_PATH, whose default is /data/cef_tracker.db (config.py:92); db.py:22 sqlite3.connect(config.DB_PATH)",
