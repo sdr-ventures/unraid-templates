@@ -118,16 +118,16 @@
   "the-desk": {
     "no_local_consumer": false,
     "vars": {
-      "TAPE_BASE_URL": "reads TAPE_BASE_URL via _http_url_env() (os.environ.get) in app/config.py; app/config.py:112; app/tape.py:102,144,152; wsgi.py:67-68",
-      "DEPLOY_ENV": "reads DEPLOY_ENV via kw-common's load_alert_settings_from_env()/validate_boot_from_env(), called from app/alerting.py; app/bootlog.py:52 (ALERTING_VARS); read by kw_common.alerting_env (a pinned pip dependency, not vendored) to pick the ntfy topic and gate boot (SHARED_ROOT/CONFIG_PATH are baked Dockerfile ENV values as of the-desk PR#27, no longer template Variables — same pattern as reauth-bot's DEPLOY_ENV citation above)",
-      "TZ": "reads TZ via the runtime (tzlocal under APScheduler's BackgroundScheduler(timezone=None), and libc), no app-code lookup; app/config.py:128 comment + app/rules.py:271 — governs cron's local-timezone behavior at the libc/tzlocal level, not a direct os.environ read in app code",
-      "DESK_NOTIFY_CRON": "reads DESK_NOTIFY_CRON via _cron_env() (os.environ.get) in app/config.py; app/config.py:137; app/scheduler.py:139,155 CronTrigger.from_crontab",
-      "DESK_NOTIFY_ON_BOOT": "reads DESK_NOTIFY_ON_BOOT via _env() (os.environ.get) in app/config.py; app/config.py:139; app/scheduler.py:159",
-      "DESK_INTAKE_INTERVAL_MIN": "reads DESK_INTAKE_INTERVAL_MIN via _int_env() (os.environ.get) in app/config.py; app/config.py:148; app/scheduler.py:157; app/main.py:96",
-      "DESK_INTAKE_SETTLE_SECONDS": "reads DESK_INTAKE_SETTLE_SECONDS via _int_env() (os.environ.get) in app/config.py; app/config.py:196; app/intake.py:452,471,476-478 — a candidate file younger than this is left for a later scan pass",
-      "DESK_STALE_AMBER_HOURS": "reads DESK_STALE_AMBER_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:151; app/assemble.py:206,381",
-      "DESK_STALE_RED_HOURS": "reads DESK_STALE_RED_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:152; app/assemble.py:207,382",
-      "DESK_LOG_LEVEL": "reads DESK_LOG_LEVEL via log_level_env() -> _env() (os.environ.get) in app/config.py; app/config.py:82 log_level_env(); app/intake.py:335,337 logging.basicConfig"
+      "TAPE_BASE_URL": "reads TAPE_BASE_URL via _http_url_env() (os.environ.get) in app/config.py; app/config.py:149; app/tape.py:114,124,137; wsgi.py:67-68",
+      "DEPLOY_ENV": "reads DEPLOY_ENV via kw-common's load_alert_settings_from_env()/validate_boot_from_env(), called from app/alerting.py; app/bootlog.py:59 (ALERTING_VARS); read by kw_common.alerting_env (a pinned pip dependency, not vendored) to pick the ntfy topic and gate boot (SHARED_ROOT/CONFIG_PATH are baked Dockerfile ENV values as of the-desk PR#27, no longer template Variables — same pattern as reauth-bot's DEPLOY_ENV citation above)",
+      "TZ": "reads TZ via the runtime (tzlocal under APScheduler's BackgroundScheduler(timezone=None), and libc), no app-code lookup; app/config.py:189 comment + app/rules.py:271 — governs cron's local-timezone behavior at the libc/tzlocal level, not a direct os.environ read in app code",
+      "DESK_NOTIFY_CRON": "reads DESK_NOTIFY_CRON via _cron_env() (os.environ.get) in app/config.py; app/config.py:198; app/scheduler.py:201,221 CronTrigger.from_crontab",
+      "DESK_NOTIFY_ON_BOOT": "reads DESK_NOTIFY_ON_BOOT via _env() (os.environ.get) in app/config.py; app/config.py:200; app/scheduler.py:226",
+      "DESK_INTAKE_INTERVAL_MIN": "reads DESK_INTAKE_INTERVAL_MIN via _int_env() (os.environ.get) in app/config.py; app/config.py:209; app/scheduler.py:206; app/main.py:108",
+      "DESK_INTAKE_SETTLE_SECONDS": "reads DESK_INTAKE_SETTLE_SECONDS via _int_env() (os.environ.get) in app/config.py; app/config.py:220; app/intake.py:454,473,478-480 — a candidate file younger than this is left for a later scan pass",
+      "DESK_STALE_AMBER_HOURS": "reads DESK_STALE_AMBER_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:223; app/assemble.py:210,385",
+      "DESK_STALE_RED_HOURS": "reads DESK_STALE_RED_HOURS via _int_env() (os.environ.get) in app/config.py; app/config.py:224; app/assemble.py:211,386",
+      "DESK_LOG_LEVEL": "reads DESK_LOG_LEVEL via log_level_env() -> _env() (os.environ.get) in app/config.py; app/config.py:119 log_level_env(); app/intake.py:576,578 logging.basicConfig"
     },
     "paths": {
       "/data": "reads /data via inbox_path under data_dir (app/config.py:254); Dockerfile:7 documents /data as the wallet and inbox volume",
