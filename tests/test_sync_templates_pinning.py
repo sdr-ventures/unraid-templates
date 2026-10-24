@@ -139,6 +139,8 @@ def _limited(headers, code=403, body=b""):
     ({"Retry-After": "60"}, 403, b"", "retry in 60 s"),
     ({}, 403, b'{"message": "You have exceeded a secondary rate limit."}', "retry later"),
     ({"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "9" * 30}, 403, b"", "retry later"),
+    # An out-of-range reset must not hide the Retry-After the same response carries.
+    ({"X-RateLimit-Reset": "9" * 30, "Retry-After": "45"}, 403, b"", "retry in 45 s"),
 ])
 def test_the_rate_limit_is_named_with_its_reset_and_nothing_changes(
         sync, tmp_path, capsys, monkeypatch, headers, code, body, expect):
@@ -149,6 +151,52 @@ def test_the_rate_limit_is_named_with_its_reset_and_nothing_changes(
     assert isinstance(code, str) and "rate limit reached" in code and "60 unauthenticated" in code, code
     assert expect in code and "Nothing changed" in code, code
     assert (tmp_path / "my-app.xml").read_bytes() == before
+
+
+def _error(url, headers, body):
+    msg = email.message.Message()
+    for k, v in headers.items():
+        msg[k] = v
+    return urllib.error.HTTPError(url, 403, "Forbidden", msg, body)
+
+
+class _Unreadable(io.RawIOBase):
+    def read(self, size=-1):
+        raise OSError("connection reset")
+
+
+def test_an_unreadable_error_body_still_gets_the_rate_limit_named_from_the_headers(sync, monkeypatch):
+    def fail(req, timeout=None):
+        raise _error(req.full_url, {"Retry-After": "7"}, _Unreadable())
+    monkeypatch.setattr(sync.urllib.request, "urlopen", fail)
+    with pytest.raises(RuntimeError, match=r"rate limit reached.*retry in 7 s"):
+        sync._get("https://api.github.com/repos/x/y")
+
+
+def test_a_rate_limit_text_is_found_within_the_first_2000_bytes_and_no_further(sync, monkeypatch):
+    asked = []
+
+    class Body(io.BytesIO):
+        def read(self, size=-1):
+            asked.append(size)
+            return super().read(size)
+
+    def fail(req, timeout=None):
+        raise _error(req.full_url, {}, Body(b"rate limit" + b"x" * 5000))
+    monkeypatch.setattr(sync.urllib.request, "urlopen", fail)
+    with pytest.raises(RuntimeError, match="rate limit reached"):
+        sync._get("https://api.github.com/repos/x/y")
+    assert asked == [2000], "the read itself must be capped, not sliced after a full read"
+
+
+def test_a_raw_host_limit_is_not_labelled_with_the_api_hosts_figure(sync, monkeypatch):
+    def fail(req, timeout=None):
+        raise _error(req.full_url, {"Retry-After": "30"}, io.BytesIO(b""))
+    monkeypatch.setattr(sync.urllib.request, "urlopen", fail)
+    with pytest.raises(RuntimeError) as exc:
+        sync._get("https://raw.githubusercontent.com/x/y/z.xml")
+    assert "raw.githubusercontent.com" in str(exc.value) and "60" not in str(exc.value), exc.value
+    assert "retry in 30 s" in str(exc.value)
 
 
 @pytest.mark.parametrize("code", [403, 404])
