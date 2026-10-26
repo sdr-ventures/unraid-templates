@@ -54,14 +54,13 @@
       "CLAMD_TIMEOUT_SECONDS": "reads CLAMD_TIMEOUT_SECONDS via pydantic-settings field clamd_timeout_seconds in app/config.py:112 (no env_prefix, case-insensitive), origin/dev only; app/core/avscan.py:45 sets the scanner socket timeout",
       "BACKUP_DB_USER": "reads BACKUP_DB_USER via pydantic-settings field backup_db_user in app/config.py:63 (no env_prefix, case-insensitive), on origin/dev only: origin/main has no backup code yet; app/config.py:372-373 effective_backup_database_url assembles the pg_dump URL from it; app/main.py:81-85 starts the nightly backup loop only when that URL is non-empty",
       "BACKUP_DB_PASSWORD": "reads BACKUP_DB_PASSWORD via pydantic-settings field backup_db_password in app/config.py:64 (no env_prefix, case-insensitive), on origin/dev only; app/config.py:373 passes it into the same pg_dump URL; blank with BACKUP_DB_USER set, the loop still starts and each dump fails to log in",
-      "DEPLOY_ENV": "reads DEPLOY_ENV via os.environ.get(DEPLOY_ENV_VAR) at app/alerting.py:46 on origin/dev only (kw-common's constant, DEPLOY_ENV_VAR = \"DEPLOY_ENV\", src/kw_common/alerting_env.py:143); unset or blank raises inside configure_alerting, which logs one WARNING and leaves alerts log-only",
+      "DEPLOY_ENV": "reads DEPLOY_ENV via os.environ.get(DEPLOY_ENV_VAR) at app/alerting.py:98 on origin/dev only (kw-common's constant, DEPLOY_ENV_VAR = \"DEPLOY_ENV\", src/kw_common/alerting_env.py:150 at origin/main); unset or blank makes configure_alerting raise inside its try, which logs one WARNING when the stored alert values are applied and leaves alerts log-only",
       "HTTPS_PROXY": "reads HTTPS_PROXY in https://github.com/sdr-ventures/keystone at origin/dev through httpx's default environment proxy support: app/simplefin.py:453 sets trust_env=True, and its comment names HTTPS_PROXY and NO_PROXY",
       "HTTP_PROXY": "reads HTTP_PROXY in https://github.com/sdr-ventures/keystone at origin/dev through httpx's default environment proxy support: app/simplefin.py:453 sets trust_env=True, and its comment names HTTPS_PROXY and NO_PROXY",
       "NO_PROXY": "reads NO_PROXY in https://github.com/sdr-ventures/keystone at origin/dev through httpx's default environment proxy support: app/simplefin.py:453 sets trust_env=True, and its comment names HTTPS_PROXY and NO_PROXY"
     },
     "paths": {
-      "/backups": "reads /backups via BACKUP_DIR = Path('/backups') at app/backup.py:49 (nightly pg_dump target)",
-      "/kw_shared": "reads /kw_shared via SHARED_ROOT = \"/kw_shared\" at app/alerting.py:35 on origin/dev only; config_file_for(SHARED_ROOT) reads configs/alerting.env under it"
+      "/backups": "reads /backups via BACKUP_DIR = Path('/backups') at app/backup.py:49 (nightly pg_dump target)"
     },
     "declared_for": {
       "/data": "keystone: no release or branch reads it; origin/dev has no code path under /data (the template Description describes a file vault that origin/dev does not read)",
