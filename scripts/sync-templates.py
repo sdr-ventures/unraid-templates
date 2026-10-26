@@ -44,7 +44,9 @@ then set its value live. Never add a variable to a live instance only: the next 
 
   Container-level settings you set per instance — image tag, network/IP, WebUI,
   Extra Params, ports, the container Name — are ALWAYS preserved. Only <Config>
-  elements are reconciled.
+  elements and the identity fields Project, Repository, Registry, TemplateURL and Icon
+  are reconciled. Of Repository only the image name follows the repo; the tag or digest
+  stays the instance's.
   PATH MODE IS OPERATOR-OWNED, once seeded — a Path's Read/Write-vs-Read-only Mode you
   set on an instance survives every later sync, even when the template's own Mode
   changes; a template-side Mode change reaches only a newly-seeded my-<name>.xml, never
@@ -290,11 +292,28 @@ def discover_instances(directory, repo_names):
     return by_template, unmapped, broken
 
 
+# Container fields that name where the template came from. A saved template keeps them from the
+# day it was created, so after a move they name the old owner. Only these five are refreshed.
+IDENTITY_FIELDS = ("Project", "Repository", "Registry", "TemplateURL", "Icon")
+_IMAGE_REF = re.compile(r"^(?P<name>[^@]+?)(?P<tail>:[^/@]+)?(?P<digest>@.+)?$")
+
+
+def _refreshed_repository(repo_ref, live_ref):
+    """The repo's image name with the live tag or digest, when the live image is the same image
+    under another owner. A different image is the operator's choice and is left as it is."""
+    name = _IMAGE_REF.match(repo_ref).group("name")
+    live_name = _IMAGE_REF.match(live_ref).group("name")
+    if name.rsplit("/", 1)[-1] != live_name.rsplit("/", 1)[-1]:
+        return live_ref
+    return name + (live_ref[len(live_name):] or repo_ref[len(name):])
+
+
 def merge(operator_root, template_root):
-    """Return (merged_root, stats). Base = operator tree; reconcile <Config> only.
+    """Return (merged_root, stats). Base = operator tree; reconcile <Config> and IDENTITY_FIELDS.
     A Config the operator has but the template lacks is deprecated and always dropped,
     whatever it holds; stats["dropped"] lists (label, held_a_value) for each, and
-    stats["mirror_dropped"] each legacy <Environment> mirror entry with no template Target."""
+    stats["mirror_dropped"] each legacy <Environment> mirror entry with no template Target.
+    stats["identity"] lists the IDENTITY_FIELDS whose value changed (names only)."""
     op_by_key, dup_keys = {}, []
     for c in operator_root.findall("Config"):
         k = config_key(c)
@@ -308,7 +327,17 @@ def merge(operator_root, template_root):
         merged.remove(c)
 
     stats = {"added": [], "retained": 0, "dropped": [], "dupes": dup_keys, "mode_kept": [],
-             "mirror_dropped": []}
+             "mirror_dropped": [], "identity": []}
+    for field in IDENTITY_FIELDS:               # replaces a value the instance holds; never fills one
+        src = template_root.findtext(field)
+        el = merged.find(field)
+        old = (el.text or "").strip() if el is not None else ""
+        if src is None or not old:
+            continue
+        new = _refreshed_repository(src.strip(), old) if field == "Repository" else src.strip()
+        if new != old:
+            el.text = new
+            stats["identity"].append(field)
     seen = set()
 
     for tc in template_root.findall("Config"):  # template order; refresh metadata
@@ -795,6 +824,8 @@ def update_instance(inst_path, tpl_root, backup_dir):
         note = f", {masked} masked value(s) REDACTED" if masked else ""
         print(f"    * {fname:<22} UPDATED   (backup: {os.path.basename(b)}{note})")
     print(f"        values kept   : {st['retained']}")
+    if st["identity"]:
+        print(f"        identity refreshed from repo: {', '.join(st['identity'])}")
     if meta_only:
         print("        metadata refreshed (descriptions/defaults/visibility); no variables added or removed")
     if st["added"]:

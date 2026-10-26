@@ -34,6 +34,7 @@ WHAT THIS FILE DOES NOT CLAIM, so that a guard implying coverage it lacks does n
     without being noticed, so every entry carries the why.
 """
 
+import copy
 import pathlib
 import re
 import xml.etree.ElementTree as ET
@@ -154,6 +155,15 @@ PRIVILEGED_BY_DESIGN = frozenset()
 # PostArgs is the squid arguments behind its sync entry script; the host's --entrypoint bash
 # (ExtraParams, operator-owned) runs it, and the PostArgs holds no shell expansion.
 POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop", "kb-redis", "kb-litellm", "kw-proxy"})
+
+# The privilege-posture rules are fleet policy, so a template that needs one is listed here
+# with the reason, and the entry is the review. Every list is empty today. An entry must name
+# a real template (and, for a Path or Device, one of its Configs) and state a non-blank reason;
+# test_every_posture_exception_states_a_reason refuses one that does not.
+# A Path entry names the exact host Default the Config may ship; any other host path is refused.
+HOST_PATH_BY_DESIGN: dict[tuple[str, str], tuple[str, str]] = {}   # (template, Target) -> (Default, reason)
+DEVICE_BY_DESIGN: dict[tuple[str, str], str] = {}                  # (template, Target) -> reason
+NETWORK_BY_DESIGN: dict[str, tuple[str, str]] = {}                 # template -> (Network, reason)
 
 # The attribute set every Config must carry. `sync-templates.py` keys on Type/Target/Name and
 # refreshes the rest from the repo copy; Unraid renders all nine. A Config missing one is
@@ -579,14 +589,19 @@ def test_the_privilege_posture_is_minimal(name):
         assert not (root.findtext("PostArgs") or "").strip(), (
             f"{name}: PostArgs is non-empty and can override any variable asserted here"
         )
-    assert (root.findtext("Network") or "").strip() == "bridge", (
-        f"{name}: Network is {root.findtext('Network')!r} — the neutral default is bridge; "
-        f"an operator picks br0 and an address in the UI"
+    network = (root.findtext("Network") or "").strip()
+    wanted = NETWORK_BY_DESIGN[name][0] if name in NETWORK_BY_DESIGN else "bridge"
+    assert network == wanted, (
+        f"{name}: Network is {network!r} — the fleet policy is {wanted!r} (a NETWORK_BY_DESIGN "
+        f"entry names another mode); an operator picks br0 and an address in the UI"
     )
     for cfg in configs(root):
         kind = (cfg.get("Type") or "").strip().lower()
         label = cfg.get("Name")
-        assert kind != "device", f"{name}: passes a host device through ({cfg.get('Target')})"
+        target = cfg.get("Target") or ""
+        assert kind != "device" or (name, target) in DEVICE_BY_DESIGN, (
+            f"{name}: passes a host device through ({target}); a device needs a DEVICE_BY_DESIGN entry"
+        )
         if kind != "path":
             continue
         # Target/Default only: Default is always "" by the blank-host-path rule enforced two
@@ -599,10 +614,97 @@ def test_the_privilege_posture_is_minimal(name):
         # The HOST side decides what the container can reach, and a host path is
         # operator-specific by definition: it ships BLANK and is filled in on import. (The
         # leak guard refuses the real share roots; this refuses any value at all.)
+        # The value is not echoed: this repo is public and a failing run prints its log.
         default, text = value_of(cfg)
-        assert default == "" and text == "", (
-            f"{name}: {label!r} ships a host path {default!r} — host paths are set at creation"
+        fixed = HOST_PATH_BY_DESIGN[(name, target)][0] if (name, target) in HOST_PATH_BY_DESIGN else ""
+        assert default == fixed and text == fixed, (
+            f"{name}: {label!r} ships a host path — host paths are set at creation "
+            f"(a HOST_PATH_BY_DESIGN entry names the one value it may ship)"
         )
+
+
+def posture_exception_problems(host_path, device, network):
+    """What is wrong with the three exception lists: a name that is not a template, a Target
+    that the template does not declare, or a blank reason. Takes the lists as arguments so a
+    synthetic entry can be checked."""
+    problems = []
+    for label, entries in (("HOST_PATH_BY_DESIGN", host_path), ("DEVICE_BY_DESIGN", device)):
+        for (name, target), value in entries.items():
+            reason = value[1] if label == "HOST_PATH_BY_DESIGN" else value
+            if name not in NAMES:
+                problems.append(f"{label}: {name!r} is not a template")
+            elif target not in {c.get("Target") for c in configs(template(name))}:
+                problems.append(f"{label}: {name} declares no Config with Target {target!r}")
+            if not str(reason).strip():
+                problems.append(f"{label}: {name} {target} has no reason")
+    for name, (_mode, reason) in network.items():
+        if name not in NAMES:
+            problems.append(f"NETWORK_BY_DESIGN: {name!r} is not a template")
+        if not str(reason).strip():
+            problems.append(f"NETWORK_BY_DESIGN: {name} has no reason")
+    return problems
+
+
+def test_a_listed_network_exception_is_honoured_for_its_template_only(monkeypatch):
+    # The template declares br0 and the list names it: the posture test passes for that template.
+    # The same declaration on any unlisted template still fails.
+    root = copy.deepcopy(template("tape"))   # never mutate the cached tree
+    root.find("Network").text = "br0"
+    monkeypatch.setitem(_CACHE, "tape", root)
+    monkeypatch.setitem(NETWORK_BY_DESIGN, "tape", ("br0", "synthetic test entry"))
+    test_the_privilege_posture_is_minimal("tape")
+    monkeypatch.setitem(NETWORK_BY_DESIGN, "tape", ("bridge", "synthetic test entry"))
+    with pytest.raises(AssertionError, match="Network is 'br0'"):
+        test_the_privilege_posture_is_minimal("tape")
+
+
+def _tape_with_a_localtime_path_and_a_device(monkeypatch):
+    root = copy.deepcopy(template("tape"))   # never mutate the cached tree
+    base = {"Display": "advanced", "Required": "false", "Mask": "false", "Description": "x"}
+    path = ET.SubElement(root, "Config", {**base, "Name": "tz", "Target": "/etc/localtime",
+                                          "Default": "/etc/localtime", "Mode": "ro", "Type": "Path"})
+    path.text = "/etc/localtime"
+    ET.SubElement(root, "Config", {**base, "Name": "gpu", "Target": "/dev/dri", "Default": "",
+                                   "Mode": "", "Type": "Device"})
+    monkeypatch.setitem(_CACHE, "tape", root)
+
+
+def test_a_listed_host_path_and_device_are_honoured_for_their_template(monkeypatch):
+    _tape_with_a_localtime_path_and_a_device(monkeypatch)
+    monkeypatch.setitem(HOST_PATH_BY_DESIGN, ("tape", "/etc/localtime"), ("/etc/localtime", "synthetic"))
+    monkeypatch.setitem(DEVICE_BY_DESIGN, ("tape", "/dev/dri"), "synthetic test entry")
+    test_the_privilege_posture_is_minimal("tape")
+
+
+def test_an_unlisted_host_path_or_device_is_refused(monkeypatch):
+    _tape_with_a_localtime_path_and_a_device(monkeypatch)
+    with pytest.raises(AssertionError, match="ships a host path"):
+        test_the_privilege_posture_is_minimal("tape")
+    monkeypatch.setitem(HOST_PATH_BY_DESIGN, ("tape", "/etc/localtime"), ("/etc/localtime", "synthetic"))
+    with pytest.raises(AssertionError, match="passes a host device through"):
+        test_the_privilege_posture_is_minimal("tape")
+
+
+def test_every_posture_exception_states_a_reason():
+    assert posture_exception_problems(HOST_PATH_BY_DESIGN, DEVICE_BY_DESIGN, NETWORK_BY_DESIGN) == []
+
+
+def test_a_posture_exception_without_a_reason_is_refused():
+    problems = posture_exception_problems({}, {}, {"tape": ("bridge", "  ")})
+    assert problems == ["NETWORK_BY_DESIGN: tape has no reason"]
+
+
+def test_a_host_path_or_device_exception_without_a_reason_is_refused():
+    target = next(c.get("Target") for c in configs(template("tape")) if c.get("Type") == "Path")
+    assert posture_exception_problems({("tape", target): ("", " ")}, {}, {}) == [
+        f"HOST_PATH_BY_DESIGN: tape {target} has no reason"]
+    assert posture_exception_problems({}, {("tape", target): ""}, {}) == [
+        f"DEVICE_BY_DESIGN: tape {target} has no reason"]
+
+
+def test_a_posture_exception_naming_no_template_is_refused():
+    problems = posture_exception_problems({}, {}, {"no-such-template": ("bridge", "a reason")})
+    assert problems == ["NETWORK_BY_DESIGN: 'no-such-template' is not a template"]
 
 
 @pytest.mark.parametrize("name", NAMES)
