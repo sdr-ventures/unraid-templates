@@ -50,6 +50,22 @@ by design — fill them in Unraid on import.
 
 **`sync-templates.py` is the only thing that carries a template change toward a container that already exists — and it carries it as far as that container's *saved template*, not into the container itself.** Stock Unraid never merges a template change into an existing container, and that is deliberate rather than a bug: in `emhttp/plugins/dynamix.docker.manager/include/DockerClient.php`, `updateUserTemplate()` opens with `// Don't update templates, but leave code in place for future reference` and returns — on every release from 6.12 to current. Its sibling `downloadTemplates()` became a no-op only in **7.3.0**; on 6.12.x—7.2.x it is live, so registering this repo in `/boot/config/plugins/dockerMan/template-repos` there really does mirror it into `templates-usb` and refresh the *Default templates* list — but that path only populates the Add Container list (and deletes templates it no longer finds); it never touches an existing `my-*.xml`. Templates from this repo appear under **Docker → Add Container** in the *User templates* group because `sync-templates.py` seeds a `my-<name>.xml` for each; `<TemplateURL>` earns its keep by letting that script map an instance back to its template. **So: edit a template here, run `sync-templates.py`, then open the container's Edit page and press Apply.** The script rewrites `my-<name>.xml`; the container is rebuilt from that file by Apply, and equally by any container **Update** or *force update* — but never on its own. "Check for update" compares the image only.
 
+## Fleet posture exceptions
+
+Three rules in `tests/test_template_invariants.py` are fleet policy, not properties of a valid
+template: no `Path` ships a host value, no `Device` is passed through, and `Network` is `bridge`.
+A template that needs one of them is listed with its reason, and the list is the review:
+
+| List | Key | Value |
+|---|---|---|
+| `HOST_PATH_BY_DESIGN` | `(template, Target)` | `(Default, reason)`: the one host value that Config may ship |
+| `DEVICE_BY_DESIGN` | `(template, Target)` | `reason` |
+| `NETWORK_BY_DESIGN` | `template` | `(Network, reason)` |
+
+Every list is empty today. An entry must name a template and a Config of that template, and state
+a non-blank reason, or the test refuses it. A template not listed is checked as before. A
+`docker.sock` mount is refused whatever the lists say.
+
 ## Scripts
 
 `scripts/` holds the repo's operational + CI tooling. Every script here must have a row:
@@ -81,9 +97,15 @@ its `TEMPLATE` setting names, **keeping each instance's applied values**:
 
 **The rule.** The repo template is the schema: variables, ports and paths by name, with neutral defaults. The live instance is the values. A sync copies each applied live value into the matching repo variable and adopts the repo's metadata. Not in the repo template means deprecated, and the sync drops it. To retire a variable, remove it from the repo template. To add one, add it to the repo template first, let the sync bring it to the instance, then set its value there. A variable added to a live instance only is dropped by the next sync.
 
-Container-level settings you set per instance — image tag, network/IP, WebUI, Extra
-Params, ports, the container Name — are **always preserved**; only `<Config>`
-elements are reconciled.
+Container-level settings you set per instance — image tag, network/IP, WebUI,
+Extra Params, ports, the container Name — are **always preserved**. Two things are
+reconciled from the repo: the `<Config>` elements, and the five identity fields
+`Project`, `Repository`, `Registry`, `TemplateURL` and `Icon`. An identity field is
+replaced only when the instance already holds a value for it; an empty or missing one
+is not filled. `Repository` is replaced only when the live image is the same image
+(same last path segment) under another owner, and the instance's tag or digest is kept.
+A different image is left alone: the operator chose it. The dry run prints
+`identity refreshed from repo: <field names>` for each instance it would change.
 
 **A Path's Mode (Read/Write vs Read-only) is operator-owned, once an instance is
 seeded** — a Mode you set on an existing instance survives every later sync even when
