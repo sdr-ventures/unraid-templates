@@ -438,3 +438,16 @@ def test_every_consumer_release_a_citation_names_is_the_one_the_image_pulls(name
 ])
 def test_the_consumer_release_rule_catches_a_citation_for_another_release(expected, text, caught):
     assert bool(_consumer_release_problems(expected, text)) is caught
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_every_variable_a_pinned_release_reads_is_listed_in_its_template(name):
+    # A release reads a Variable the template does not list, and the next sync drops it live.
+    manifest = _manifest()[name]
+    if manifest.get("no_local_consumer"):
+        return
+    unlisted = set(manifest.get("vars") or {}) - _template_vars(name)
+    assert not unlisted, (
+        f"{name}: the pinned release reads {sorted(unlisted)}, which the template does not list. "
+        f"Add each as a Variable (exact name, no value, secrets masked) to templates/{name}.xml."
+    )

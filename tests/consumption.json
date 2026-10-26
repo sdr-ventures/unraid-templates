@@ -401,7 +401,8 @@
       "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/__main__.py:14 os.environ.get(\"KB_MODE\", \"library\") == \"embedder\" (embedder selects the embedder app)",
       "KB_EMBEDDER_TOKEN": "reads KB_EMBEDDER_TOKEN in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:58 env.get(\"KB_EMBEDDER_TOKEN\", \"\"); config.py:59-60 refuses a short token",
       "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:61 env.get(\"KB_EMBED_BASE_URL\", \"\") (the model server)",
-      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:67 env.get(\"KB_EMBED_MODEL\") (the model name)"
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:67 env.get(\"KB_EMBED_MODEL\") (the model name)",
+      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:68 env.get(\"KB_EMBED_API_KEY\", \"\") (the model server key); embedder_app.py:58 passes it to kb_service/embed.py:24, which sends it as a bearer token only when set"
     },
     "paths": {},
     "declared_for": {}
@@ -416,6 +417,7 @@
       "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:130 env.get(\"KB_EXTRACT_MODEL\") (the router group)",
       "KB_EXTRACT_DEADLINE_SECONDS": "reads KB_EXTRACT_DEADLINE_SECONDS in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:131 env.get(\"KB_EXTRACT_DEADLINE_SECONDS\") or 840 (the 504 deadline)",
       "KB_EXTRACT_BACKUP_KEY": "reads KB_EXTRACT_BACKUP_KEY in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:132 env.get(\"KB_EXTRACT_BACKUP_KEY\", \"\"); kb_service/extractor_app.py:154 a backup run needs it (empty = no backup)",
+      "KB_EXTRACT_BACKUP_MODEL": "reads KB_EXTRACT_BACKUP_MODEL in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:133 env.get(\"KB_EXTRACT_BACKUP_MODEL\") or \"claude-haiku\" (the model name the backup run asks for; used at extractor_app.py:157)",
       "HTTP_PROXY": "reads HTTP_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() (urllib reads HTTP_PROXY), used by the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.1 with the default trust_env",
       "NO_PROXY": "reads NO_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() and :47 proxy_info.get(\"no\") split on commas, for the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.1"
     },
