@@ -45,4 +45,5 @@
   <Config Name="KB_EMBEDDER_TOKEN" Target="KB_EMBEDDER_TOKEN" Default="" Mode="" Description="REQUIRED. Bearer keystone presents, 32 or more random characters. Blank on purpose; the container exits 2 without it." Type="Variable" Display="always" Required="true" Mask="true"></Config>
   <Config Name="KB_EMBED_BASE_URL" Target="KB_EMBED_BASE_URL" Default="" Mode="" Description="REQUIRED. OpenAI-style embeddings endpoint of the model server on the same internal network, ending in /v1." Type="Variable" Display="always" Required="true" Mask="false"></Config>
   <Config Name="KB_EMBED_MODEL" Target="KB_EMBED_MODEL" Default="qwen3-embedding:0.6b" Mode="" Description="REQUIRED. Embedding model name as the model server lists it." Type="Variable" Display="always" Required="true" Mask="false">qwen3-embedding:0.6b</Config>
+  <Config Name="KB_EMBED_API_KEY" Target="KB_EMBED_API_KEY" Default="" Mode="" Description="Optional. Key for the model server above, sent as its bearer token. Blank if the model server takes none." Type="Variable" Display="advanced" Required="false" Mask="true"/>
 </Container>
