@@ -5,7 +5,7 @@
   specific to any host or operator.
 
   WHAT IT DOES. Answers POST /v1/embed per keystone's embedder-call contract 1.0.0: 1 to 64 texts
-  in, one vector per text out. Stateless: no database, no data volume, scratch in RAM, one bearer,
+  in, each up to 8000 characters, one vector per text out. Stateless: no database, no data volume, scratch in RAM, one bearer,
   and nothing of the input or output is kept or logged beyond tenant, model, count, milliseconds
   and success.
 

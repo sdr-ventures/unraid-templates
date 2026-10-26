@@ -22,22 +22,24 @@
   and is LAN-exposed through the host port the operator picks: no default is offered, so a
   port already taken on the host is never silently reused.
 
-  v0.1.0 IS THE STAGE 0 SKELETON. It serves GET /health (no token) and GET /whoami (bearer
-  token) and nothing else. KB_DATABASE_URL, KB_EXPORT_DIR, KB_ASSETS_DIR, KB_EMBED_BASE_URL,
-  KB_EMBED_MODEL and KB_EMBED_API_KEY are carried now, and ignored by v0.1.0, because adding
-  a variable to a template later would need a sync. The REST routes at / and the MCP endpoint
-  at /mcp arrive in a later release.
+  WHAT THE IMAGE DOES (library mode, the default). It serves GET /health (no token), GET /whoami
+  (bearer token), the /v1 library and ingest-job routes, and /v1/chat/completions, which forwards
+  to the router at LITELLM_URL. When KB_DATABASE_URL is set it applies the database migrations at
+  start. The /v1 library routes answer 503 until KB_DATABASE_URL and KB_EMBED_BASE_URL are both
+  set. KB_EMBED_BASE_URL, KB_EMBED_MODEL and KB_EMBED_API_KEY are the embedding call the library
+  makes for each stored chunk and each search. KB_EXPORT_DIR and KB_ASSETS_DIR are not read by
+  this release.
 
   THE PROCESS RUNS AS 99:100 (nobody:users), the ownership Unraid gives appdata, so the two
-  mounts below are writable when their directories are created the ordinary way. /assets holds
-  the original files: back it up.
+  mounts below are writable when their directories are created the ordinary way. Nothing in
+  this release writes to them.
 
   THE IMAGE TAG IS PINNED to one release; an Update is a deliberate bump of that pin.
 
-  UPSTREAM REFERENCE (names verified at tag v0.1.0):
-      kb_service/config.py    KB_STACK, KB_PERSONA_TOKENS
+  UPSTREAM REFERENCE (names verified at the pinned tag):
+      kb_service/config.py    KB_STACK, KB_PERSONA_TOKENS, KB_EMBED_BASE_URL, KB_EMBED_API_KEY
       kb_service/__main__.py  listens on 0.0.0.0:8000; exits 2 when configuration is unusable
-      kb_service/app.py       GET /health returns {"status": "ok"}
+      kb_service/app.py       GET /health returns {"status": "ok"}; migrations run at start
 -->
 <Container version="2">
   <Name>kb-service</Name>
@@ -48,7 +50,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/sdr-ventures/kb-service</Project>
-  <Overview>The one door to the shared knowledge library. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose, behind bearer tokens; anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. RELEASE: v0.1.0 is the Stage 0 skeleton - it answers health and whoami only, and it ignores the database and embedding settings until a later release. Those variables are carried now because adding them later would need a template sync. REQUIRED: the service refuses to start (exit code 2) without KB_PERSONA_TOKENS, a JSON object of caller name to token with every token at least 32 characters. STORAGE: /assets holds original files and /export the plain-file export; put both on a pool and /assets under backup. The process runs as user 99:100. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
+  <Overview>The one door to the shared knowledge library. It stores items and their vectors in Postgres and serves the /v1 library routes, including the ingest-job routes the ingest worker calls, behind bearer tokens. /v1/chat/completions forwards to the model router. STARTED IN ORDER: kb-postgres, then kb-redis, then kb-litellm, then kb-service, then kb-webui. There is no template equivalent of compose depends_on, so nothing enforces that for you. NETWORK: the kb containers share one user-defined Docker network named kb that you create once, by hand, before the first start (a template cannot create a network, so Network stays bridge here - set it to kb when you create the container). Docker must preserve user-defined networks across updates (Unraid: Settings > Docker, Preserve user defined networks = Yes), or the containers fall back to bridge and the container names stop resolving. EXPOSURE: this container is exposed on your LAN through the host port you choose, behind bearer tokens; anything further (a domain, reverse proxy, TLS) is a separate step for whoever administers your network. MIGRATIONS: when KB_DATABASE_URL is set, the service applies its database migrations at every start. LIBRARY: the /v1 library routes answer 503 until KB_DATABASE_URL and KB_EMBED_BASE_URL are both set; /health answers without a token. REQUIRED: the service refuses to start (exit code 2) without KB_PERSONA_TOKENS, a JSON object of caller name to token with every token at least 32 characters. STORAGE: this release writes nothing to /assets or /export; give each a pool path, and back /assets up once a release writes originals there. The process runs as user 99:100. IMAGE TAG: pinned to one release; an Update is a deliberate bump of that pin.</Overview>
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:8000]/health</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-service.xml</TemplateURL>
