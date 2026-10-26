@@ -308,7 +308,8 @@
       "PERPLEXITYAI_API_KEY": "reads PERPLEXITYAI_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/perplexity/chat/transformation.py:30 get_secret_str(\"PERPLEXITYAI_API_KEY\") when no per-model api_key is set in config.yaml",
       "GROQ_API_KEY": "reads GROQ_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/groq/chat/transformation.py:166 get_secret_str(\"GROQ_API_KEY\") when no per-model api_key is set in config.yaml; litellm/litellm_core_utils/get_llm_provider_logic.py:277 get_secret_str(\"GROQ_API_KEY\") for an api.groq.com endpoint",
       "CLOUDFLARE_API_KEY": "reads CLOUDFLARE_API_KEY in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:16 api_key_env = (\"CLOUDFLARE_API_KEY\",), the key the decisions provider reads; litellm/constants.py:1964 lists it in SENTRY_DENYLIST, the names kept out of error reports",
-      "CLOUDFLARE_ACCOUNT_ID": "reads CLOUDFLARE_ACCOUNT_ID in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:20 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the endpoint; litellm/llms/cloudflare/chat/transformation.py:51 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the chat endpoint when no api_base is given"
+      "CLOUDFLARE_ACCOUNT_ID": "reads CLOUDFLARE_ACCOUNT_ID in https://github.com/BerriAI/litellm at v1.105.1: litellm/llms/cloudflare/decisions/transformation.py:20 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the endpoint; litellm/llms/cloudflare/chat/transformation.py:51 get_secret_str(\"CLOUDFLARE_ACCOUNT_ID\") builds the chat endpoint when no api_base is given",
+      "LITELLM_LOCAL_MODEL_COST_MAP": "reads LITELLM_LOCAL_MODEL_COST_MAP in https://github.com/BerriAI/litellm at v1.105.1: litellm/litellm_core_utils/get_model_cost_map.py:380 os.getenv(\"LITELLM_LOCAL_MODEL_COST_MAP\", \"\").lower() == \"true\" (the bundled price list, no fetch)"
     },
     "paths": {
       "/app/config.yaml": "reads /app/config.yaml via the --config argument in the template's PostArgs; litellm v1.105.1 litellm/proxy/proxy_cli.py:364-365 opens the --config path"
@@ -385,7 +386,9 @@
       "KB_URL": "reads KB_URL in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:17 os.environ[\"KB_URL\"] (the service base URL; the worker exits if missing)",
       "KB_TOKEN": "reads KB_TOKEN in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:18 os.environ[\"KB_TOKEN\"] (the bearer sent on every claim/result/fail call)",
       "POLL_SECONDS": "reads POLL_SECONDS in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:19 os.environ.get(\"POLL_SECONDS\", \"30\") (wait between empty claims)",
-      "MAX_MINUTES": "reads MAX_MINUTES in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:21 os.environ.get(\"MAX_MINUTES\", \"240\") (longest video accepted)"
+      "MAX_MINUTES": "reads MAX_MINUTES in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:21 os.environ.get(\"MAX_MINUTES\", \"240\") (longest video accepted)",
+      "NVIDIA_VISIBLE_DEVICES": "reads NVIDIA_VISIBLE_DEVICES via the runtime, no app-code lookup: the NVIDIA container runtime reads it at container start to pick the GPUs; the worker then selects CUDAExecutionProvider when present (worker/ingest_worker.py:69, worker/Dockerfile:17-24 in https://github.com/sdr-ventures/kb-service at v0.9.5)",
+      "NVIDIA_DRIVER_CAPABILITIES": "reads NVIDIA_DRIVER_CAPABILITIES via the runtime, no app-code lookup: the NVIDIA container runtime reads it to decide which driver features reach the container; the CUDA libraries are installed at worker/Dockerfile:17-24 in https://github.com/sdr-ventures/kb-service at v0.9.5"
     },
     "paths": {
       "/models": "reads /models in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/Dockerfile:7 HF_HOME=/models (the speech model downloads there on first start so it survives updates)"
@@ -410,7 +413,11 @@
       "KB_EXTRACTOR_TOKEN": "reads KB_EXTRACTOR_TOKEN in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:116 env.get(\"KB_EXTRACTOR_TOKEN\", \"\"); config.py:117 refuses a short token",
       "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:119 env.get(\"LITELLM_URL\", \"\") (the model router)",
       "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:120 env.get(\"LITELLM_KEY\") (the router key)",
-      "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:126 env.get(\"KB_EXTRACT_MODEL\") (the router group)"
+      "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.6.1: kb_service/config.py:126 env.get(\"KB_EXTRACT_MODEL\") (the router group)",
+      "KB_EXTRACT_DEADLINE_SECONDS": "reads KB_EXTRACT_DEADLINE_SECONDS in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:131 env.get(\"KB_EXTRACT_DEADLINE_SECONDS\") or 840 (the 504 deadline)",
+      "KB_EXTRACT_BACKUP_KEY": "reads KB_EXTRACT_BACKUP_KEY in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:132 env.get(\"KB_EXTRACT_BACKUP_KEY\", \"\"); kb_service/extractor_app.py:154 a backup run needs it (empty = no backup)",
+      "HTTP_PROXY": "reads HTTP_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() (urllib reads HTTP_PROXY), used by the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.5 with the default trust_env",
+      "NO_PROXY": "reads NO_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() and :47 proxy_info.get(\"no\") split on commas, for the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.5"
     },
     "paths": {},
     "declared_for": {}

@@ -5,7 +5,7 @@
   Nothing here is specific to any host or operator.
 
   WHAT IT DOES. It claims URL jobs from kb-service over HTTP, gets a timestamped transcript
-  (the video's own captions if it has them, otherwise audio transcribed on CPU), has a local
+  (the video's own captions if it has them, otherwise audio transcribed on the GPU or the CPU), has a local
   model summarize it through kb-service's router, and posts the text back. It has NO database
   access and holds no library data: its only credential is one bearer token.
 
@@ -16,8 +16,11 @@
   KB_PERSONA_TOKENS. Add that key there first (32+ random characters), then paste the same value
   here. It ships blank on purpose.
 
-  CPU AND MEMORY. Speech-to-text is CPU only and runs one job at a time. Keep Extra Parameters at
-  cpus 4 and memory 4g (swap equal) so a long video cannot starve the host.
+  CPU AND MEMORY. Speech-to-text runs one job at a time, on the GPU when the host passes one
+  through and on CPU otherwise. The GPU also needs the host's NVIDIA runtime, which this template
+  cannot set (Extra Parameters stays empty), so on a host without it the two NVIDIA variables do
+  nothing. Keep Extra Parameters at cpus 4 and memory 4g (swap equal) so a long video cannot
+  starve the host.
 
   FIRST START. The speech model downloads into the Models path (a few hundred MB) and stays
   there across updates. Losing it costs a re-download, not data.
@@ -38,10 +41,12 @@
   <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-ingest.png</Icon>
   <ExtraParams/>
   <DateInstalled/>
-  <Description>Ingest worker for the knowledge library. CPU only, one job at a time, no database access. Start after kb-service.</Description>
+  <Description>Ingest worker for the knowledge library. GPU or CPU, one job at a time, no database access. Start after kb-service.</Description>
   <Config Name="Models" Target="/models" Default="" Mode="rw" Description="REQUIRED. Speech model cache. Re-downloadable: losing it costs a download, not data. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-ingest/models." Type="Path" Display="always" Required="true" Mask="false"></Config>
   <Config Name="KB_URL" Target="KB_URL" Default="http://kb-service:8000" Mode="" Description="REQUIRED. kb-service&#x27;s address on the kb network. Leave the default." Type="Variable" Display="always" Required="true" Mask="false">http://kb-service:8000</Config>
   <Config Name="KB_TOKEN" Target="KB_TOKEN" Default="" Mode="" Description="REQUIRED. Bearer token for the ingest-worker persona: the same value as the ingest-worker key in kb-service&#x27;s KB_PERSONA_TOKENS. Blank on purpose; the container exits if it is unset." Type="Variable" Display="always" Required="true" Mask="true"></Config>
   <Config Name="POLL_SECONDS" Target="POLL_SECONDS" Default="30" Mode="" Description="Seconds to wait between claim attempts when the queue is empty." Type="Variable" Display="advanced" Required="false" Mask="false">30</Config>
   <Config Name="MAX_MINUTES" Target="MAX_MINUTES" Default="240" Mode="" Description="Videos longer than this many minutes are refused." Type="Variable" Display="advanced" Required="false" Mask="false">240</Config>
+  <Config Name="NVIDIA_VISIBLE_DEVICES" Target="NVIDIA_VISIBLE_DEVICES" Default="all" Mode="" Description="GPUs the container may use: all, none, or a comma-separated list of GPU IDs. Takes effect only on a host with the NVIDIA runtime. Set none to force CPU." Type="Variable" Display="advanced" Required="false" Mask="false">all</Config>
+  <Config Name="NVIDIA_DRIVER_CAPABILITIES" Target="NVIDIA_DRIVER_CAPABILITIES" Default="compute,utility" Mode="" Description="Driver features the container gets from the GPU. Leave compute,utility." Type="Variable" Display="advanced" Required="false" Mask="false">compute,utility</Config>
 </Container>
