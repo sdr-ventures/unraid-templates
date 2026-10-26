@@ -45,6 +45,8 @@ that actually uses it. This file enforces that the record is COMPLETE and never 
   * a Variable or Path a release has not wired yet goes under `declared_for`, never under
     `vars` or `paths`: its value names the package or branch that will read it and does not
     claim a read today. A name is cited or declared_for, never both.
+  * every consumer release a citation names is the one its template's image pulls. A moving
+    tag (`latest`) is checked against the release recorded in `MOVING_TAG_RELEASE`.
 This is a structural gate, not a semantic one: it cannot itself prove a citation is true.
 That proof is the one-time job the accompanying RETURN records; ⚠️ re-run the grep behind a
 citation before trusting it if the cited consumer file has moved on since.
@@ -62,6 +64,15 @@ TEMPLATES = REPO / "templates"
 MANIFEST_PATH = REPO / "tests" / "consumption.json"
 
 NAMES = sorted(p.stem for p in TEMPLATES.glob("*.xml"))
+
+# A moving image tag names no release, so this table records the release it is meant to track.
+# Keys are image repositories. Update an entry, with the citations that name it, when the consumer
+# cuts a release.
+MOVING_TAG_RELEASE = {
+    "ghcr.io/sdr-ventures/kb-service": "v0.9.5",
+    "ghcr.io/sdr-ventures/kb-ingest": "v0.9.5",
+}
+CONSUMER_RELEASE = re.compile(r"\bv\d+\.\d+\.\d+\b")
 
 
 def _manifest():
@@ -386,3 +397,54 @@ def test_the_citation_rule_names_the_env_var_a_wrong_field_reads():
 ])
 def test_the_citation_rule_says_what_it_found(var, citation, expected):
     assert expected in "; ".join(_citation_problems(var, citation))
+
+
+def _image_release(name):
+    """The release a template's image is pinned to, or the release its moving tag tracks (None if neither)."""
+    image = ET.parse(TEMPLATES / f"{name}.xml").getroot().findtext(".//Repository", "").strip()
+    repo, _, tag = image.partition("@")[0].rpartition(":")
+    if re.fullmatch(r"v\d+\.\d+\.\d+", tag):
+        return tag
+    return MOVING_TAG_RELEASE.get(repo)
+
+
+def _consumer_release_problems(expected, text):
+    """What is wrong with `text` as a citation of consumer releases, given the template's release ([] = nothing)."""
+    named = sorted(set(CONSUMER_RELEASE.findall(text)))
+    if not named:
+        return []
+    if expected is None:
+        return [f"names {named}, but the template's image names no release to check it against"]
+    wrong = [tag for tag in named if tag != expected]
+    return [f"names {wrong}, but the template's image is {expected}"] if wrong else []
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_every_consumer_release_a_citation_names_is_the_one_the_image_pulls(name):
+    expected = _image_release(name)
+    manifest = _manifest()[name]
+    texts = [
+        *(manifest.get("vars") or {}).values(),
+        *(manifest.get("paths") or {}).values(),
+        *_declared_for(manifest).values(),
+    ]
+    for text in texts:
+        problems = _consumer_release_problems(expected, text)
+        assert not problems, (
+            f"{name}: {'; '.join(problems)}: {text[:120]!r}. A citation names the consumer release its "
+            f"template's image pulls. Re-check the cited line at that release and update the citation, "
+            f"or, for a moving tag, the release recorded in MOVING_TAG_RELEASE."
+        )
+
+
+@pytest.mark.parametrize("expected, text, caught", [
+    ("v0.9.5", "reads KB_URL in https://github.com/sdr-ventures/kb-service at v0.6.1: worker/ingest_worker.py:17", True),
+    ("v0.9.5", "reads KB_URL in https://github.com/sdr-ventures/kb-service at v0.9.5: worker/ingest_worker.py:26", False),
+    ("v0.9.5", "reads KB_URL at v0.9.5 and again at v0.6.1: worker/ingest_worker.py:26", True),
+    ("v0.9.5", "reads KB_URL via httpx 0.28.1 at v0.9.5: httpx/_utils.py:37", False),
+    ("v0.9.5", "reads KB_URL with no release named: worker/ingest_worker.py:26", False),
+    (None, "reads KB_URL at v0.9.5: worker/ingest_worker.py:26", True),
+    (None, "reads /models via worker/Dockerfile:7 HF_HOME=/models", False),
+])
+def test_the_consumer_release_rule_catches_a_citation_for_another_release(expected, text, caught):
+    assert bool(_consumer_release_problems(expected, text)) is caught
