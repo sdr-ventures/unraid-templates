@@ -129,8 +129,22 @@ FLEET_IMAGE_PREFIX = ("ghcr.io/texasdaddy/", "ghcr.io/sdr-ventures/")
 FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 # Fleet images that are version-pinned on purpose, each a visible decision: they ship a
 # (v-prefixed) release tag, never a channel, and an Update is a deliberate bump of that pin.
-#   (none: the kb-service templates ship latest; the operator's live template holds the pin)
-FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset()
+# The kb stack publishes only vX.Y.Z release tags (PUBLISHED_TAG_RULE below), so each template
+# names the release its live instance runs.
+FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
+    ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.9.2"),
+    ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.5.1"),
+    ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.9.1"),
+    ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.9.5"),
+})
+# The tag rule each publisher releases by, recorded here so the check runs offline. A tag outside
+# the rule is one the registry does not publish, so a template that names it cannot pull.
+#   kb-service: its release workflow publishes only vX.Y.Z and says there is no floating tag.
+#   kb-ingest: the registry holds vX.Y.Z tags and no latest.
+PUBLISHED_TAG_RULE = {
+    "ghcr.io/sdr-ventures/kb-service": re.compile(r"^v\d+\.\d+\.\d+$"),
+    "ghcr.io/sdr-ventures/kb-ingest": re.compile(r"^v\d+\.\d+\.\d+$"),
+}
 
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
 #   tldw-redis  redis:7-alpine              — upstream's own compose choice; the blast radius is
@@ -541,6 +555,27 @@ def test_the_image_reference_is_pinned_or_a_declared_fleet_channel(name):
     )
     word = channel_word_in(tag)
     assert word is None, f"{name}: {tag!r} carries the channel word {word!r}, so it moves"
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_a_publisher_with_a_release_rule_is_pulled_by_a_tag_it_publishes(name):
+    repository = (template(name).findtext("Repository") or "").strip()
+    ref = repository.partition("@")[0]
+    image, _, tag = ref.rpartition(":") if ":" in ref.rsplit("/", 1)[-1] else (ref, "", "latest")
+    rule = PUBLISHED_TAG_RULE.get(image)
+    if rule is None:
+        return
+    assert rule.match(tag), (
+        f"{name}: {repository!r} names {tag!r}, which the publisher does not release "
+        f"(its tags match {rule.pattern})"
+    )
+
+
+@pytest.mark.parametrize("tag, published", [
+    ("v0.9.2", True), ("latest", False), ("v0.9", False), ("0.9.2", False), ("v0.9.2-rc.1", False),
+])
+def test_the_publisher_tag_rule_names_only_the_releases_it_publishes(tag, published):
+    assert bool(PUBLISHED_TAG_RULE["ghcr.io/sdr-ventures/kb-service"].match(tag)) is published
 
 
 def test_the_rolling_tag_exceptions_are_all_live():
