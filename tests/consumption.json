@@ -265,14 +265,14 @@
   "kb-service": {
     "no_local_consumer": false,
     "vars": {
-      "KB_PERSONA_TOKENS": "reads KB_PERSONA_TOKENS in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:84 env.get('KB_PERSONA_TOKENS', ''); config.py:85-86 raises ConfigError when blank, config.py:95 rejects a token under 32 characters (MIN_TOKEN_LENGTH, config.py:7), and kb_service/__main__.py:30-32 turns that into exit 2",
-      "KB_STACK": "reads KB_STACK in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:77 env.get('KB_STACK', 'global'); config.py:78-79 raises ConfigError for any value but global",
-      "KB_DATABASE_URL": "reads KB_DATABASE_URL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:36 env.get('KB_DATABASE_URL', '') in load_settings (the database the service connects to)",
-      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:37 env.get('KB_EMBED_BASE_URL', '') in load_settings (the embedding endpoint)",
-      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:38 env.get('KB_EMBED_MODEL') in load_settings (the embedding model name)",
-      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:39 env.get('KB_EMBED_API_KEY', '') in load_settings (the key for the embedding endpoint)",
-      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:34 env.get('LITELLM_URL', '') in load_settings (the model router)",
-      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:35 env.get('LITELLM_KEY', '') in load_settings (the router key)"
+      "KB_PERSONA_TOKENS": "reads KB_PERSONA_TOKENS in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:84 env.get('KB_PERSONA_TOKENS', ''); config.py:85-86 raises ConfigError when blank, config.py:95 rejects a token under 32 characters (MIN_TOKEN_LENGTH, config.py:7), and kb_service/__main__.py:30-32 turns that into exit 2",
+      "KB_STACK": "reads KB_STACK in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:77 env.get('KB_STACK', 'global'); config.py:78-79 raises ConfigError for any value but global",
+      "KB_DATABASE_URL": "reads KB_DATABASE_URL in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:36 env.get('KB_DATABASE_URL', '') in load_settings (the database the service connects to)",
+      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:37 env.get('KB_EMBED_BASE_URL', '') in load_settings (the embedding endpoint)",
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:38 env.get('KB_EMBED_MODEL') in load_settings (the embedding model name)",
+      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:39 env.get('KB_EMBED_API_KEY', '') in load_settings (the key for the embedding endpoint)",
+      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:34 env.get('LITELLM_URL', '') in load_settings (the model router)",
+      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.9.2: kb_service/config.py:35 env.get('LITELLM_KEY', '') in load_settings (the router key)"
     },
     "paths": {},
     "declared_for": {
@@ -398,10 +398,10 @@
   "kw-embedder": {
     "no_local_consumer": false,
     "vars": {
-      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") (embedder selects the embedder app)",
-      "KB_EMBEDDER_TOKEN": "reads KB_EMBEDDER_TOKEN in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:58 env.get(\"KB_EMBEDDER_TOKEN\", \"\"); config.py:59-60 refuses a short token",
-      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:61 env.get(\"KB_EMBED_BASE_URL\", \"\") (the model server)",
-      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:67 env.get(\"KB_EMBED_MODEL\") (the model name)"
+      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/__main__.py:14 os.environ.get(\"KB_MODE\", \"library\") == \"embedder\" (embedder selects the embedder app)",
+      "KB_EMBEDDER_TOKEN": "reads KB_EMBEDDER_TOKEN in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:58 env.get(\"KB_EMBEDDER_TOKEN\", \"\"); config.py:59-60 refuses a short token",
+      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:61 env.get(\"KB_EMBED_BASE_URL\", \"\") (the model server)",
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.5.1: kb_service/config.py:67 env.get(\"KB_EMBED_MODEL\") (the model name)"
     },
     "paths": {},
     "declared_for": {}
@@ -409,15 +409,15 @@
   "kw-extractor": {
     "no_local_consumer": false,
     "vars": {
-      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") (extractor selects the extractor app)",
-      "KB_EXTRACTOR_TOKEN": "reads KB_EXTRACTOR_TOKEN in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:120 env.get(\"KB_EXTRACTOR_TOKEN\", \"\"); config.py:121-122 refuses a short token",
-      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:123 env.get(\"LITELLM_URL\", \"\") (the model router)",
-      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:124 env.get(\"LITELLM_KEY\") (the router key)",
-      "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:130 env.get(\"KB_EXTRACT_MODEL\") (the router group)",
-      "KB_EXTRACT_DEADLINE_SECONDS": "reads KB_EXTRACT_DEADLINE_SECONDS in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:131 env.get(\"KB_EXTRACT_DEADLINE_SECONDS\") or 840 (the 504 deadline)",
-      "KB_EXTRACT_BACKUP_KEY": "reads KB_EXTRACT_BACKUP_KEY in https://github.com/sdr-ventures/kb-service at v0.9.5: kb_service/config.py:132 env.get(\"KB_EXTRACT_BACKUP_KEY\", \"\"); kb_service/extractor_app.py:154 a backup run needs it (empty = no backup)",
-      "HTTP_PROXY": "reads HTTP_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() (urllib reads HTTP_PROXY), used by the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.5 with the default trust_env",
-      "NO_PROXY": "reads NO_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() and :47 proxy_info.get(\"no\") split on commas, for the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.5"
+      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") (extractor selects the extractor app)",
+      "KB_EXTRACTOR_TOKEN": "reads KB_EXTRACTOR_TOKEN in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:120 env.get(\"KB_EXTRACTOR_TOKEN\", \"\"); config.py:121-122 refuses a short token",
+      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:123 env.get(\"LITELLM_URL\", \"\") (the model router)",
+      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:124 env.get(\"LITELLM_KEY\") (the router key)",
+      "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:130 env.get(\"KB_EXTRACT_MODEL\") (the router group)",
+      "KB_EXTRACT_DEADLINE_SECONDS": "reads KB_EXTRACT_DEADLINE_SECONDS in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:131 env.get(\"KB_EXTRACT_DEADLINE_SECONDS\") or 840 (the 504 deadline)",
+      "KB_EXTRACT_BACKUP_KEY": "reads KB_EXTRACT_BACKUP_KEY in https://github.com/sdr-ventures/kb-service at v0.9.1: kb_service/config.py:132 env.get(\"KB_EXTRACT_BACKUP_KEY\", \"\"); kb_service/extractor_app.py:154 a backup run needs it (empty = no backup)",
+      "HTTP_PROXY": "reads HTTP_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() (urllib reads HTTP_PROXY), used by the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.1 with the default trust_env",
+      "NO_PROXY": "reads NO_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() and :47 proxy_info.get(\"no\") split on commas, for the router client at kb_service/extractor_app.py:49 in https://github.com/sdr-ventures/kb-service at v0.9.1"
     },
     "paths": {},
     "declared_for": {}

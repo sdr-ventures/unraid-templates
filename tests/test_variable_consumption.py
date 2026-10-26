@@ -45,8 +45,8 @@ that actually uses it. This file enforces that the record is COMPLETE and never 
   * a Variable or Path a release has not wired yet goes under `declared_for`, never under
     `vars` or `paths`: its value names the package or branch that will read it and does not
     claim a read today. A name is cited or declared_for, never both.
-  * every consumer release a citation names is the one its template's image pulls. A moving
-    tag (`latest`) is checked against the release recorded in `MOVING_TAG_RELEASE`.
+  * every consumer release a citation names is the one its template's image pulls. A template
+    whose image names no release (`latest`) fails any citation that names one.
 This is a structural gate, not a semantic one: it cannot itself prove a citation is true.
 That proof is the one-time job the accompanying RETURN records; ⚠️ re-run the grep behind a
 citation before trusting it if the cited consumer file has moved on since.
@@ -65,13 +65,6 @@ MANIFEST_PATH = REPO / "tests" / "consumption.json"
 
 NAMES = sorted(p.stem for p in TEMPLATES.glob("*.xml"))
 
-# A moving image tag names no release, so this table records the release it is meant to track.
-# Keys are image repositories. Update an entry, with the citations that name it, when the consumer
-# cuts a release.
-MOVING_TAG_RELEASE = {
-    "ghcr.io/sdr-ventures/kb-service": "v0.9.5",
-    "ghcr.io/sdr-ventures/kb-ingest": "v0.9.5",
-}
 CONSUMER_RELEASE = re.compile(r"\bv\d+\.\d+\.\d+\b")
 
 
@@ -400,12 +393,10 @@ def test_the_citation_rule_says_what_it_found(var, citation, expected):
 
 
 def _image_release(name):
-    """The release a template's image is pinned to, or the release its moving tag tracks (None if neither)."""
+    """The release a template's image is pinned to (None when its tag is not a release)."""
     image = ET.parse(TEMPLATES / f"{name}.xml").getroot().findtext(".//Repository", "").strip()
-    repo, _, tag = image.partition("@")[0].rpartition(":")
-    if re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-        return tag
-    return MOVING_TAG_RELEASE.get(repo)
+    tag = image.partition("@")[0].rpartition(":")[2]
+    return tag if re.fullmatch(r"v\d+\.\d+\.\d+", tag) else None
 
 
 def _consumer_release_problems(expected, text):
@@ -432,8 +423,7 @@ def test_every_consumer_release_a_citation_names_is_the_one_the_image_pulls(name
         problems = _consumer_release_problems(expected, text)
         assert not problems, (
             f"{name}: {'; '.join(problems)}: {text[:120]!r}. A citation names the consumer release its "
-            f"template's image pulls. Re-check the cited line at that release and update the citation, "
-            f"or, for a moving tag, the release recorded in MOVING_TAG_RELEASE."
+            f"template's image pulls. Re-check the cited line at that release and update the citation."
         )
 
 
