@@ -4,15 +4,22 @@
   (github.com/sdr-ventures/kb-service, image kb-service, KB_MODE=extractor). Nothing here is
   specific to any host or operator.
 
-  WHAT IT DOES. Answers POST /v1/extract per keystone's extractor-call contract 1.1.0: a PDF
-  statement with a text layer in, a ParseResult 1.2.0 out. Stateless: no database, no data volume,
-  the file is read in memory, scratch is RAM, and nothing of the file or the answer is kept or
-  logged beyond tenant, file id, model, milliseconds and success. One run at a time (429 when busy).
+  WHAT IT DOES. Answers POST /v1/extract per keystone's extractor-call contract 1.1.0: a PDF in,
+  a ParseResult 1.2.0 out. A body that is not a PDF is refused with 415; a PDF no statement can be
+  read from answers 422. It also answers POST /v1/extract-transactions. Stateless: no database,
+  no data volume, the file is read in memory, scratch is RAM, and nothing of the file or the
+  answer is kept or logged beyond tenant, file id, model, milliseconds and success. One run at a
+  time (429 when busy).
 
-  THE MODEL. It calls a LiteLLM-compatible router at LITELLM_URL using a key that allows local
-  models only. KB_EXTRACT_MODEL is the router group. It needs a model that follows a JSON schema;
-  allow about 80 seconds per dense page on a mid-range GPU. When the model is unreachable the
-  container answers 503 with Retry-After 60.
+  THE MODEL. It calls a LiteLLM-compatible router at LITELLM_URL with LITELLM_KEY, a key that
+  allows local models only. KB_EXTRACT_MODEL is the router group. It needs a model that follows a
+  JSON schema; allow about 80 seconds per dense page on a mid-range GPU. When the model is
+  unreachable the container answers 503 with Retry-After 60.
+
+  THE BACKUP. Only when keystone sends X-KW-Allow-Backup: 1 and KB_EXTRACT_BACKUP_KEY is set does
+  a run go to the router with that key and KB_EXTRACT_BACKUP_MODEL (default claude-haiku). Account
+  numbers are masked on the way out and restored on the way back. Any other header value, or a
+  blank backup key, keeps the run on local models.
 
   NETWORK. Set the Network field to the internal Docker network the Keystone containers share
   (no route out) and give it a fixed address there. It publishes no port. If the router is outside
@@ -35,7 +42,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/sdr-ventures/kb-service/issues</Support>
   <Project>https://github.com/sdr-ventures/kb-service</Project>
-  <Overview>The statement reader for Keystone Wealth: turns a PDF statement into structured accounts and positions using a local model. Stateless, no data volume, one bearer, reachable only on the internal network.</Overview>
+  <Overview>The statement reader for Keystone Wealth: turns a PDF statement into structured accounts and positions using a local model. When keystone asks for a backup run and a backup key is set, it uses Haiku with account numbers masked. Stateless, no data volume, one bearer, reachable only on the internal network.</Overview>
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-extractor.xml</TemplateURL>
