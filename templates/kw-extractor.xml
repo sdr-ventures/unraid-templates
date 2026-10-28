@@ -17,7 +17,7 @@
   unreachable the container answers 503 with Retry-After 60.
 
   THE BACKUP. Only when keystone sends X-KW-Allow-Backup: 1 and KB_EXTRACT_BACKUP_KEY is set does
-  a run go to the router with that key and KB_EXTRACT_BACKUP_MODEL (default claude-haiku). Account
+  a run go to the router with that key and KB_EXTRACT_BACKUP_MODEL (blank means claude-haiku). Account
   numbers are masked on the way out and restored on the way back. Any other header value, or a
   blank backup key, keeps the run on local models.
 
@@ -57,7 +57,7 @@
   <Config Name="KB_EXTRACT_MODEL" Target="KB_EXTRACT_MODEL" Default="large" Mode="" Description="Router group that reads statements." Type="Variable" Display="always" Required="false" Mask="false">large</Config>
   <Config Name="KB_EXTRACT_DEADLINE_SECONDS" Target="KB_EXTRACT_DEADLINE_SECONDS" Default="840" Mode="" Description="Seconds a run may take before it answers 504. Keep 840: keystone's own timeout is 900." Type="Variable" Display="advanced" Required="false" Mask="false">840</Config>
   <Config Name="KB_EXTRACT_BACKUP_KEY" Target="KB_EXTRACT_BACKUP_KEY" Default="" Mode="" Description="Optional. Router key that allows Haiku only, for the backup run keystone asks for. Blank means no backup: the request header is ignored and the run stays on local models." Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="KB_EXTRACT_BACKUP_MODEL" Target="KB_EXTRACT_BACKUP_MODEL" Default="claude-haiku" Mode="" Description="Model name the backup run asks the router for, when KB_EXTRACT_BACKUP_KEY is set. Leave the default unless the router lists another name." Type="Variable" Display="advanced" Required="false" Mask="false">claude-haiku</Config>
+  <Config Name="KB_EXTRACT_BACKUP_MODEL" Target="KB_EXTRACT_BACKUP_MODEL" Default="" Mode="" Description="Model name the backup run asks the router for, when KB_EXTRACT_BACKUP_KEY is set. Blank: the app asks for claude-haiku. Set it only if the router lists another name." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="HTTP_PROXY" Target="HTTP_PROXY" Default="" Mode="" Description="Optional. Egress proxy URL, for example http://proxy.example:3128, when the router is outside the internal network. Blank means a direct connection." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="NO_PROXY" Target="NO_PROXY" Default="" Mode="" Description="Optional. Comma-separated hosts that skip HTTP_PROXY, such as the router's own name. Blank means none." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 </Container>
