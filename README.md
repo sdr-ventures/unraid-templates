@@ -74,7 +74,7 @@ a non-blank reason, or the test refuses it. A template not listed is checked as 
 |---|---|---|
 | `scripts/sync-templates.py` | Reconciles the Unraid host's `my-*.xml` container templates against this repo | Unraid host, via **User Scripts** |
 
-> **The leak guard is the pinned kw-common `v1.7.0` guard** — nothing is vendored here. CI runs it as the
+> **The leak guard is the pinned kw-common `v1.14.0` guard** — nothing is vendored here. CI runs it as the
 > `leak-guard` job (the reusable `leak-guard.yml`); the local hooks are written into the git directory by
 > `kw-leak-guard --install-hooks` from a venv outside the tracked tree (`.venv-guard/`, ignored); allowances,
 > if ever needed, live in `.leakguard.json`. It matches shapes only, so a bare hostname, codename or
