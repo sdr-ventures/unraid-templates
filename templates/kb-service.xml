@@ -43,7 +43,7 @@
 -->
 <Container version="2">
   <Name>kb-service</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.9.7</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.9.8</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
