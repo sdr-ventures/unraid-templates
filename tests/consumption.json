@@ -163,7 +163,9 @@
       "HTTPS_PROXY": "reads HTTPS_PROXY via the Node runtime, not repo code: lib/keystone.ts:39 and lib/healthchecks.ts:25 call fetch(), and the runtime is node:24.21.0-bookworm-slim (keystone-web Dockerfile:4)",
       "HTTP_PROXY": "reads HTTP_PROXY via the Node runtime, not repo code: lib/keystone.ts:39 and lib/healthchecks.ts:25 call fetch(), and the runtime is node:24.21.0-bookworm-slim (keystone-web Dockerfile:4)",
       "NO_PROXY": "reads NO_PROXY via the Node runtime, not repo code: lib/keystone.ts:39 and lib/healthchecks.ts:25 call fetch(), and the runtime is node:24.21.0-bookworm-slim (keystone-web Dockerfile:4)",
-      "NODE_USE_ENV_PROXY": "reads NODE_USE_ENV_PROXY in the Node 24 runtime, not repo code: it switches on environment proxy support for the fetch() calls at lib/keystone.ts:39 and lib/healthchecks.ts:25; the runtime is pinned at keystone-web Dockerfile:4 (node:24.21.0-bookworm-slim)"
+      "NODE_USE_ENV_PROXY": "reads NODE_USE_ENV_PROXY in the Node 24 runtime, not repo code: it switches on environment proxy support for the fetch() calls at lib/keystone.ts:39 and lib/healthchecks.ts:25; the runtime is pinned at keystone-web Dockerfile:4 (node:24.21.0-bookworm-slim)",
+      "HOUSEHOLD_HOST": "reads HOUSEHOLD_HOST via process.env in lib/hosts.ts (origin/dev at 8d4bf59); lib/hosts.ts:13 setting() and :20 sideOfHost(): the household side is the request whose Host equals it; unset, the household site serves nothing but /api/health",
+      "ADMIN_HOST": "reads ADMIN_HOST via process.env in lib/hosts.ts (origin/dev at 8d4bf59); lib/hosts.ts:13 setting() and :19 sideOfHost(): the admin side is the request whose Host equals it; unset, the admin console does not exist"
     }
   },
   "tldw-webui": {

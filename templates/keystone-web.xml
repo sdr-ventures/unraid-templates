@@ -27,6 +27,9 @@
        Route Handlers and never shipped to the browser, so the internal container address is
        the right value here (no CORS — the browser only ever sees the one public hostname). -->
   <Config Name="KEYSTONE_API_URL" Target="KEYSTONE_API_URL" Default="" Mode="" Description="Base URL of the keystone API container THIS instance talks to, e.g. http://&lt;keystone-api-ip&gt;:8000 (dev web -> dev API). Reached over the container network, never via the public hostname." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <!-- The two sites this instance serves (D127). The exact Host the proxy sends, lower case, no scheme. -->
+  <Config Name="HOUSEHOLD_HOST" Target="HOUSEHOLD_HOST" Default="" Mode="" Description="REQUIRED. Hostname of the household app, e.g. &lt;household-host-name&gt; (no scheme, no path; a port only if the proxy sends one). Blank: the household site does not exist and only /api/health answers there." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="ADMIN_HOST" Target="ADMIN_HOST" Default="" Mode="" Description="REQUIRED. Hostname of the admin console, e.g. admin.&lt;household-host-name&gt;, a sub-name of HOUSEHOLD_HOST so one passkey relying party covers both. Blank: the admin console does not exist." Type="Variable" Display="always" Required="true" Mask="false"/>
 
   <!-- Runtime tuning -->
   <Config Name="SESSION_COOKIE_MAX_AGE" Target="SESSION_COOKIE_MAX_AGE" Default="43200" Mode="" Description="Lifetime in seconds of the httpOnly refresh cookie. Keep equal to the API's refresh-token TTL (its JWT_REFRESH_TTL_SECONDS, default 43200 = 12 h): the API's session row is authoritative, so a longer value only leaves a dead cookie behind." Type="Variable" Display="advanced" Required="false" Mask="false">43200</Config>
