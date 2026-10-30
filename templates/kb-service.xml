@@ -43,7 +43,7 @@
 -->
 <Container version="2">
   <Name>kb-service</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.9.9</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.9.10</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -64,6 +64,7 @@
   <Config Name="Assets" Target="/assets" Default="" Mode="rw" Description="REQUIRED. Original files and derived images; losing this loses the originals. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/assets. Put it under backup." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Export" Target="/export" Default="" Mode="rw" Description="REQUIRED. The nightly plain-file export of the library. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/export." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="KB_PERSONA_TOKENS" Target="KB_PERSONA_TOKENS" Default="" Mode="" Description="REQUIRED. JSON object of caller name to bearer token, format {&quot;&lt;caller&gt;&quot;:&quot;&lt;token&gt;&quot;}. Every token is at least 32 characters, no two callers share one, and the object is not empty; otherwise the service exits 2 at start. Use long random values." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="KB_ADMIN_PERSONAS" Target="KB_ADMIN_PERSONAS" Default="system-admin" Mode="" Description="Comma-separated persona names with administrator rights: they approve tags and vocabulary and may call POST /v1/admin/reembed. Leave the default unless your admin persona is named otherwise. Blank makes no persona an administrator." Type="Variable" Display="advanced" Required="false" Mask="false">system-admin</Config>
   <Config Name="KB_DATABASE_URL" Target="KB_DATABASE_URL" Default="" Mode="" Description="REQUIRED. PostgreSQL connection URL, format postgresql://&lt;user&gt;:&lt;password&gt;@kb-postgres:5432/&lt;db&gt; - the user, password and database set on kb-postgres, the host being its container name on the kb network. Percent-encode any reserved character in the password. The service runs its database migrations when it starts. Blank: the library endpoints answer 503." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KB_STACK" Target="KB_STACK" Default="global" Mode="" Description="Which library this service fronts. Only global is accepted; any other value makes the service exit 2 at start. Leave global." Type="Variable" Display="always" Required="true" Mask="false">global</Config>
   <Config Name="KB_EMBED_BASE_URL" Target="KB_EMBED_BASE_URL" Default="http://kb-litellm:4000/v1" Mode="" Description="Embedding endpoint: the kb-litellm route on the kb network, which serves the embed model. Blank: the library endpoints answer 503, because storing and searching both need embeddings." Type="Variable" Display="always" Required="false" Mask="false">http://kb-litellm:4000/v1</Config>
