@@ -91,7 +91,7 @@ No parameters. Each run does **create / update / drop-deprecated** for the one
 managed container template in `/boot/config/plugins/dockerMan/templates-user` that
 its `TEMPLATE` setting names, **keeping each instance's applied values**:
 
-- **CREATE** — seeds `my-<name>.xml` for the template if it has no `my-` file yet, so it is ready to pick under *Add Container*.
+- **CREATE** — seeds `my-<name>.xml` only when the host holds **no instance** of the template at all (no `my-<name>.xml` and no other `my-` file that maps to it, such as `my-<name>-dev.xml`), so it is ready to pick under *Add Container* on a fresh host. A host that already runs an instance gets no base stub, and the run says so (`seed SKIPPED`).
 - **UPDATE** — for **every live instance** of a template (for `tape`: `my-tape.xml` *and* `my-tape-dev.xml`, …; `my-tape-db-dev.xml` is `tape-db`'s): keeps that instance's applied value for each variable, refreshes the variable's metadata (description, defaults, visibility) from the repo template, and adds variables the template has gained.
 - **DROP** — a variable the instance has and the repo template lacks is **deprecated and is dropped, whatever value it holds**. Each drop is named in the run output (`DROPPED, not in repo template (deprecated): NAME (held a value)`). The pre-sync backup (secrets redacted) is the only record of it.
 
