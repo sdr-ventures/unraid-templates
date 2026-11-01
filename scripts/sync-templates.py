@@ -26,8 +26,11 @@ for the ONE repo template that TEMPLATE (below) names:
   apart from its TEMPLATE line, so syncing one template can never ship another
   template's merged-but-not-intended changes.
 
-  CREATE  — seed my-<name>.xml for the template if it has no my- file yet,
-            so it is ready to pick in Add Container.
+  CREATE  — seed my-<name>.xml only when the host holds NO instance of the template
+            at all (no my-<name>.xml and no other my- file that maps to it, such as
+            my-<name>-dev.xml), so it is ready to pick in Add Container on a fresh host.
+            A host that already runs an instance gets no base stub, and the run says
+            so ("seed SKIPPED").
   UPDATE  — for EVERY live instance of a template (tape: my-tape.xml AND
             my-tape-dev.xml, ...; my-tape-db-dev.xml is tape-db's): keep each
             instance's applied values, refresh each variable's metadata from the
@@ -859,8 +862,9 @@ def load_template(name, sha):
 
 
 def process_template(name, tpl_root, instances_by_tpl, backup_dir):
-    """Process one loaded repo template: CREATE the stub if absent, UPDATE every live instance.
-    Returns the number of failures (unraid-templates#61/#62) — 0 means clean."""
+    """Process one loaded repo template: CREATE the stub if the host has no instance of it,
+    UPDATE every live instance. Returns the number of failures (unraid-templates#61/#62) — 0
+    means clean."""
     print(f"[{name}]")
     failures = 0
     base_path = os.path.join(TEMPLATES_USER, f"my-{name}.xml")
@@ -881,7 +885,13 @@ def process_template(name, tpl_root, instances_by_tpl, backup_dir):
         failures += 1
         base_exists = None
 
-    if base_exists is False:                     # CREATE the base stub if absent
+    live = sorted(os.path.basename(p) for p in instances_by_tpl.get(name, ()))
+    if base_exists is False and live:
+        # A host that runs only my-<name>-dev.xml (say) carries no base stub on purpose: seeding
+        # one would put back a template the operator removed.
+        print(f"    - my-{name}.xml         seed SKIPPED  (this host already has {', '.join(live)}; "
+              f"a base stub is seeded only where no instance of {name!r} exists)")
+    elif base_exists is False:                   # CREATE the base stub: no instance at all
         if DRY_RUN:
             print(f"    + my-{name}.xml         would CREATE  (does not exist yet)")
         else:

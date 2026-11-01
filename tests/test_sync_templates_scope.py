@@ -433,6 +433,75 @@ def test_a_scoped_run_refuses_when_it_cannot_list_the_templates_dir(
     assert snap(tmp_path) == before
 
 
+# ------------------------------------------- 6. a base stub is seeded only on a host with no instance
+
+@pytest.mark.parametrize("dry", [False, True])
+@pytest.mark.parametrize("url", [True, False])
+def test_a_host_with_only_a_dev_instance_gets_no_base_stub(sync, tmp_path, capsys, dry, url):
+    """A dev host runs my-tape-dev.xml only; the operator removed my-tape.xml on purpose. The
+    -dev file counts whether it maps by TemplateURL or by its name."""
+    world(tmp_path, instances=False)
+    dev = container("tape-dev", [cfg("TOKEN", "dev-s3cret", masked=True)], tpl="tape" if url else None)
+    (tmp_path / "my-tape-dev.xml").write_bytes(dev.encode())
+    sync.TEMPLATE = "tape"
+    sync.DRY_RUN = dry
+    code, out, _ = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    assert not (tmp_path / "my-tape.xml").exists()
+    assert "CREATE" not in out
+    assert ("my-tape.xml         seed SKIPPED  (this host already has my-tape-dev.xml; "
+            "a base stub is seeded only where no instance of 'tape' exists)") in out
+    assert ("would UPDATE" if dry else "UPDATED") in out.split("seed SKIPPED")[1]
+
+
+@pytest.mark.parametrize("dry", [False, True])
+def test_a_host_with_no_instance_still_gets_the_base_stub(sync, tmp_path, capsys, dry):
+    """A fresh host: another template's instances do not count against tape's stub."""
+    world(tmp_path, instances=False)
+    (tmp_path / "my-tape-db-dev.xml").write_bytes(INSTANCES["my-tape-db-dev.xml"].encode())
+    sync.TEMPLATE = "tape"
+    sync.DRY_RUN = dry
+    code, out, _ = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    assert "seed SKIPPED" not in out
+    assert ("would CREATE" if dry else "CREATED") in out
+    assert (tmp_path / "my-tape.xml").exists() is not dry
+
+
+def test_a_host_with_both_updates_both_and_seeds_nothing(sync, tmp_path, capsys):
+    world(tmp_path)
+    before = snap(tmp_path)
+    sync.TEMPLATE = "tape"
+    code, out, _ = run(sync, tmp_path, capsys)
+    assert code == 0, out
+    assert "CREATE" not in out and "seed SKIPPED" not in out
+    for inst in ("my-tape.xml", "my-tape-dev.xml"):
+        assert f"{inst:<22} UPDATED" in out and snap(tmp_path)[inst] != before[inst]
+
+
+@pytest.mark.parametrize("body", ["tape-db instance", "foreign"])
+def test_a_case_variant_or_foreign_base_with_a_dev_instance_is_still_refused(
+        sync, tmp_path, capsys, body):
+    """The skip does not soften the stub refusal: a my-tape.xml that is really another
+    template's or a foreign container is refused as before, -dev instance or not."""
+    world(tmp_path)
+    (tmp_path / "my-tape.xml").unlink()
+    content = {"tape-db instance": INSTANCES["my-tape-db.xml"],
+               "foreign": container("Tape", [cfg("X", "1")])}[body].encode()
+    (tmp_path / "my-Tape.xml").write_bytes(content)
+    if not (tmp_path / "my-tape.xml").exists():      # case-sensitive here: alias it by hard link
+        try:
+            os.link(tmp_path / "my-Tape.xml", tmp_path / "my-tape.xml")
+        except (OSError, NotImplementedError) as e:
+            pytest.skip(f"no hard links here: {e}")
+    before = snap(tmp_path)
+    sync.TEMPLATE = "tape"
+    code, _out, _ = run(sync, tmp_path, capsys)
+    why ="maps to 'tape-db'" if body == "tape-db instance" else "is not from these templates"
+    assert isinstance(code, str) and why in code and "Nothing changed" in code, code
+    assert snap(tmp_path) == before
+
+
 def test_a_scoped_run_still_reports_an_unreadable_instance_it_cannot_attribute(sync, tmp_path, capsys):
     """Unreadable and unmappable, so it may be this template's (its TemplateURL cannot be read):
     every scoped run reports it and exits non-zero rather than assume it is someone else's."""
