@@ -35,7 +35,7 @@
   until changed in the admin UI. The first administrator can always be created on an empty
   database; ENABLE_SIGNUP=false only closes registration for everyone after that.
 
-  UPSTREAM REFERENCE (names verified at tag v0.12.3):
+  UPSTREAM REFERENCE (names verified at tag v0.12.5):
       backend/open_webui/env.py                      WEBUI_AUTH, WEBUI_SECRET_KEY,
                                                      WEBUI_SESSION_COOKIE_SECURE,
                                                      WEBUI_SESSION_COOKIE_SAME_SITE,
@@ -61,7 +61,7 @@
 -->
 <Container version="2">
   <Name>kb-webui</Name>
-  <Repository>ghcr.io/open-webui/open-webui:v0.12.3</Repository>
+  <Repository>ghcr.io/open-webui/open-webui:v0.12.5</Repository>
   <Registry>https://github.com/open-webui/open-webui/pkgs/container/open-webui</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
