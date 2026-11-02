@@ -23,7 +23,7 @@
 -->
 <Container version="2">
   <Name>kb-embed</Name>
-  <Repository>ollama/ollama@sha256:265409e1d931028a8f7d5a32bcbafddd7bffbc6cc629d77efe9560adf692a5e7</Repository>
+  <Repository>ollama/ollama@sha256:b2f0122c476bc9fe7ce679d8bb4bd555351e25e2554eefb156f61cb0a89cf429</Repository>
   <Registry>https://hub.docker.com/r/ollama/ollama</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>

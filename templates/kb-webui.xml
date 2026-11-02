@@ -61,7 +61,7 @@
 -->
 <Container version="2">
   <Name>kb-webui</Name>
-  <Repository>ghcr.io/open-webui/open-webui:v0.12.3</Repository>
+  <Repository>ghcr.io/open-webui/open-webui:v0.12.5</Repository>
   <Registry>https://github.com/open-webui/open-webui/pkgs/container/open-webui</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>

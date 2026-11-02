@@ -96,7 +96,7 @@
 -->
 <Container version="2">
   <Name>kb-litellm</Name>
-  <Repository>ghcr.io/berriai/litellm:v1.105.1</Repository>
+  <Repository>ghcr.io/berriai/litellm:v1.105.7</Repository>
   <Registry>https://github.com/BerriAI/litellm/pkgs/container/litellm</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
