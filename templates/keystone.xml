@@ -22,6 +22,12 @@
   <Config Name="Data" Target="/data" Default="" Mode="rw" Description="App data (encrypted file vault). REQUIRED - an absolute path on a POOL, NOT the user-share FUSE overlay." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Backups" Target="/backups" Default="" Mode="rw" Description="Where the nightly pg_dump lands (KW-SELF-BACKUP-1). REQUIRED for a real backup: WITHOUT this mount the dump is written INSIDE the container and destroyed by the next update — the job still reports success, which is exactly the failure mode tape hit for months before its own Backups mount existed. Set an absolute path on a POOL DIFFERENT from the one holding the DB container's data (e.g. /mnt/&lt;other-pool&gt;/appdata/keystone/backups), so one pool failure cannot take both the database and its only backup. The app WARNS in the container log at boot and at every dump if this path is not a persistent mount. ⚠️ THIS MOUNT IS THE BACKUP DESTINATION — there is deliberately no separate Variable for it, because the two must never disagree: a Variable pointing anywhere other than this mount point would send dumps into the container filesystem, which is the exact silent failure above." Type="Path" Display="always" Required="true" Mask="false"/>
 
+  <!-- Key store (D148). Each household's Tenant Key is a file here, outside the database and its
+       dumps, so a dump restores nothing without it. A volume of its own, never the container layer:
+       a recreate would lose every key. The container refuses to boot when this folder is missing or
+       not writable. Backup Admin backs it up beside the nightly dump. -->
+  <Config Name="Key store" Target="/keystore" Default="" Mode="rw" Description="Key store: one folder holding each household's Tenant Key, outside the database and its dumps. It MUST persist and sit on a POOL, NOT the user-share FUSE overlay. The container refuses to boot when this folder is missing or not writable, and a recreate without it loses every household's key. It is backed up beside the nightly dump (by Backup Admin) and must be restored with that dump: a dump restores nothing without it." Type="Path" Display="always" Required="true" Mask="false"/>
+
   <!-- Database connection — TWO logins (keystone#14). The runtime posture is load-bearing
        for row-level security: MIGRATIONS run as the OWNER (DB_*), which owns the tables; the
        APP process connects as a separate NON-owner login (APP_DB_*) that is a member of
@@ -48,6 +54,13 @@
        off, because Unraid passes a blank Variable's Default (keystone_backup) instead. -->
   <Config Name="BACKUP_DB_USER" Target="BACKUP_DB_USER" Default="keystone_backup" Mode="" Description="BACKUP DB login — the identity the nightly pg_dump connects as. Must have its own BYPASSRLS attribute (a migration cannot set this; it is not inheritable) AND be a member of backup_role for schema-wide SELECT. Create on keystone-db: CREATE ROLE keystone_backup LOGIN PASSWORD '...' NOSUPERUSER BYPASSRLS; GRANT backup_role TO keystone_backup;" Type="Variable" Display="advanced" Required="false" Mask="false">keystone_backup</Config>
   <Config Name="BACKUP_DB_PASSWORD" Target="BACKUP_DB_PASSWORD" Default="" Mode="" Description="Password for the BACKUP login BACKUP_DB_USER. Left blank, the nightly backup job still starts and every dump fails to log in (logged as a failed nightly dump). Blanking BACKUP_DB_USER does not stop it: Unraid passes that Variable's Default, keystone_backup, when it is blank. The app still serves normally." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+
+  <!-- Scheduler login (D154). The job manager's own identity: a NOSUPERUSER NOBYPASSRLS login that
+       owns nothing and is a member of scheduler_role. Never the owner, app or backup login (the manager
+       refuses to run on any of them). Blank password: the manager does not run and the web workers run
+       their jobs as before. -->
+  <Config Name="SCHEDULER_DB_USER" Target="SCHEDULER_DB_USER" Default="keystone_scheduler" Mode="" Description="SCHEDULER DB login: the identity the job manager connects as. Must be NOSUPERUSER NOBYPASSRLS, own no table, and be a member of scheduler_role (granted by migration 0053; the role itself is created on keystone-db). Create on keystone-db: CREATE ROLE keystone_scheduler LOGIN PASSWORD '...' NOSUPERUSER NOBYPASSRLS; GRANT scheduler_role TO keystone_scheduler;" Type="Variable" Display="advanced" Required="false" Mask="false">keystone_scheduler</Config>
+  <Config Name="SCHEDULER_DB_PASSWORD" Target="SCHEDULER_DB_PASSWORD" Default="" Mode="" Description="Password for the SCHEDULER login SCHEDULER_DB_USER. Blank: the job manager does not run and the web workers run their jobs as before (no error). Set: the manager still refuses to run if the login is a superuser, has BYPASSRLS, or is not in scheduler_role." Type="Variable" Display="advanced" Required="false" Mask="true"/>
 
   <!-- Reverse proxy. Keystone's auth surface is rate-limited per account AND per source
        IP (keystone#15). Behind a proxy the socket peer is the PROXY, so unless the proxy
