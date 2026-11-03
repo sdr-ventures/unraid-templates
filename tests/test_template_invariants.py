@@ -132,10 +132,10 @@ FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 # The kb stack publishes only vX.Y.Z release tags (PUBLISHED_TAG_RULE below), so each template
 # names the release its live instance runs.
 FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
-    ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.16.0"),
-    ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.16.0"),
-    ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.16.0"),
-    ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.16.0"),
+    ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.17.0"),
+    ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.17.0"),
+    ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.17.0"),
+    ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.17.0"),
 })
 # The tag rule each publisher releases by, recorded here so the check runs offline. A tag outside
 # the rule is one the registry does not publish, so a template that names it cannot pull.
