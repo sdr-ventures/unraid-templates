@@ -25,8 +25,8 @@
   <!-- Key store (D148). Each household's Tenant Key is a file here, outside the database and its
        dumps, so a dump restores nothing without it. A volume of its own, never the container layer:
        a recreate would lose every key. The container refuses to boot when this folder is missing or
-       not writable. Backup Admin backs it up beside the nightly dump, under the same retention. -->
-  <Config Name="Key store" Target="/keystore" Default="" Mode="rw" Description="Key store: one folder holding each household's Tenant Key, outside the database and its dumps. It MUST persist and sit on a POOL, NOT the user-share FUSE overlay. The container refuses to boot when this folder is missing or not writable, and a recreate without it loses every household's key. It is backed up beside the nightly dump (Backup Admin, same retention) and must be restored with that dump: a dump restores nothing without it." Type="Path" Display="always" Required="true" Mask="false"/>
+       not writable. Backup Admin backs it up beside the nightly dump. -->
+  <Config Name="Key store" Target="/keystore" Default="" Mode="rw" Description="Key store: one folder holding each household's Tenant Key, outside the database and its dumps. It MUST persist and sit on a POOL, NOT the user-share FUSE overlay. The container refuses to boot when this folder is missing or not writable, and a recreate without it loses every household's key. It is backed up beside the nightly dump (by Backup Admin) and must be restored with that dump: a dump restores nothing without it." Type="Path" Display="always" Required="true" Mask="false"/>
 
   <!-- Database connection — TWO logins (keystone#14). The runtime posture is load-bearing
        for row-level security: MIGRATIONS run as the OWNER (DB_*), which owns the tables; the
