@@ -40,7 +40,7 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
 | kw-proxy (KW edge, dev side; publishes no port, `internal` network; host ExtraParams `--entrypoint bash`) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
 | clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav-updater.png` | `templates/clamav-updater.xml` |
-| clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged`) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
+| clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; **required** host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged`, because the default entrypoint fails on the read-only signature mount) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
 
 Every template + icon in this repo must have a row here — keep this table in sync when adding either (the reauth-bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.
 
