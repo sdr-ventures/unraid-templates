@@ -13,11 +13,12 @@
   NO HOST PORT IS PUBLISHED, AND THERE IS NO PORT CONFIG AT ALL. The daemon is reachable only
   from containers on the same network, by this container's name, on port 3310.
 
-  SCRATCH IN RAM: clamd writes its scratch files under /tmp in the container. The Scratch Path
-  maps that /tmp to a host folder. Set it to a folder under /tmp on the host: on Unraid, /tmp is
-  a RAM filesystem, so scanned bytes stay out of the array and off disk. Confirm on the host with
-  df /tmp that it is tmpfs. A template cannot add a tmpfs mount itself, because ExtraParams must
-  stay empty, so this Path is the only way it is expressed.
+  SCRATCH IN RAM: clamd writes its scratch files under /tmp in the container. The host makes that
+  /tmp a tmpfs owned by the runtime user, through the tmpfs flag in the required ExtraParams (see
+  the Overview). Scanned bytes then stay out of the array and off disk, and the mount is recreated
+  empty with the right owner on every start. A template cannot express that mount, because
+  ExtraParams must stay empty, so there is no Path for scratch. Confirm in the container with
+  docker exec clamav-scanner df /tmp (it reports tmpfs).
 
   IMAGE TAG: clamav/clamav:1.5.4-debian is a pinned release, as the repo requires for third-party
   images.
@@ -37,7 +38,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/Cisco-Talos/clamav-docker/issues</Support>
   <Project>https://github.com/Cisco-Talos/clamav-docker</Project>
-  <Overview>ClamAV scanning daemon for one stack (keystone's uploads). It scans each upload streamed to TCP 3310 and reads its virus signatures from the Signatures folder, which clamav-updater on the same host writes. It never refreshes signatures: CLAMAV_NO_FRESHCLAMD is true, which the image's own README (Controlling the container) documents as the switch that stops freshclam from starting. Signature age is enforced by keystone, not here: keystone refuses uploads when the signatures are older than its limit. NETWORK: set Network to the stack's internal network (for keystone, the network keystone is on), and leave it there. Only containers on that network can reach this daemon, by this container's name on port 3310. There is no internet route on that network. EXPOSURE: this template publishes no port. SIGNATURES: mount the folder clamav-updater writes, read-only, through the Signatures Path. ENTRYPOINT: the image's default entrypoint chowns the signature folder at start, and that fails on the read-only mount. REQUIRED: the host must set ExtraParams to --user 1000:1000 --entrypoint /init-unprivileged, because the default entrypoint fails on the read-only signature mount; this template leaves ExtraParams empty. SCRATCH: map the Scratch Path to a folder under /tmp on the host (RAM on Unraid); see the template's own notes. HEALTH: run docker exec clamav-scanner clamdcheck.sh and check the exit status; zero means clamd answers. The image also runs that check itself as its HEALTHCHECK.</Overview>
+  <Overview>ClamAV scanning daemon for one stack (keystone's uploads). It scans each upload streamed to TCP 3310 and reads its virus signatures from the Signatures folder, which clamav-updater on the same host writes. It never refreshes signatures: CLAMAV_NO_FRESHCLAMD is true, which the image's own README (Controlling the container) documents as the switch that stops freshclam from starting. Signature age is enforced by keystone, not here: keystone refuses uploads when the signatures are older than its limit. NETWORK: set Network to the stack's internal network (for keystone, the network keystone is on), and leave it there. Only containers on that network can reach this daemon, by this container's name on port 3310. There is no internet route on that network. EXPOSURE: this template publishes no port. SIGNATURES: mount the folder clamav-updater writes, read-only, through the Signatures Path. ENTRYPOINT: the image's default entrypoint chowns the signature folder at start, and that fails on the read-only mount. REQUIRED: the host must set ExtraParams to --user 1000:1000 --entrypoint /init-unprivileged --tmpfs /tmp:rw,uid=1000,gid=1000,mode=0750, and this template leaves ExtraParams empty. The first two flags are there because the default entrypoint fails on the read-only signature mount, and clamd must run as the uid that owns its scratch. The tmpfs is there because /tmp then lives in RAM, so scanned bytes never reach disk, and it is recreated empty and owned by uid 1000 on every start. A host folder under /tmp does not do this: Docker recreates it as root after a reboot, and clamd cannot create its socket. SCRATCH: there is no Path; the /tmp clamd uses is the tmpfs above, so confirm it with docker exec clamav-scanner df /tmp. HEALTH: run docker exec clamav-scanner clamdcheck.sh and check the exit status; zero means clamd answers. The image also runs that check itself as its HEALTHCHECK.</Overview>
   <Category>Security:</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/clamav-scanner.xml</TemplateURL>
@@ -47,6 +48,5 @@
   <Description>ClamAV daemon that scans uploads for one stack. Reads signatures read-only from the host folder clamav-updater writes; scratch in RAM. Publishes no port.</Description>
 
   <Config Name="Signatures" Target="/var/lib/clamav" Default="" Mode="ro" Description="REQUIRED. The host folder clamav-updater writes its signatures to, mounted read-only. Use the same absolute path as the updater's Signatures Path, e.g. /mnt/&lt;pool&gt;/appdata/clamav-signatures. The scanner never writes here." Type="Path" Display="always" Required="true" Mask="false"/>
-  <Config Name="Scratch" Target="/tmp" Default="" Mode="rw" Description="REQUIRED. A host folder under /tmp, which Unraid keeps in RAM, so clamd's scratch files never reach disk. Use e.g. /tmp/clamav-scanner-&lt;stack&gt; and confirm the host's /tmp is tmpfs." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="CLAMAV_NO_FRESHCLAMD" Target="CLAMAV_NO_FRESHCLAMD" Default="true" Mode="" Description="Leave true. true stops the freshclam daemon, so this container never tries to write the read-only signature folder. The updater container refreshes the signatures." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
 </Container>

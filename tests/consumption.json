@@ -385,8 +385,7 @@
       "CLAMAV_NO_FRESHCLAMD": "reads CLAMAV_NO_FRESHCLAMD via the clamav/clamav 1.5.4-debian image entrypoint (clamav-docker clamav/README-debian.md, 'Controlling the container': default false; true stops the freshclam daemon from starting)"
     },
     "paths": {
-      "/var/lib/clamav": "reads /var/lib/clamav via the clamav/clamav image: clamd loads the signature databases from the database directory (clamav-docker clamav/README-debian.md, 'Controlling the container'); mounted read-only here",
-      "/tmp": "reads /tmp via clamd's scratch and socket paths: the image keeps clamd.sock in /tmp (clamav-docker clamav/README-debian.md, default socket /tmp/clamd.sock); the README does not name the scratch directory itself"
+      "/var/lib/clamav": "reads /var/lib/clamav via the clamav/clamav image: clamd loads the signature databases from the database directory (clamav-docker clamav/README-debian.md, 'Controlling the container'); mounted read-only here"
     }
   },
   "kb-ingest": {
