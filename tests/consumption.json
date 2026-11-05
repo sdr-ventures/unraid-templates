@@ -268,20 +268,20 @@
   "kb-service": {
     "no_local_consumer": false,
     "vars": {
-      "KB_PERSONA_TOKENS": "reads KB_PERSONA_TOKENS in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:105 env.get('KB_PERSONA_TOKENS', ''); config.py:106-107 raises ConfigError when blank, config.py:116 rejects a token under 32 characters (MIN_TOKEN_LENGTH, config.py:8), and kb_service/__main__.py:30-32 turns that into exit 2",
-      "KB_ADMIN_PERSONAS": "reads KB_ADMIN_PERSONAS in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:55 _names(env, 'KB_ADMIN_PERSONAS', 'system-admin') in load_settings (a blank value gives an empty set, so no persona is an administrator); kb_service/auth.py:23 admin=persona in the admins set; kb_service/api.py:270-273 POST /admin/reembed answers 403 unless the caller is an admin",
-      "KB_MCP_URL": "reads KB_MCP_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:160 env.get(\"KB_MCP_URL\", \"\") in _mcp_url (called at config.py:56); config.py:161-162 raises ConfigError unless it starts with https:// (kb_service/__main__.py:30-32 turns that into exit 2); kb_service/app.py:47 builds the MCP endpoint only when it is set, and app.py:97 adds its routes",
-      "KB_ROLES": "reads KB_ROLES in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:168 env.get(\"KB_ROLES\", \"\") in _roles (called at config.py:57); config.py:174, :178 and :180 raise ConfigError for bad JSON, a non-object or one persona on two roles (exit 2 via kb_service/__main__.py:30-32); kb_service/messages.py acting_role uses it to decide which role a persona sends and reads as",
-      "KB_PROJECTS": "reads KB_PROJECTS in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:187 env.get(\"KB_PROJECTS\", \"\") in _projects (called at config.py:59); config.py:193, :195 and :202 raise ConfigError for bad JSON, a non-object or a project without members and shared (exit 2 via kb_service/__main__.py:30-32); kb_service/app.py:53 writes its membership into project_members at start; kb_service/docs.py may_read and may_write decide document access from it",
-      "KB_STACK": "reads KB_STACK in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:98 env.get('KB_STACK', 'global'); config.py:99-100 raises ConfigError for any value but global",
-      "KB_DATABASE_URL": "reads KB_DATABASE_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:51 env.get('KB_DATABASE_URL', '') in load_settings (the database the service connects to)",
-      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:52 env.get('KB_EMBED_BASE_URL', '') in load_settings (the embedding endpoint)",
-      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:53 env.get('KB_EMBED_MODEL') in load_settings (the embedding model name)",
-      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:54 env.get('KB_EMBED_API_KEY', '') in load_settings (the key for the embedding endpoint)",
-      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:49 env.get('LITELLM_URL', '') in load_settings (the model router)",
-      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:50 env.get('LITELLM_KEY', '') in load_settings (the router key)",
-      "KB_WATCHDOG_PING_URL": "reads KB_WATCHDOG_PING_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:62 env.get(\"KB_WATCHDOG_PING_URL\", \"\") in load_settings; kb_service/app.py:59-63 starts the watchdog only when it is set; kb_service/watchdog.py:109-113 GETs it while the critical checks pass and POSTs <url>/fail otherwise",
-      "KB_WATCH_OLLAMA_URL": "reads KB_WATCH_OLLAMA_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:63 env.get(\"KB_WATCH_OLLAMA_URL\", \"\") in load_settings; kb_service/watchdog.py:61 GETs <url>/api/ps and flags models with no VRAM; watchdog.py:85-86 adds it as an advisory check only when it is set"
+      "KB_PERSONA_TOKENS": "reads KB_PERSONA_TOKENS in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:105 env.get('KB_PERSONA_TOKENS', ''); config.py:106-107 raises ConfigError when blank, config.py:116 rejects a token under 32 characters (MIN_TOKEN_LENGTH, config.py:8), and kb_service/__main__.py:30-32 turns that into exit 2",
+      "KB_ADMIN_PERSONAS": "reads KB_ADMIN_PERSONAS in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:55 _names(env, 'KB_ADMIN_PERSONAS', 'system-admin') in load_settings (a blank value gives an empty set, so no persona is an administrator); kb_service/auth.py:23 admin=persona in the admins set; kb_service/api.py:275-278 POST /admin/reembed answers 403 unless the caller is an admin",
+      "KB_MCP_URL": "reads KB_MCP_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:160 env.get(\"KB_MCP_URL\", \"\") in _mcp_url (called at config.py:56); config.py:161-162 raises ConfigError unless it starts with https:// (kb_service/__main__.py:30-32 turns that into exit 2); kb_service/app.py:47 builds the MCP endpoint only when it is set, and app.py:102 adds its routes",
+      "KB_ROLES": "reads KB_ROLES in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:168 env.get(\"KB_ROLES\", \"\") in _roles (called at config.py:57); config.py:174, :178 and :180 raise ConfigError for bad JSON, a non-object or one persona on two roles (exit 2 via kb_service/__main__.py:30-32); kb_service/messages.py acting_role uses it to decide which role a persona sends and reads as",
+      "KB_PROJECTS": "reads KB_PROJECTS in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:187 env.get(\"KB_PROJECTS\", \"\") in _projects (called at config.py:59); config.py:193, :195 and :202 raise ConfigError for bad JSON, a non-object or a project without members and shared (exit 2 via kb_service/__main__.py:30-32); kb_service/app.py:53 writes its membership into project_members at start; kb_service/docs.py may_read and may_write decide document access from it",
+      "KB_STACK": "reads KB_STACK in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:98 env.get('KB_STACK', 'global'); config.py:99-100 raises ConfigError for any value but global",
+      "KB_DATABASE_URL": "reads KB_DATABASE_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:51 env.get('KB_DATABASE_URL', '') in load_settings (the database the service connects to)",
+      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:52 env.get('KB_EMBED_BASE_URL', '') in load_settings (the embedding endpoint)",
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:53 env.get('KB_EMBED_MODEL') in load_settings (the embedding model name)",
+      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:54 env.get('KB_EMBED_API_KEY', '') in load_settings (the key for the embedding endpoint)",
+      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:49 env.get('LITELLM_URL', '') in load_settings (the model router)",
+      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:50 env.get('LITELLM_KEY', '') in load_settings (the router key)",
+      "KB_WATCHDOG_PING_URL": "reads KB_WATCHDOG_PING_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:62 env.get(\"KB_WATCHDOG_PING_URL\", \"\") in load_settings; kb_service/app.py:59-63 starts the watchdog only when it is set; kb_service/watchdog.py:109-113 GETs it while the critical checks pass and POSTs <url>/fail otherwise",
+      "KB_WATCH_OLLAMA_URL": "reads KB_WATCH_OLLAMA_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:63 env.get(\"KB_WATCH_OLLAMA_URL\", \"\") in load_settings; kb_service/watchdog.py:61 GETs <url>/api/ps and flags models with no VRAM; watchdog.py:85-86 adds it as an advisory check only when it is set"
     },
     "paths": {},
     "declared_for": {
@@ -391,26 +391,26 @@
   "kb-ingest": {
     "no_local_consumer": false,
     "vars": {
-      "KB_URL": "reads KB_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: worker/ingest_worker.py:33 os.environ[\"KB_URL\"] (the service base URL; the worker exits if missing)",
-      "KB_TOKEN": "reads KB_TOKEN in https://github.com/sdr-ventures/kb-service at v0.20.2: worker/ingest_worker.py:34 os.environ[\"KB_TOKEN\"] (the bearer sent on every call, worker/ingest_worker.py:288)",
-      "POLL_SECONDS": "reads POLL_SECONDS in https://github.com/sdr-ventures/kb-service at v0.20.2: worker/ingest_worker.py:35 os.environ.get(\"POLL_SECONDS\", \"30\") (wait between empty claims at worker/ingest_worker.py:297; wait again when the service is unreachable at :304)",
-      "MAX_MINUTES": "reads MAX_MINUTES in https://github.com/sdr-ventures/kb-service at v0.20.2: worker/ingest_worker.py:37 os.environ.get(\"MAX_MINUTES\", \"240\") (longest video accepted, enforced by the yt-dlp match filter at worker/ingest_worker.py:117)",
-      "NVIDIA_VISIBLE_DEVICES": "reads NVIDIA_VISIBLE_DEVICES via the runtime, no app-code lookup: the NVIDIA container runtime reads it at container start to pick the GPUs; the worker then selects CUDAExecutionProvider when present (worker/ingest_worker.py:83, worker/Dockerfile:17-24 in https://github.com/sdr-ventures/kb-service at v0.20.2)",
-      "NVIDIA_DRIVER_CAPABILITIES": "reads NVIDIA_DRIVER_CAPABILITIES via the runtime, no app-code lookup: the NVIDIA container runtime reads it to decide which driver features reach the container; the CUDA libraries are installed at worker/Dockerfile:17-24 in https://github.com/sdr-ventures/kb-service at v0.20.2"
+      "KB_URL": "reads KB_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: worker/ingest_worker.py:33 os.environ[\"KB_URL\"] (the service base URL; the worker exits if missing)",
+      "KB_TOKEN": "reads KB_TOKEN in https://github.com/sdr-ventures/kb-service at v0.21.0: worker/ingest_worker.py:34 os.environ[\"KB_TOKEN\"] (the bearer sent on every call, worker/ingest_worker.py:288)",
+      "POLL_SECONDS": "reads POLL_SECONDS in https://github.com/sdr-ventures/kb-service at v0.21.0: worker/ingest_worker.py:35 os.environ.get(\"POLL_SECONDS\", \"30\") (wait between empty claims at worker/ingest_worker.py:297; wait again when the service is unreachable at :304)",
+      "MAX_MINUTES": "reads MAX_MINUTES in https://github.com/sdr-ventures/kb-service at v0.21.0: worker/ingest_worker.py:37 os.environ.get(\"MAX_MINUTES\", \"240\") (longest video accepted, enforced by the yt-dlp match filter at worker/ingest_worker.py:117)",
+      "NVIDIA_VISIBLE_DEVICES": "reads NVIDIA_VISIBLE_DEVICES via the runtime, no app-code lookup: the NVIDIA container runtime reads it at container start to pick the GPUs; the worker then selects CUDAExecutionProvider when present (worker/ingest_worker.py:83, worker/Dockerfile:17-24 in https://github.com/sdr-ventures/kb-service at v0.21.0)",
+      "NVIDIA_DRIVER_CAPABILITIES": "reads NVIDIA_DRIVER_CAPABILITIES via the runtime, no app-code lookup: the NVIDIA container runtime reads it to decide which driver features reach the container; the CUDA libraries are installed at worker/Dockerfile:17-24 in https://github.com/sdr-ventures/kb-service at v0.21.0"
     },
     "paths": {
-      "/models": "reads /models in https://github.com/sdr-ventures/kb-service at v0.20.2: worker/Dockerfile:7 HF_HOME=/models (the speech model downloads there on first start so it survives updates)"
+      "/models": "reads /models in https://github.com/sdr-ventures/kb-service at v0.21.0: worker/Dockerfile:7 HF_HOME=/models (the speech model downloads there on first start so it survives updates)"
     },
     "declared_for": {}
   },
   "kw-embedder": {
     "no_local_consumer": false,
     "vars": {
-      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") and :21 == \"embedder\" (embedder selects the embedder app)",
-      "KB_EMBEDDER_TOKEN": "reads KB_EMBEDDER_TOKEN in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:79 env.get(\"KB_EMBEDDER_TOKEN\", \"\"); config.py:80-81 refuses a short token",
-      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:82 env.get(\"KB_EMBED_BASE_URL\", \"\") (the model server)",
-      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:88 env.get(\"KB_EMBED_MODEL\") (the model name)",
-      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:89 env.get(\"KB_EMBED_API_KEY\", \"\") (the model server key); embedder_app.py:58 passes it to kb_service/embed.py:24, which sends it as a bearer token only when set"
+      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") and :21 == \"embedder\" (embedder selects the embedder app)",
+      "KB_EMBEDDER_TOKEN": "reads KB_EMBEDDER_TOKEN in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:79 env.get(\"KB_EMBEDDER_TOKEN\", \"\"); config.py:80-81 refuses a short token",
+      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:82 env.get(\"KB_EMBED_BASE_URL\", \"\") (the model server)",
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:88 env.get(\"KB_EMBED_MODEL\") (the model name)",
+      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:89 env.get(\"KB_EMBED_API_KEY\", \"\") (the model server key); embedder_app.py:58 passes it to kb_service/embed.py:24, which sends it as a bearer token only when set"
     },
     "paths": {},
     "declared_for": {}
@@ -418,16 +418,16 @@
   "kw-extractor": {
     "no_local_consumer": false,
     "vars": {
-      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") (extractor selects the extractor app)",
-      "KB_EXTRACTOR_TOKEN": "reads KB_EXTRACTOR_TOKEN in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:141 env.get(\"KB_EXTRACTOR_TOKEN\", \"\"); config.py:142-143 refuses a short token",
-      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:144 env.get(\"LITELLM_URL\", \"\") (the model router)",
-      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:145 env.get(\"LITELLM_KEY\") (the router key)",
-      "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:151 env.get(\"KB_EXTRACT_MODEL\") (the router group)",
-      "KB_EXTRACT_DEADLINE_SECONDS": "reads KB_EXTRACT_DEADLINE_SECONDS in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:152 env.get(\"KB_EXTRACT_DEADLINE_SECONDS\") or 840 (the 504 deadline)",
-      "KB_EXTRACT_BACKUP_KEY": "reads KB_EXTRACT_BACKUP_KEY in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:153 env.get(\"KB_EXTRACT_BACKUP_KEY\", \"\"); kb_service/extractor_app.py:198 a backup run needs it (empty = no backup)",
-      "KB_EXTRACT_BACKUP_MODEL": "reads KB_EXTRACT_BACKUP_MODEL in https://github.com/sdr-ventures/kb-service at v0.20.2: kb_service/config.py:154 env.get(\"KB_EXTRACT_BACKUP_MODEL\") or \"claude-haiku\" (the model name the backup run asks for; used at extractor_app.py:201)",
-      "HTTP_PROXY": "reads HTTP_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() (urllib reads HTTP_PROXY), used by the router client at kb_service/extractor_app.py:56 in https://github.com/sdr-ventures/kb-service at v0.20.2 with the default trust_env",
-      "NO_PROXY": "reads NO_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() and :47 proxy_info.get(\"no\") split on commas, for the router client at kb_service/extractor_app.py:56 in https://github.com/sdr-ventures/kb-service at v0.20.2"
+      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") (extractor selects the extractor app)",
+      "KB_EXTRACTOR_TOKEN": "reads KB_EXTRACTOR_TOKEN in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:141 env.get(\"KB_EXTRACTOR_TOKEN\", \"\"); config.py:142-143 refuses a short token",
+      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:144 env.get(\"LITELLM_URL\", \"\") (the model router)",
+      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:145 env.get(\"LITELLM_KEY\") (the router key)",
+      "KB_EXTRACT_MODEL": "reads KB_EXTRACT_MODEL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:151 env.get(\"KB_EXTRACT_MODEL\") (the router group)",
+      "KB_EXTRACT_DEADLINE_SECONDS": "reads KB_EXTRACT_DEADLINE_SECONDS in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:152 env.get(\"KB_EXTRACT_DEADLINE_SECONDS\") or 840 (the 504 deadline)",
+      "KB_EXTRACT_BACKUP_KEY": "reads KB_EXTRACT_BACKUP_KEY in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:153 env.get(\"KB_EXTRACT_BACKUP_KEY\", \"\"); kb_service/extractor_app.py:198 a backup run needs it (empty = no backup)",
+      "KB_EXTRACT_BACKUP_MODEL": "reads KB_EXTRACT_BACKUP_MODEL in https://github.com/sdr-ventures/kb-service at v0.21.0: kb_service/config.py:154 env.get(\"KB_EXTRACT_BACKUP_MODEL\") or \"claude-haiku\" (the model name the backup run asks for; used at extractor_app.py:201)",
+      "HTTP_PROXY": "reads HTTP_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() (urllib reads HTTP_PROXY), used by the router client at kb_service/extractor_app.py:56 in https://github.com/sdr-ventures/kb-service at v0.21.0 with the default trust_env",
+      "NO_PROXY": "reads NO_PROXY via the HTTP library, no app-code lookup: httpx 0.28.1 (httpx/_utils.py):37 getproxies() and :47 proxy_info.get(\"no\") split on commas, for the router client at kb_service/extractor_app.py:56 in https://github.com/sdr-ventures/kb-service at v0.21.0"
     },
     "paths": {},
     "declared_for": {}
