@@ -134,6 +134,7 @@ FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
     ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.24.0"),
     ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.24.0"),
+    ("kb-runner", "ghcr.io/sdr-ventures/kb-service:v0.24.0"),
     ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.24.0"),
     ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.24.0"),
 })

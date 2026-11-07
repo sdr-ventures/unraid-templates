@@ -431,5 +431,16 @@
     },
     "paths": {},
     "declared_for": {}
+  },
+  "kb-runner": {
+    "no_local_consumer": false,
+    "vars": {
+      "KB_MODE": "reads KB_MODE in https://github.com/sdr-ventures/kb-service at v0.24.0: kb_service/__main__.py:20 os.environ.get(\"KB_MODE\", \"library\") and :25 == \"runner\" (runner selects the script runner, kb_service/runner.py)",
+      "KB_URL": "reads KB_URL in https://github.com/sdr-ventures/kb-service at v0.24.0: kb_service/runner.py:54 os.environ.get(\"KB_URL\", \"\") (kb-service it claims runs from); :56 refuses to start without it",
+      "KB_TOKEN": "reads KB_TOKEN in https://github.com/sdr-ventures/kb-service at v0.24.0: kb_service/runner.py:54 os.environ.get(\"KB_TOKEN\", \"\") (sent as the bearer of every claim and result); :56 refuses to start without it",
+      "TZ": "reads TZ in https://github.com/sdr-ventures/kb-service at v0.24.0: kb_service/runner.py:18 CLEAN_ENV and :32 os.environ[k] for k in CLEAN_ENV pass TZ to every script it runs"
+    },
+    "paths": {},
+    "declared_for": {}
   }
 }
