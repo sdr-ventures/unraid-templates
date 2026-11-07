@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!--
+  kb-runner: the kb scheduler's script runner (github.com/sdr-ventures/kb-service, image
+  kb-service, KB_MODE=runner). Nothing here is specific to any host or operator.
+
+  It claims approved script runs from kb-service over REST with its own persona token, runs each
+  one in a temporary folder (bash or python3, with a timeout), and posts the result back. It holds
+  no database access, publishes no port and keeps nothing between runs. A script sees only PATH,
+  LANG, TZ and HOME, plus its own arguments.
+
+  NETWORK. Put it on the same network as kb-service, so KB_URL can name kb-service by container
+  name. It needs nothing else to start; anything a script reaches is declared on its event for
+  review.
+
+  HARDENING. Extra Parameters ships empty (repo rule). After import, add these docker run options (each begins with two dashes): read-only; tmpfs /tmp:size=256m; tmpfs /export:size=1m; tmpfs /assets:size=1m; cap-drop=ALL; security-opt no-new-privileges; cpus=2; memory=1g
+  It gives: read-only root, RAM scratch over /tmp and the two paths the image declares as volumes
+  (so no anonymous volume is created), all capabilities dropped, no new privileges, CPU and memory
+  caps. No Docker socket, not privileged.
+-->
+<Container version="2">
+  <Name>kb-runner</Name>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.24.0</Repository>
+  <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sdr-ventures/kb-service/issues</Support>
+  <Project>https://github.com/sdr-ventures/kb-service</Project>
+  <Overview>The kb scheduler's script runner: claims approved script runs from kb-service, runs each in a temporary folder with a timeout and posts the result. No port, no database, no data volume; one persona token. Needs kb-service on the same network.</Overview>
+  <Description>Runs the kb scheduler's approved script events (kb-service in runner mode).</Description>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-runner.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-runner.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Config Name="KB_MODE" Target="KB_MODE" Default="runner" Mode="" Description="REQUIRED. Run the script runner only. Leave runner." Type="Variable" Display="always" Required="true" Mask="false">runner</Config>
+  <Config Name="KB_URL" Target="KB_URL" Default="" Mode="" Description="REQUIRED. kb-service's base URL on the shared network, e.g. http://kb-service:8000." Type="Variable" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="KB_TOKEN" Target="KB_TOKEN" Default="" Mode="" Description="REQUIRED. This runner's kb persona token; kb-service must list the persona in KB_PERSONA_TOKENS and KB_RUNNER_PERSONAS (default kb-runner)." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="TZ" Target="TZ" Default="America/Chicago" Mode="" Description="Time zone the scripts see." Type="Variable" Display="advanced" Required="false" Mask="false">America/Chicago</Config>
+</Container>
