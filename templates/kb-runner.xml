@@ -38,4 +38,5 @@
   <Config Name="KB_URL" Target="KB_URL" Default="" Mode="" Description="REQUIRED. kb-service's base URL on the shared network, e.g. http://kb-service:8000." Type="Variable" Display="always" Required="true" Mask="false"></Config>
   <Config Name="KB_TOKEN" Target="KB_TOKEN" Default="" Mode="" Description="REQUIRED. This runner's kb persona token; kb-service must list the persona in KB_PERSONA_TOKENS and KB_RUNNER_PERSONAS (default kb-runner)." Type="Variable" Display="always" Required="true" Mask="true"></Config>
   <Config Name="TZ" Target="TZ" Default="America/Chicago" Mode="" Description="Time zone the scripts see." Type="Variable" Display="advanced" Required="false" Mask="false">America/Chicago</Config>
+  <Config Name="Facts" Target="/facts" Default="" Mode="ro" Description="Host facts the scheduled scripts read, read-only: one folder per host with update_facts.txt and maintenance.until (Cyberdyne kb doc 30_operations/KB_Scheduler.md section 8). Set per host, for example the runner's appdata facts folder." Type="Path" Display="always" Required="false" Mask="false"/>
 </Container>
