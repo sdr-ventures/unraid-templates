@@ -18,9 +18,9 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | tape-db (dev+prod) | `icons/tape-db.png` | `templates/tape-db.xml` |
 | cef-tracker (prod) | `icons/cef-tracker.png` | `templates/cef-tracker.xml` |
 | reauth-bot | `icons/reauth-bot.png` | `templates/reauth-bot.xml` |
-| keystone | `icons/keystone.png` | `templates/keystone.xml` |
-| keystone-db | `icons/keystone-db.png` | `templates/keystone-db.xml` |
-| keystone-web (dev+prod) | `icons/keystone-web.png` | `templates/keystone-web.xml` |
+| kw-core | `icons/kw-core.png` | `templates/kw-core.xml` |
+| kw-core-db | `icons/kw-core-db.png` | `templates/kw-core-db.xml` |
+| kw-web (dev+prod) | `icons/kw-web.png` | `templates/kw-web.xml` |
 | the-desk (prod) | `icons/the-desk.png` | `templates/the-desk.xml` |
 | gambit (prod) | `icons/gambit.png` | `templates/gambit.xml` |
 | gambit-loop (same image, paper-lab loop) | `icons/gambit.png` | `templates/gambit-loop.xml` |

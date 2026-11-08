@@ -21,7 +21,7 @@
       "/kw_shared": "reads /kw_shared via alerting_config.py:45 (_SHARED_ROOT; alerting.env under /kw_shared/configs)"
     }
   },
-  "keystone": {
+  "kw-core": {
     "no_local_consumer": false,
     "vars": {
       "DB_HOST": "reads DB_HOST via pydantic-settings field db_host in app/config.py (no env_prefix, case-insensitive); config.py assembles the owner SQLAlchemy URL from this; app/db.py engine connection",
@@ -140,7 +140,7 @@
     "no_local_consumer": false,
     "vars": {}
   },
-  "keystone-db": {
+  "kw-core-db": {
     "no_local_consumer": true,
     "note": "stock postgres image; POSTGRES_* vars are consumed by the upstream postgres entrypoint, not a repo under C:\\dev"
   },
@@ -156,7 +156,7 @@
     "no_local_consumer": true,
     "note": "third-party tldw_server image; no consuming repo under C:\\dev"
   },
-  "keystone-web": {
+  "kw-web": {
     "no_local_consumer": false,
     "vars": {
       "KEYSTONE_API_URL": "reads KEYSTONE_API_URL via process.env in lib/keystone.ts and app/api/health/route.ts (origin/dev; origin/main has no app code yet); lib/keystone.ts baseUrl(): every Route Handler upstream fetch; throws if unset; app/api/health/route.ts reachability probe",
