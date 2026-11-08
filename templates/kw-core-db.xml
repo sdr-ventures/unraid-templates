@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>keystone-db</Name>
+  <Name>kw-core-db</Name>
   <!-- VERSION-PINNED on purpose (never :latest / a moving major tag): stateful DB containers
        are excluded from auto-update, and updates are DELIBERATE — back up, bump this pin,
        verify the app reconnects. Current pin: PostgreSQL 16.15. -->
@@ -10,16 +10,16 @@
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/sdr-ventures/keystone</Project>
-  <Overview>PostgreSQL 16 — Keystone's tenant-private datastore (row-level security). Stock postgres (NOT TimescaleDB — Keystone's schema is relational multi-tenant, no hypertables), VERSION-PINNED: this template names an exact postgres version; DB updates are deliberate (back up first), never a moving tag. ONE neutral template for dev and prod: at creation set Name (keystone-db / keystone-db-dev), network + a static IP if you use one, the data path on a pool, and POSTGRES_PASSWORD. Autostart this DB BEFORE the keystone app container; the app's DB_HOST/DB_USER/DB_PASSWORD/DB_NAME must match this container's IP + POSTGRES_USER/PASSWORD/DB.</Overview>
+  <Project>https://github.com/sdr-ventures/kw-core</Project>
+  <Overview>PostgreSQL 16 — Keystone's tenant-private datastore (row-level security). Stock postgres (NOT TimescaleDB — Keystone's schema is relational multi-tenant, no hypertables), VERSION-PINNED: this template names an exact postgres version; DB updates are deliberate (back up first), never a moving tag. ONE neutral template for dev and prod: at creation set Name (kw-core-db / kw-core-db-dev), network + a static IP if you use one, the data path on a pool, and POSTGRES_PASSWORD. Autostart this DB BEFORE the keystone app container; the app's DB_HOST/DB_USER/DB_PASSWORD/DB_NAME must match this container's IP + POSTGRES_USER/PASSWORD/DB.</Overview>
   <Category>Database:</Category>
   <WebUI/>
-  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/keystone-db.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/keystone-db.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-core-db.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kw-core-db.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>PostgreSQL 16 for Keystone (version-pinned). Neutral template; set Name (keystone-db / keystone-db-dev), IP + POSTGRES_PASSWORD at creation.</Description>
+  <Description>PostgreSQL 16 for Keystone (version-pinned). Neutral template; set Name (kw-core-db / kw-core-db-dev), IP + POSTGRES_PASSWORD at creation.</Description>
   <Config Name="Postgres Port" Target="5432" Default="5432" Mode="tcp" Description="PostgreSQL port" Type="Port" Display="always" Required="false" Mask="false">5432</Config>
   <Config Name="Data" Target="/var/lib/postgresql/data" Default="" Mode="rw" Description="Postgres data dir. REQUIRED - an absolute path on a POOL, NOT the user-share FUSE overlay." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="POSTGRES_USER" Target="POSTGRES_USER" Default="keystone" Mode="" Description="DB user" Type="Variable" Display="always" Required="true" Mask="false">keystone</Config>
