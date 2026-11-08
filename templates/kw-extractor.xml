@@ -4,7 +4,7 @@
   (github.com/sdr-ventures/kb-service, image kb-service, KB_MODE=extractor). Nothing here is
   specific to any host or operator.
 
-  WHAT IT DOES. Answers POST /v1/extract per keystone's extractor-call contract 1.1.0: a PDF in,
+  WHAT IT DOES. Answers POST /v1/extract per kw-core's extractor-call contract 1.1.0: a PDF in,
   a ParseResult 1.2.0 out. A body that is not a PDF is refused with 415; a PDF no statement can be
   read from answers 422. It also answers POST /v1/extract-transactions. Stateless: no database,
   no data volume, the file is read in memory, scratch is RAM, and nothing of the file or the
@@ -16,7 +16,7 @@
   JSON schema; allow about 80 seconds per dense page on a mid-range GPU. When the model is
   unreachable the container answers 503 with Retry-After 60.
 
-  THE BACKUP. Only when keystone sends X-KW-Allow-Backup: 1 and KB_EXTRACT_BACKUP_KEY is set does
+  THE BACKUP. Only when kw-core sends X-KW-Allow-Backup: 1 and KB_EXTRACT_BACKUP_KEY is set does
   a run go to the router with that key and KB_EXTRACT_BACKUP_MODEL (blank means claude-haiku). Account
   numbers are masked on the way out and restored on the way back. Any other header value, or a
   blank backup key, keeps the run on local models.
@@ -31,7 +31,7 @@
   dropped, no new privileges, CPU and memory caps.
 
   THE TOKEN. KB_EXTRACTOR_TOKEN ships blank. Use 32 or more random characters and give the same
-  value to keystone as its extractor bearer. The container exits 2 if it is blank or short.
+  value to kw-core as its extractor bearer. The container exits 2 if it is blank or short.
 -->
 <Container version="2">
   <Name>kw-extractor</Name>
@@ -42,7 +42,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/sdr-ventures/kb-service/issues</Support>
   <Project>https://github.com/sdr-ventures/kb-service</Project>
-  <Overview>The statement reader for Keystone Wealth: turns a PDF statement into structured accounts and positions using a local model. When keystone asks for a backup run and a backup key is set, it uses Haiku with account numbers masked. Stateless, no data volume, one bearer, reachable only on the internal network.</Overview>
+  <Overview>The statement reader for Keystone Wealth: turns a PDF statement into structured accounts and positions using a local model. When kw-core asks for a backup run and a backup key is set, it uses Haiku with account numbers masked. Stateless, no data volume, one bearer, reachable only on the internal network.</Overview>
   <Category>Productivity: Tools:Utilities</Category>
   <WebUI/>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-extractor.xml</TemplateURL>
@@ -51,12 +51,12 @@
   <DateInstalled/>
   <Description>Statement reader for Keystone Wealth. No data kept.</Description>
   <Config Name="KB_MODE" Target="KB_MODE" Default="extractor" Mode="" Description="REQUIRED. Run the extractor engine only. Leave extractor." Type="Variable" Display="always" Required="true" Mask="false">extractor</Config>
-  <Config Name="KB_EXTRACTOR_TOKEN" Target="KB_EXTRACTOR_TOKEN" Default="" Mode="" Description="REQUIRED. Bearer keystone presents. 32 or more random characters." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="KB_EXTRACTOR_TOKEN" Target="KB_EXTRACTOR_TOKEN" Default="" Mode="" Description="REQUIRED. Bearer kw-core presents. 32 or more random characters." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="LITELLM_URL" Target="LITELLM_URL" Default="" Mode="" Description="REQUIRED. Base URL of the model router, for example http://router:4000." Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="LITELLM_KEY" Target="LITELLM_KEY" Default="" Mode="" Description="REQUIRED. Router key that allows local models only." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KB_EXTRACT_MODEL" Target="KB_EXTRACT_MODEL" Default="large" Mode="" Description="Router group that reads statements." Type="Variable" Display="always" Required="false" Mask="false">large</Config>
-  <Config Name="KB_EXTRACT_DEADLINE_SECONDS" Target="KB_EXTRACT_DEADLINE_SECONDS" Default="840" Mode="" Description="Seconds a run may take before it answers 504. Keep 840: keystone's own timeout is 900." Type="Variable" Display="advanced" Required="false" Mask="false">840</Config>
-  <Config Name="KB_EXTRACT_BACKUP_KEY" Target="KB_EXTRACT_BACKUP_KEY" Default="" Mode="" Description="Optional. Router key that allows Haiku only, for the backup run keystone asks for. Blank means no backup: the request header is ignored and the run stays on local models." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="KB_EXTRACT_DEADLINE_SECONDS" Target="KB_EXTRACT_DEADLINE_SECONDS" Default="840" Mode="" Description="Seconds a run may take before it answers 504. Keep 840: kw-core's own timeout is 900." Type="Variable" Display="advanced" Required="false" Mask="false">840</Config>
+  <Config Name="KB_EXTRACT_BACKUP_KEY" Target="KB_EXTRACT_BACKUP_KEY" Default="" Mode="" Description="Optional. Router key that allows Haiku only, for the backup run kw-core asks for. Blank means no backup: the request header is ignored and the run stays on local models." Type="Variable" Display="advanced" Required="false" Mask="true"/>
   <Config Name="KB_EXTRACT_BACKUP_MODEL" Target="KB_EXTRACT_BACKUP_MODEL" Default="" Mode="" Description="Model name the backup run asks the router for, when KB_EXTRACT_BACKUP_KEY is set. Blank: the app asks for claude-haiku. Set it only if the router lists another name." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="HTTP_PROXY" Target="HTTP_PROXY" Default="" Mode="" Description="Optional. Egress proxy URL, for example http://proxy.example:3128, when the router is outside the internal network. Blank means a direct connection." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="NO_PROXY" Target="NO_PROXY" Default="" Mode="" Description="Optional. Comma-separated hosts that skip HTTP_PROXY, such as the router's own name. Blank means none." Type="Variable" Display="advanced" Required="false" Mask="false"/>

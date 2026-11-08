@@ -443,6 +443,8 @@
       "TZ": "reads TZ in https://github.com/sdr-ventures/kb-service at v0.26.3: kb_service/runner.py:18 CLEAN_ENV and :38 os.environ[k] for k in CLEAN_ENV pass TZ to every script it runs"
     },
     "paths": {},
-    "declared_for": {}
+    "declared_for": {
+      "/facts": "host facts for scheduled script events, mounted read-only (Cyberdyne kb doc 30_operations/KB_Scheduler.md section 8): the approved script kb doc 30_operations/_scripts/update_watch/kb_run.py reads /facts/<host>/update_facts.txt; no kb-service release file reads it"
+    }
   }
 }
