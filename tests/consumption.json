@@ -447,5 +447,13 @@
     "declared_for": {
       "/facts": "host facts for scheduled script events, mounted read-only (Cyberdyne kb doc 30_operations/KB_Scheduler.md section 8): the approved script kb doc 30_operations/_scripts/update_watch/kb_run.py reads /facts/<host>/update_facts.txt; no kb-service release file reads it"
     }
+  },
+  "kw-vault": {
+    "no_local_consumer": false,
+    "vars": {
+      "KW_VAULT_BEARER": "reads KW_VAULT_BEARER in https://github.com/sdr-ventures/kw-vault at origin/dev: app/main.py:40 os.environ.get(BEARER_SETTING, \"\") with BEARER_SETTING = \"KW_VAULT_BEARER\" (app/main.py:27); boot refuses without it"
+    },
+    "paths": {},
+    "declared_for": {}
   }
 }
