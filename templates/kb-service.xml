@@ -39,14 +39,14 @@
   UPSTREAM REFERENCE (names verified at the pinned tag):
       kb_service/config.py    KB_STACK, KB_PERSONA_TOKENS, KB_EMBED_BASE_URL, KB_EMBED_API_KEY, KB_MCP_URL, KB_ROLES, KB_PROJECTS,
                               KB_WATCHDOG_PING_URL, KB_WATCH_OLLAMA_URL, KB_FUND_MODEL,
-                              KB_FETCH_CONTACT
+                              KB_FETCH_CONTACT, KB_FUND_INBOX
       kb_service/watchdog.py  every 5 minutes: checks the kb stack, messages KB Analyst on change, pings healthchecks
       kb_service/__main__.py  listens on 0.0.0.0:8000; exits 2 when configuration is unusable
       kb_service/app.py       GET /health returns {"status": "ok"}; migrations run at start
 -->
 <Container version="2">
   <Name>kb-service</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.26.3</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.27.0</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -82,6 +82,7 @@
   <Config Name="KB_WATCH_OLLAMA_URL" Target="KB_WATCH_OLLAMA_URL" Default="" Mode="" Description="Base address of a desktop Ollama (for example http://&lt;your-pc&gt;:11434) that the watchdog reports on: unreachable, or a model loaded on CPU only. Advisory only: it is messaged to KB Analyst and never fails the healthchecks ping, since the PC may be off. Blank leaves the PC unwatched." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="KB_FUND_MODEL" Target="KB_FUND_MODEL" Default="claude-haiku" Mode="" Description="Router model group (kb-litellm) for the second, independent read of fund distribution notices (Shared kb doc KB_Fund_Datasets.md). Public documents only. Blank means claude-haiku." Type="Variable" Display="advanced" Required="false" Mask="false">claude-haiku</Config>
   <Config Name="KB_FETCH_CONTACT" Target="KB_FETCH_CONTACT" Default="" Mode="" Description="Contact mailbox named in the fund fetcher&apos;s User-Agent (SEC EDGAR asks automated readers for one). Set per host; blank sends no address." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="KB_FUND_INBOX" Target="KB_FUND_INBOX" Default="" Mode="" Description="Folder inside the container (under a mapped path such as /assets) holding &lt;sponsor&gt;/*.pdf fund notices a person saved in their own browser; POST /v1/funds/inbox reads them. Blank turns the drop folder off." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_EXPORT_DIR" Target="KB_EXPORT_DIR" Default="/export" Mode="" Description="Container path the export is written to. Nothing in the pinned release reads it yet. Leave /export: it is the mount above." Type="Variable" Display="advanced" Required="false" Mask="false">/export</Config>
   <Config Name="KB_ASSETS_DIR" Target="KB_ASSETS_DIR" Default="/assets" Mode="" Description="Container path original files and derived images are stored under. Nothing in the pinned release reads it yet. Leave /assets: it is the mount above." Type="Variable" Display="advanced" Required="false" Mask="false">/assets</Config>
 </Container>
