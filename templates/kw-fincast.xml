@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+  kw-fincast - the Keystone Wealth planning engine (github.com/sdr-ventures/kw-fincast). Nothing
+  here is specific to any host or operator.
+
+  WHAT IT DOES. Runs the retirement planning members on its published run contract
+  (docs/engine-contract.md in the repo): the retirement-window Monte Carlo, the gap schedule, the
+  historical replay, scenario comparison, the accumulation Monte Carlo, guardrail simulation,
+  sequence-risk analysis, withdrawal optimization and the Roth ladder. kw-core sends each run's
+  inputs and collects the result once. Stateless: no database, no data volume, nothing kept after a
+  result is collected. GET /v1/health answers without a bearer.
+
+  NETWORK. Set the Network field to the internal Docker network the Keystone containers share
+  (no route out) and give it a fixed address there. It publishes no port and needs no egress.
+
+  HARDENING AND LIMITS. Extra Parameters ships empty (repo rule). After import, add these docker run options (each begins with two dashes): read-only; tmpfs /tmp:size=64m; cap-drop=ALL; security-opt no-new-privileges; ulimit core=0; cpus=4; cpu-shares=256; memory=2g; memory-swap=2g; oom-score-adj=500
+  A dev instance takes half: cpus=2; cpu-shares=128; memory=1g; memory-swap=1g, with FINCAST_WORKERS and FINCAST_MAX_CONCURRENT_RUNS set to 2.
+
+  THE TOKEN. FINCAST_ENGINE_BEARER_SHA256 ships blank. It is the hex SHA-256 of the bearer kw-core
+  presents (64 hex characters); the engine never holds the bearer itself. The container refuses to
+  start without it. FINCAST_ENGINE_BEARER_SHA256_NEXT is set only during a rotation.
+-->
+<Container version="2">
+  <Name>kw-fincast</Name>
+  <Repository>ghcr.io/sdr-ventures/kw-fincast:stable</Repository>
+  <Registry>https://github.com/sdr-ventures/kw-fincast/pkgs/container/kw-fincast</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sdr-ventures/kw-fincast/issues</Support>
+  <Project>https://github.com/sdr-ventures/kw-fincast</Project>
+  <Overview>The planning engine for Keystone Wealth: runs the retirement Monte Carlo and the other planning members on inputs kw-core sends, and keeps nothing. Stateless, no data volume, one bearer verifier, reachable only on the internal network.</Overview>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-fincast.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kw-fincast.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Description>Planning engine for Keystone Wealth. No data kept.</Description>
+  <Config Name="FINCAST_ENGINE_BEARER_SHA256" Target="FINCAST_ENGINE_BEARER_SHA256" Default="" Mode="" Description="REQUIRED. Hex SHA-256 of the bearer kw-core presents (64 hex characters)." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="FINCAST_ENGINE_BEARER_SHA256_NEXT" Target="FINCAST_ENGINE_BEARER_SHA256_NEXT" Default="" Mode="" Description="Rotation only: hex SHA-256 of the next bearer. Leave blank otherwise." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="FINCAST_MAX_CONCURRENT_RUNS" Target="FINCAST_MAX_CONCURRENT_RUNS" Default="" Mode="" Description="Runs admitted at once (queued plus running). Blank means 4." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="FINCAST_WORKERS" Target="FINCAST_WORKERS" Default="" Mode="" Description="Worker processes for a run's chunks. Blank means 4; match the CPU limit." Type="Variable" Display="always" Required="false" Mask="false"/>
+</Container>
