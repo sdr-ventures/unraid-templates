@@ -455,5 +455,16 @@
     },
     "paths": {},
     "declared_for": {}
+  },
+  "kw-fincast": {
+    "no_local_consumer": false,
+    "vars": {
+      "FINCAST_ENGINE_BEARER_SHA256": "reads FINCAST_ENGINE_BEARER_SHA256 in https://github.com/sdr-ventures/kw-fincast at origin/dev: app/settings.py:71 _digest(env, \"FINCAST_ENGINE_BEARER_SHA256\", required=True); boot refuses without it",
+      "FINCAST_ENGINE_BEARER_SHA256_NEXT": "reads FINCAST_ENGINE_BEARER_SHA256_NEXT in https://github.com/sdr-ventures/kw-fincast at origin/dev: app/settings.py:78 _digest(env, \"FINCAST_ENGINE_BEARER_SHA256_NEXT\", required=False)",
+      "FINCAST_MAX_CONCURRENT_RUNS": "reads FINCAST_MAX_CONCURRENT_RUNS in https://github.com/sdr-ventures/kw-fincast at origin/dev: app/settings.py:76 _int(env, \"FINCAST_MAX_CONCURRENT_RUNS\", 4, 1, 64)",
+      "FINCAST_WORKERS": "reads FINCAST_WORKERS in https://github.com/sdr-ventures/kw-fincast at origin/dev: app/settings.py:77 _int(env, \"FINCAST_WORKERS\", 4, 0, 32)"
+    },
+    "paths": {},
+    "declared_for": {}
   }
 }
