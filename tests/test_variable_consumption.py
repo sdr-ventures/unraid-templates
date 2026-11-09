@@ -246,7 +246,8 @@ def _citation_problems(var, citation):
     problems = []
     if not re.match(rf"reads {re.escape(var)}\b", citation):
         problems.append(f"does not start `reads {var}`")
-    settings = re.search(r"pydantic|BaseSettings|\bsettings\b", citation, re.IGNORECASE)
+    # A file named settings.py is a path, not a settings class.
+    settings = re.search(r"pydantic|BaseSettings|\bsettings\b(?!\.py)", citation, re.IGNORECASE)
     fields = re.findall(r"\bfield `?(\w+)", citation) if settings else []
     if settings and not fields:
         problems.append("names pydantic or a settings class but no `field <name>`")
@@ -292,6 +293,7 @@ def test_every_citation_names_the_env_var_the_code_reads(name):
     # Naming the Variable by rote while citing the field that actually reads another name.
     ("DB_BACKUP_USER", "reads DB_BACKUP_USER via settings field backup_db_user, app/config.py:63", True),
     ("APP_DB_USER", "reads APP_DB_USER via pydantic-settings field db_user in app/config.py", True),
+    ("FINCAST_WORKERS", "reads FINCAST_WORKERS at app/settings.py:77 _int(env, \"FINCAST_WORKERS\", 4, 0, 32)", False),
     ("APP_DB_USER", "reads APP_DB_USER via pydantic-settings field app_db_user, like field db_user", True),
     ("DB_BACKUP_USER", "reads DB_BACKUP_USER via pydantic-settings field `backup_user` in app/config.py", True),
     ("DB_BACKUP_USER", "reads DB_BACKUP_USER via pydantic-settings field `db_backup_user` in app/config.py", False),
