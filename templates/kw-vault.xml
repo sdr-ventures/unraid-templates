@@ -15,8 +15,10 @@
   HARDENING. Extra Parameters ships empty (repo rule). After import, add these docker run options (each begins with two dashes): read-only; tmpfs /tmp:size=64m; cap-drop=ALL; security-opt no-new-privileges; cpus=2; memory=3g
   The parser child is capped at 2 GiB and two may run at once, so keep memory at least 2.5g.
 
-  THE TOKEN. KW_VAULT_BEARER ships blank. Use 32 or more random characters and give the same
-  value to kw-core as the sandbox bearer. The container refuses to start without it.
+  THE TOKEN. KW_VAULT_BEARER_SHA256 ships blank. It is the hex SHA-256 of the bearer kw-core
+  presents (64 hex characters); the sandbox never holds the bearer. The container refuses to start
+  without it. KW_VAULT_BEARER is read only by builds before v0.1.0-rc.5 and is removed once no
+  instance runs one.
 -->
 <Container version="2">
   <Name>kw-vault</Name>
@@ -35,5 +37,6 @@
   <ExtraParams/>
   <DateInstalled/>
   <Description>File sandbox for Keystone Wealth. No data kept.</Description>
+  <Config Name="KW_VAULT_BEARER_SHA256" Target="KW_VAULT_BEARER_SHA256" Default="" Mode="" Description="REQUIRED from v0.1.0-rc.5. Hex SHA-256 of the bearer kw-core presents (64 hex characters); the sandbox never holds the bearer." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KW_VAULT_BEARER" Target="KW_VAULT_BEARER" Default="" Mode="" Description="REQUIRED. Bearer kw-core presents. 32 or more random characters." Type="Variable" Display="always" Required="true" Mask="true"/>
 </Container>
