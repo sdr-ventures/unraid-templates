@@ -39,14 +39,14 @@
   UPSTREAM REFERENCE (names verified at the pinned tag):
       kb_service/config.py    KB_STACK, KB_PERSONA_TOKENS, KB_EMBED_BASE_URL, KB_EMBED_API_KEY, KB_MCP_URL, KB_ROLES, KB_PROJECTS,
                               KB_WATCHDOG_PING_URL, KB_WATCH_OLLAMA_URL, KB_FUND_MODEL,
-                              KB_FETCH_CONTACT, KB_FUND_INBOX
+                              KB_FETCH_CONTACT, KB_FUND_INBOX, KB_FUND_KEEP
       kb_service/watchdog.py  every 5 minutes: checks the kb stack, messages KB Analyst on change, pings healthchecks
       kb_service/__main__.py  listens on 0.0.0.0:8000; exits 2 when configuration is unusable
       kb_service/app.py       GET /health returns {"status": "ok"}; migrations run at start
 -->
 <Container version="2">
   <Name>kb-service</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.30.6</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.31.0</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -66,6 +66,7 @@
   <Config Name="HTTP Port" Target="8000" Default="" Mode="tcp" Description="REQUIRED. Host port for the service (REST at /, MCP at /mcp, health at /health); the container always listens on 8000 internally - change the host side only. No default is offered: pick a free port." Type="Port" Display="always" Required="true" Mask="false"/>
   <Config Name="Assets" Target="/assets" Default="" Mode="rw" Description="REQUIRED. Original files and derived images; losing this loses the originals. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/assets. Put it under backup." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Export" Target="/export" Default="" Mode="rw" Description="REQUIRED. The nightly plain-file export of the library. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/export." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Drop" Target="/drop" Default="" Mode="rw" Description="Optional. A share a person drops fund notice PDFs into (set KB_FUND_INBOX=/drop), e.g. /mnt/&lt;pool&gt;/&lt;drop-share&gt;. Files kb reads move out of it; nothing else is written there except a .problem.txt beside a file it cannot read." Type="Path" Display="always" Required="false" Mask="false"/>
   <Config Name="KB_PERSONA_TOKENS" Target="KB_PERSONA_TOKENS" Default="" Mode="" Description="REQUIRED. JSON object of caller name to bearer token, format {&quot;&lt;caller&gt;&quot;:&quot;&lt;token&gt;&quot;}. Every token is at least 32 characters, no two callers share one, and the object is not empty; otherwise the service exits 2 at start. Use long random values." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KB_ADMIN_PERSONAS" Target="KB_ADMIN_PERSONAS" Default="system-admin" Mode="" Description="Comma-separated persona names with administrator rights: they approve tags and vocabulary and may call POST /v1/admin/reembed. Leave the default unless your admin persona is named otherwise. Blank makes no persona an administrator." Type="Variable" Display="advanced" Required="false" Mask="false">system-admin</Config>
   <Config Name="KB_DATABASE_URL" Target="KB_DATABASE_URL" Default="" Mode="" Description="REQUIRED. PostgreSQL connection URL, format postgresql://&lt;user&gt;:&lt;password&gt;@kb-postgres:5432/&lt;db&gt; - the user, password and database set on kb-postgres, the host being its container name on the kb network. Percent-encode any reserved character in the password. The service runs its database migrations when it starts. Blank: the library endpoints answer 503." Type="Variable" Display="always" Required="true" Mask="true"/>
@@ -82,7 +83,8 @@
   <Config Name="KB_WATCH_OLLAMA_URL" Target="KB_WATCH_OLLAMA_URL" Default="" Mode="" Description="Base address of a desktop Ollama (for example http://&lt;your-pc&gt;:11434) that the watchdog reports on: unreachable, or a model loaded on CPU only. Advisory only: it is messaged to KB Analyst and never fails the healthchecks ping, since the PC may be off. Blank leaves the PC unwatched." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="KB_FUND_MODEL" Target="KB_FUND_MODEL" Default="claude-haiku" Mode="" Description="Router model group (kb-litellm) for the second, independent read of fund distribution notices (Shared kb doc KB_Fund_Datasets.md). Public documents only. Blank means claude-haiku." Type="Variable" Display="advanced" Required="false" Mask="false">claude-haiku</Config>
   <Config Name="KB_FETCH_CONTACT" Target="KB_FETCH_CONTACT" Default="" Mode="" Description="Contact mailbox named in the fund fetcher&apos;s User-Agent (SEC EDGAR asks automated readers for one). Set per host; blank sends no address." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
-  <Config Name="KB_FUND_INBOX" Target="KB_FUND_INBOX" Default="" Mode="" Description="Folder inside the container (under a mapped path such as /assets) holding &lt;sponsor&gt;/*.pdf fund notices a person saved in their own browser; POST /v1/funds/inbox reads them. Blank turns the drop folder off." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="KB_FUND_INBOX" Target="KB_FUND_INBOX" Default="" Mode="" Description="Folder inside the container that a person drops fund notice PDFs into, one flat folder (the Drop path below, so /drop). kb-service watches it every 30 s while idle and reads each PDF with the reader of the sponsor it names; a read file moves to KB_FUND_KEEP, a file it cannot read stays with a .problem.txt beside it. Blank turns the drop folder off." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="KB_FUND_KEEP" Target="KB_FUND_KEEP" Default="/assets/fund_notices" Mode="" Description="Folder inside the container where read fund notices are kept, one flat folder, each renamed &lt;sponsor&gt;_&lt;period&gt;_&lt;tickers&gt;_&lt;sha8&gt;.pdf. They are the evidence behind published rows: keep it under /assets (backed up). Blank means /assets/fund_notices." Type="Variable" Display="advanced" Required="false" Mask="false">/assets/fund_notices</Config>
   <Config Name="KB_EXPORT_DIR" Target="KB_EXPORT_DIR" Default="/export" Mode="" Description="Container path the export is written to. Nothing in the pinned release reads it yet. Leave /export: it is the mount above." Type="Variable" Display="advanced" Required="false" Mask="false">/export</Config>
   <Config Name="KB_ASSETS_DIR" Target="KB_ASSETS_DIR" Default="/assets" Mode="" Description="Container path original files and derived images are stored under. Nothing in the pinned release reads it yet. Leave /assets: it is the mount above." Type="Variable" Display="advanced" Required="false" Mask="false">/assets</Config>
 </Container>
