@@ -36,8 +36,8 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kw-fincast (Keystone Wealth planning engine; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-fincast.png` | `templates/kw-fincast.xml` |
 | kw-vault (Keystone Wealth file sandbox; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-vault.png` | `templates/kw-vault.xml` |
 | kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
-| docker-proxy (start 1st for kw-ops; the only Docker socket holder, private network) | `icons/docker-proxy.png` | `templates/docker-proxy.xml` |
-| kw-ops (start 2nd, after docker-proxy; no port, kw-internal and private network) | `icons/kw-ops.png` | `templates/kw-ops.xml` |
+| kw-ops-proxy (start 1st for kw-ops; the only Docker socket holder, private network) | `icons/kw-ops-proxy.png` | `templates/kw-ops-proxy.xml` |
+| kw-ops (start 2nd, after kw-ops-proxy; no port, kw-internal and private network) | `icons/kw-ops.png` | `templates/kw-ops.xml` |
 | kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
 | kw-proxy (KW edge, dev side; publishes no port, `internal` network; host ExtraParams `--entrypoint bash`) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
 | clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav-updater.png` | `templates/clamav-updater.xml` |

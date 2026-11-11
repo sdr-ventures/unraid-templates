@@ -162,10 +162,11 @@ ROLLING_TAG_EXCEPTIONS = frozenset({("kb-redis", "redis:7.4-alpine")})
 # and carry the trust model in the README and the template's own field descriptions.
 PRIVILEGED_BY_DESIGN = frozenset()
 
-# Templates that mount the Docker socket by design. docker-proxy is the socket's ONLY holder: it
+# Templates that mount the Docker socket by design. kw-ops-proxy is the socket's ONLY holder: it
 # passes three GET requests and refuses the rest (docs in kw-ops, D222), and its mount is read-only.
+# (Named kw-ops-proxy, not docker-proxy: the kw- prefix files it under the KW stack.)
 # Anything else that names the socket still fails the check below.
-DOCKER_SOCKET_BY_DESIGN = frozenset({"docker-proxy"})
+DOCKER_SOCKET_BY_DESIGN = frozenset({"kw-ops-proxy"})
 
 # PostArgs is appended after the image name: it is the container's COMMAND LINE, and a shell
 # command there can export anything over the values asserted in this file. gambit-loop needs it
@@ -847,8 +848,8 @@ def test_every_icon_file_is_named_by_a_template_and_listed_in_the_readme():
         assert f"icons/{icon}" in rows, f"icons/{icon} has no README row"
 
 
-# Every KW container, by name: the kw-* family and docker-proxy, which is kw-ops' socket proxy.
-KW_CONTAINERS = [n for n in NAMES if n.startswith("kw-") or n == "docker-proxy"]
+# Every KW container, by name: the kw-* family, which includes kw-ops-proxy (kw-ops' socket proxy).
+KW_CONTAINERS = [n for n in NAMES if n.startswith("kw-")]
 
 
 def test_no_two_kw_containers_share_an_icon_file():

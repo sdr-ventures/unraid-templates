@@ -211,7 +211,7 @@
     },
     "declared_for": {}
   },
-  "docker-proxy": {
+  "kw-ops-proxy": {
     "no_local_consumer": false,
     "vars": {
       "SP_ALLOW_GET": "reads SP_ALLOW_GET in the wollomatic/socket-proxy image: the allow-list rule the proxy matches, named in kw-ops docs/socket-proxy.md and pinned by its tests/test_socket_proxy_doc.py (the proxy's own source is not read here)",

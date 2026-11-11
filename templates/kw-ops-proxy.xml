@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  docker-proxy - the Docker socket proxy for the kw-ops collector (D222). It is the ONLY
+  kw-ops-proxy - the Docker socket proxy for the kw-ops collector (D222). It is the ONLY
   container that holds the Docker socket, and it passes three GET requests only: the container
   list, one container's inspect and its stats. Every other path and method is refused before
   Docker is reached. Third-party image (wollomatic/socket-proxy), digest-pinned; nothing here is
@@ -14,7 +14,7 @@
   network holds nothing but this container and kw-ops.
 -->
 <Container version="2">
-  <Name>docker-proxy</Name>
+  <Name>kw-ops-proxy</Name>
   <Repository>ghcr.io/wollomatic/socket-proxy:1.13.2@sha256:82db5c4728e4fd68d969ec3d74d99bf6d990d06428b583a6f1daabab27de1bd3</Repository>
   <Registry>https://github.com/wollomatic/socket-proxy</Registry>
   <Network>bridge</Network>
@@ -30,13 +30,13 @@ USER AND SOCKET GROUP, for System Admin to set live in Extra Parameters (the rep
 
 HARDENING, for System Admin to set live in Extra Parameters, a proposal and not measured under Docker: --read-only --cap-drop=ALL --security-opt no-new-privileges --ulimit core=0 --pids-limit 64 --cpus 0.25 --cpu-shares 128 --memory 32m --memory-swap 32m --oom-score-adj 500. Report an excess rather than raising a ceiling.
 
-HEALTH: the image's own healthcheck binary, ./healthcheck, for System Admin to set live with --health-cmd ./healthcheck --health-interval 30s --health-timeout 5s --health-retries 3.
+HEALTH: this template sets no container health check, and System Admin sets none live: Extra Parameters stays empty. The image has no shell, and Docker runs a health command through one, so a health check set here failed every probe and showed the container unhealthy. A stopped or unresponsive proxy is reported by kw-ops' Docker source, which reads through it on each refresh.
 
 SOCKET: the host's Docker socket is mounted read-only at /var/run/docker.sock. The host side is set at creation, never shipped.</Overview>
   <Category>Tools: Utilities</Category>
   <WebUI/>
-  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/docker-proxy.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/docker-proxy.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kw-ops-proxy.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kw-ops-proxy.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>

@@ -4,13 +4,13 @@
   and reads each Healthchecks check and each database backup folder, read-only, for the admin
   console. Built from the kw-ops repository; nothing here is specific to any host or operator.
 
-  IT NEVER HOLDS THE DOCKER SOCKET. The docker-proxy template holds it and passes three GET
+  IT NEVER HOLDS THE DOCKER SOCKET. The kw-ops-proxy template holds it and passes three GET
   requests only. kw-ops reaches the proxy over its private network, and the proxy's address is
   KW_OPS_DOCKER_URL.
 
   NETWORKS (set live by System Admin; a template carries one network only). kw-ops needs two:
   the kw-internal network, where kw-core calls it on its fixed address, and the private
-  socket-proxy network it shares with docker-proxy and nothing else. Leave Network as shipped.
+  socket-proxy network it shares with kw-ops-proxy and nothing else. Leave Network as shipped.
 
   NO PORT IS PUBLISHED. kw-core reaches the collector on kw-internal; nothing on the LAN does.
 
@@ -28,7 +28,7 @@
   <Project/>
   <Overview>The Docker collector for one host. kw-core calls it on kw-internal and shows every container on the host in the admin console, plus each Healthchecks check and each database backup folder. Read-only and stateless; it returns fixed whitelists only.
 
-NETWORKS: two, set by System Admin after the container is created (the template carries one network only, so leave Network as shipped). (1) kw-internal, at the fixed address System Admin records, which kw-core calls. (2) The private socket-proxy network, which holds this container and docker-proxy and nothing else. Neither network is reachable from the LAN and the container publishes no port.
+NETWORKS: two, set by System Admin after the container is created (the template carries one network only, so leave Network as shipped). (1) kw-internal, at the fixed address System Admin records, which kw-core calls. (2) The private socket-proxy network, which holds this container and kw-ops-proxy and nothing else. Neither network is reachable from the LAN and the container publishes no port.
 
 HARDENING, for System Admin to set live in Extra Parameters (the repo template ships Extra Parameters empty, by rule): --read-only --tmpfs /tmp:size=16m --cap-drop=ALL --security-opt no-new-privileges --ulimit core=0 --pids-limit 128 --cpus 0.5 --cpu-shares 256 --memory 128m --memory-swap 128m --oom-score-adj 500. These ceilings are a proposal, not measured under Docker; confirm with docker stats on a dev host and report an excess rather than raising a limit.
 
@@ -42,11 +42,11 @@ VARIABLES: KW_OPS_COLLECTOR_BEARER_SHA256 is required (the hex SHA-256 of the be
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>Docker and Healthchecks collector for one host, read-only, for the admin console. No port; reached by kw-core on kw-internal. Needs the docker-proxy container up on its private network first.</Description>
+  <Description>Docker and Healthchecks collector for one host, read-only, for the admin console. No port; reached by kw-core on kw-internal. Needs the kw-ops-proxy container up on its private network first.</Description>
 
   <Config Name="Collector bearer digest" Target="KW_OPS_COLLECTOR_BEARER_SHA256" Default="" Mode="" Description="REQUIRED. The hex SHA-256 of the bearer kw-core presents: 64 lowercase hex characters, format &lt;sha256-hex&gt;. The service does not start without it. The bearer itself is a vault item and is never entered here." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="Collector bearer digest (next, rotation only)" Target="KW_OPS_COLLECTOR_BEARER_SHA256_NEXT" Default="" Mode="" Description="Optional. Rotation only: the SHA-256 hex digest of the next bearer, format &lt;sha256-hex&gt;. Both are accepted until a restart with the next one alone. Leave blank otherwise." Type="Variable" Display="always" Required="false" Mask="true"/>
-  <Config Name="Docker proxy URL" Target="KW_OPS_DOCKER_URL" Default="http://docker-proxy:2375" Mode="" Description="The socket proxy's address, format http://host[:port], nothing more. The default is the docker-proxy container's name on its private network. Blank means the default." Type="Variable" Display="always" Required="false" Mask="false">http://docker-proxy:2375</Config>
+  <Config Name="Docker proxy URL" Target="KW_OPS_DOCKER_URL" Default="http://kw-ops-proxy:2375" Mode="" Description="The socket proxy's address, format http://host[:port], nothing more. The default is the kw-ops-proxy container's name on its private network. Blank means the default." Type="Variable" Display="always" Required="false" Mask="false">http://kw-ops-proxy:2375</Config>
   <Config Name="Minimum refresh seconds" Target="KW_OPS_MIN_REFRESH_SECONDS" Default="20" Mode="" Description="Floor between reads of each source (Docker, Healthchecks, backup folders), 5 to 300 seconds. Blank means 20." Type="Variable" Display="always" Required="false" Mask="false">20</Config>
   <Config Name="Healthchecks URL" Target="KW_OPS_HEALTHCHECKS_URL" Default="" Mode="" Description="Optional. The Healthchecks service, format https://&lt;host&gt;[:port] for the hosted service (reached through the egress proxy below) or http://&lt;host&gt;[:port] for a self-hosted one on kw-internal. Blank means checks are not-configured." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="Healthchecks read-only key file" Target="KW_OPS_HEALTHCHECKS_KEY_FILE" Default="/run/secrets/healthchecks-ro-key" Mode="" Description="The path, inside the container, of the mounted file that holds a READ-ONLY Healthchecks API key. The default matches the Path below. Only the path is a setting; the key is never entered here." Type="Variable" Display="always" Required="false" Mask="false">/run/secrets/healthchecks-ro-key</Config>
