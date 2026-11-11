@@ -137,14 +137,19 @@ FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
     ("kb-runner", "ghcr.io/sdr-ventures/kb-service:v0.33.1"),
     ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.33.1"),
     ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.33.1"),
+    # kw-ops has no :stable yet (the first non-rc tag is the PM's to cut), so it runs the published
+    # release candidate. Moves to a vX.Y.Z when a release is cut.
+    ("kw-ops", "ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.3"),
 })
 # The tag rule each publisher releases by, recorded here so the check runs offline. A tag outside
 # the rule is one the registry does not publish, so a template that names it cannot pull.
 #   kb-service: its release workflow publishes only vX.Y.Z and says there is no floating tag.
 #   kb-ingest: the registry holds vX.Y.Z tags and no latest.
+#   kw-ops: its release workflow publishes vX.Y.Z and vX.Y.Z-rc.N, with a moving :dev for rc tags.
 PUBLISHED_TAG_RULE = {
     "ghcr.io/sdr-ventures/kb-service": re.compile(r"^v\d+\.\d+\.\d+$"),
     "ghcr.io/sdr-ventures/kb-ingest": re.compile(r"^v\d+\.\d+\.\d+$"),
+    "ghcr.io/sdr-ventures/kw-ops": re.compile(r"^v\d+\.\d+\.\d+(-rc\.\d+)?$"),
 }
 
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
@@ -160,6 +165,11 @@ ROLLING_TAG_EXCEPTIONS = frozenset(
 # No template in this repo currently needs Privileged by design. When one does, name it here
 # and carry the trust model in the README and the template's own field descriptions.
 PRIVILEGED_BY_DESIGN = frozenset()
+
+# Templates that mount the Docker socket by design. docker-proxy is the socket's ONLY holder: it
+# passes three GET requests and refuses the rest (docs in kw-ops, D222), and its mount is read-only.
+# Anything else that names the socket still fails the check below.
+DOCKER_SOCKET_BY_DESIGN = frozenset({"docker-proxy"})
 
 # PostArgs is appended after the image name: it is the container's COMMAND LINE, and a shell
 # command there can export anything over the values asserted in this file. tldw-redis is
@@ -646,7 +656,10 @@ def test_the_privilege_posture_is_minimal(name):
         # documents WHAT a path is for even while the value itself stays blank, so it is the
         # one place this can actually catch a docker-socket mount before it ships.
         both = f"{cfg.get('Target') or ''} {cfg.get('Default') or ''} {cfg.get('Description') or ''}".lower()
-        assert "docker.sock" not in both, f"{name}: {label!r} mounts the docker socket"
+        if name not in DOCKER_SOCKET_BY_DESIGN:
+            assert "docker.sock" not in both, f"{name}: {label!r} mounts the docker socket"
+        elif "docker.sock" in both:
+            assert cfg.get("Mode") == "ro", f"{name}: {label!r} mounts the docker socket read-write"
         # The HOST side decides what the container can reach, and a host path is
         # operator-specific by definition: it ships BLANK and is filled in on import. (The
         # leak guard refuses the real share roots; this refuses any value at all.)

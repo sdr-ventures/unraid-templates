@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!--
+  docker-proxy - the Docker socket proxy for the kw-ops collector (D222). It is the ONLY
+  container that holds the Docker socket, and it passes three GET requests only: the container
+  list, one container's inspect and its stats. Every other path and method is refused before
+  Docker is reached. Third-party image (wollomatic/socket-proxy), digest-pinned; nothing here is
+  specific to any host or operator.
+
+  THE SOCKET MOUNT IS THE PROXY'S OWN DESIGN. The docker.sock mount is read-only, and the mode
+  governs the file, not the API: the allow-list is the control. This is the one template that
+  mounts the socket; the test suite records that as a decision (DOCKER_SOCKET_BY_DESIGN).
+
+  NO PORT IS PUBLISHED. The proxy listens on plain HTTP, which is safe only because its private
+  network holds nothing but this container and kw-ops.
+-->
+<Container version="2">
+  <Name>docker-proxy</Name>
+  <Repository>ghcr.io/wollomatic/socket-proxy:1.13.2@sha256:82db5c4728e4fd68d969ec3d74d99bf6d990d06428b583a6f1daabab27de1bd3</Repository>
+  <Registry>https://github.com/wollomatic/socket-proxy</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/wollomatic/socket-proxy</Project>
+  <Overview>The Docker socket proxy for the kw-ops collector. It is the only container that holds the Docker socket, and it passes three GET requests only (the container list, one container's inspect, its stats). Everything else is refused before Docker is reached. The allow-list is set in the variables below; leave them as shipped.
+
+NETWORK: one private Docker network, created by System Admin with internal set (no route out), holding exactly two containers: this one and kw-ops. Set its name and addresses live; the template carries none. This container is on no other network. Leave Network as shipped; System Admin attaches the private network after creation (the template carries one network only).
+
+USER AND SOCKET GROUP, for System Admin to set live in Extra Parameters (the repo template ships Extra Parameters empty, by rule): --user 65534:&lt;gid&gt;, where &lt;gid&gt; is the socket's group (stat -c %g /var/run/docker.sock, read on the host). The image has no user database, so without this flag the proxy cannot open the socket. UNVERIFIED until a live run: the kw-ops self-test shows docker unreadable when it is wrong.
+
+HARDENING, for System Admin to set live in Extra Parameters, a proposal and not measured under Docker: --read-only --cap-drop=ALL --security-opt no-new-privileges --ulimit core=0 --pids-limit 64 --cpus 0.25 --cpu-shares 128 --memory 32m --memory-swap 32m --oom-score-adj 500. Report an excess rather than raising a ceiling.
+
+HEALTH: the image's own healthcheck binary, ./healthcheck, for System Admin to set live with --health-cmd ./healthcheck --health-interval 30s --health-timeout 5s --health-retries 3.
+
+SOCKET: the host's Docker socket is mounted read-only at /var/run/docker.sock. The host side is set at creation, never shipped.</Overview>
+  <Category>Tools: Utilities</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/docker-proxy.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/docker-proxy.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <DateInstalled/>
+  <Description>Docker socket proxy for kw-ops: passes only the container list, one container's inspect and its stats (GET). No port; on a private network shared with kw-ops alone. Start before kw-ops.</Description>
+
+  <Config Name="Docker socket" Target="/var/run/docker.sock" Default="" Mode="ro" Description="REQUIRED. The host's Docker socket, format /var/run/docker.sock, mounted read-only. The mode governs the file, not the API; the allow-list below is the control. Only this container mounts it." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="SP_ALLOW_GET" Target="SP_ALLOW_GET" Default="/containers/json" Mode="" Description="The first GET allow-list rule: the container list. The proxy anchors it. Leave as shipped." Type="Variable" Display="always" Required="true" Mask="false">/containers/json</Config>
+  <Config Name="SP_ALLOW_GET_2" Target="SP_ALLOW_GET_2" Default="/containers/[0-9a-f]{64}/(json|stats)" Mode="" Description="The second GET allow-list rule: one container's inspect and its stats, by 64-digit id. Leave as shipped." Type="Variable" Display="always" Required="true" Mask="false">/containers/[0-9a-f]{64}/(json|stats)</Config>
+  <Config Name="SP_ALLOWFROM" Target="SP_ALLOWFROM" Default="kw-ops" Mode="" Description="The one client allowed: the kw-ops container's name, resolved by Docker's DNS on the private network. Leave kw-ops unless the collector container is renamed." Type="Variable" Display="always" Required="true" Mask="false">kw-ops</Config>
+  <Config Name="SP_LISTENIP" Target="SP_LISTENIP" Default="0.0.0.0" Mode="" Description="The address the proxy listens on inside its container. Leave as shipped." Type="Variable" Display="always" Required="true" Mask="false">0.0.0.0</Config>
+  <Config Name="SP_PROXYPORT" Target="SP_PROXYPORT" Default="2375" Mode="" Description="The port the proxy listens on inside its container; kw-ops' KW_OPS_DOCKER_URL names it. Leave as shipped." Type="Variable" Display="always" Required="true" Mask="false">2375</Config>
+  <Config Name="SP_LOGLEVEL" Target="SP_LOGLEVEL" Default="INFO" Mode="" Description="Log level. Refused requests are logged as blocked with their reason at INFO." Type="Variable" Display="always" Required="true" Mask="false">INFO</Config>
+  <Config Name="SP_LOGJSON" Target="SP_LOGJSON" Default="true" Mode="" Description="Writes the log as JSON lines, so each refusal can be read with docker logs." Type="Variable" Display="always" Required="true" Mask="false">true</Config>
+  <Config Name="SP_ALLOWHEALTHCHECK" Target="SP_ALLOWHEALTHCHECK" Default="true" Mode="" Description="Enables the proxy's health check, as kw-ops' socket-proxy doc sets it. Leave as shipped." Type="Variable" Display="always" Required="true" Mask="false">true</Config>
+</Container>
