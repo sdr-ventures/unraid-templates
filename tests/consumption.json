@@ -225,6 +225,41 @@
       "/var/lib/postgresql/data": "reads /var/lib/postgresql/data as PGDATA in the stock postgres 17 image: docker-library/postgres 17/bookworm/Dockerfile:184"
     }
   },
+  "kw-ops": {
+    "no_local_consumer": false,
+    "vars": {
+      "KW_OPS_COLLECTOR_BEARER_SHA256": "reads KW_OPS_COLLECTOR_BEARER_SHA256 in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:149 _digest(env, \"KW_OPS_COLLECTOR_BEARER_SHA256\", required=True); the service does not start without it",
+      "KW_OPS_COLLECTOR_BEARER_SHA256_NEXT": "reads KW_OPS_COLLECTOR_BEARER_SHA256_NEXT in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:156 _digest(env, \"KW_OPS_COLLECTOR_BEARER_SHA256_NEXT\", required=False)",
+      "KW_OPS_DOCKER_URL": "reads KW_OPS_DOCKER_URL in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:102 env.get(\"KW_OPS_DOCKER_URL\"), blank falls back to http://docker-proxy:2375",
+      "KW_OPS_MIN_REFRESH_SECONDS": "reads KW_OPS_MIN_REFRESH_SECONDS in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:155 _int(env, \"KW_OPS_MIN_REFRESH_SECONDS\", 20, 5, 300)",
+      "KW_OPS_HEALTHCHECKS_URL": "reads KW_OPS_HEALTHCHECKS_URL in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:107 env.get(\"KW_OPS_HEALTHCHECKS_URL\"); blank means checks are not-configured",
+      "KW_OPS_HEALTHCHECKS_KEY_FILE": "reads KW_OPS_HEALTHCHECKS_KEY_FILE in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:119 env.get(\"KW_OPS_HEALTHCHECKS_KEY_FILE\"), the path the key is read from at each refresh (docs/collector.md)",
+      "KW_OPS_BACKUP_FOLDERS": "reads KW_OPS_BACKUP_FOLDERS in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:126 env.get(\"KW_OPS_BACKUP_FOLDERS\"), split on commas into the folder names under /backups",
+      "HTTPS_PROXY": "reads HTTPS_PROXY in https://github.com/sdr-ventures/kw-ops at origin/dev 637278b: app/settings.py:114 env.get(\"HTTPS_PROXY\") or https_proxy, used only for the Healthchecks https tunnel (docs/collector.md Proxy variables)"
+    },
+    "paths": {
+      "/backups": "reads /backups via app/settings.py:19 BACKUP_ROOT = \"/backups\", the read-only mount the backup folders are listed under (app/backups.py)",
+      "/run/secrets/healthchecks-ro-key": "reads /run/secrets/healthchecks-ro-key as the default KW_OPS_HEALTHCHECKS_KEY_FILE (app/settings.py:119 names the path; the file is read at each refresh per docs/collector.md)"
+    },
+    "declared_for": {}
+  },
+  "docker-proxy": {
+    "no_local_consumer": false,
+    "vars": {
+      "SP_ALLOW_GET": "reads SP_ALLOW_GET in the wollomatic/socket-proxy image: the allow-list rule the proxy matches, named in kw-ops docs/socket-proxy.md and pinned by its tests/test_socket_proxy_doc.py (the proxy's own source is not read here)",
+      "SP_ALLOW_GET_2": "reads SP_ALLOW_GET_2 in the wollomatic/socket-proxy image: the second allow-list rule, named in kw-ops docs/socket-proxy.md at origin/dev 637278b and pinned by its tests/test_socket_proxy_doc.py",
+      "SP_ALLOWFROM": "reads SP_ALLOWFROM in the wollomatic/socket-proxy image: the one allowed client name, named in kw-ops docs/socket-proxy.md at origin/dev 637278b",
+      "SP_LISTENIP": "reads SP_LISTENIP in the wollomatic/socket-proxy image: the listen address, named in kw-ops docs/socket-proxy.md at origin/dev 637278b",
+      "SP_PROXYPORT": "reads SP_PROXYPORT in the wollomatic/socket-proxy image: the listen port, named in kw-ops docs/socket-proxy.md at origin/dev 637278b and matched by KW_OPS_DOCKER_URL",
+      "SP_LOGLEVEL": "reads SP_LOGLEVEL in the wollomatic/socket-proxy image: the log level, named in kw-ops docs/socket-proxy.md at origin/dev 637278b",
+      "SP_LOGJSON": "reads SP_LOGJSON in the wollomatic/socket-proxy image: JSON log lines, named in kw-ops docs/socket-proxy.md at origin/dev 637278b",
+      "SP_ALLOWHEALTHCHECK": "reads SP_ALLOWHEALTHCHECK in the wollomatic/socket-proxy image: the health check switch, named in kw-ops docs/socket-proxy.md at origin/dev 637278b"
+    },
+    "paths": {
+      "/var/run/docker.sock": "reads /var/run/docker.sock as the Docker socket the proxy holds, read-only: kw-ops docs/socket-proxy.md (the mount row) at origin/dev 637278b"
+    },
+    "declared_for": {}
+  },
   "kb-webui": {
     "no_local_consumer": false,
     "vars": {
