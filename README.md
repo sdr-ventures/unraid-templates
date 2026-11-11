@@ -21,13 +21,9 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kw-core | `icons/kw-core.png` | `templates/kw-core.xml` |
 | kw-core-db | `icons/kw-core-db.png` | `templates/kw-core-db.xml` |
 | kw-web (dev+prod) | `icons/kw-web.png` | `templates/kw-web.xml` |
-| the-desk (prod) | `icons/the-desk.png` | `templates/the-desk.xml` |
 | gambit (prod) | `icons/gambit.png` | `templates/gambit.xml` |
 | gambit-loop (same image, paper-lab loop) | `icons/gambit.png` | `templates/gambit-loop.xml` |
 | iron-tide | `icons/iron-tide.png` | `templates/iron-tide.xml` |
-| tldw-redis (start 1st) | `icons/tldw-redis.png` | `templates/tldw-redis.xml` |
-| tldw-server (start 2nd) | `icons/tldw-server.png` | `templates/tldw-server.xml` |
-| tldw-webui (start 3rd, needs manual network-alias setup) | `icons/tldw-webui.png` | `templates/tldw-webui.xml` |
 | kb-postgres (start 1st, `kb` network only) | `icons/kb-postgres.png` | `templates/kb-postgres.xml` |
 | kb-redis (start 2nd, after kb-postgres, `kb` network only) | `icons/kb-redis.png` | `templates/kb-redis.xml` |
 | kb-litellm (start 3rd, after kb-redis; needs a `litellm` database and a `config.yaml`) | `icons/kb-litellm.png` | `templates/kb-litellm.xml` |

@@ -1,12 +1,11 @@
 """Every template in this repo, held to the properties a PUBLIC Unraid template must have.
 
-These rules began life in `test_tldw_templates.py`, written for one two-container set, and
+These rules began life in a tl;dw-specific test file (removed when tl;dw was retired), and
 none of them was specific to it: a credential field that ships a working default, an image
 reference that moves under an Update, a `Default=` attribute that disagrees with the element
 text, an icon the README does not list — each is a defect in ANY template here, and each is
 silently undone by an edit that looks like tidying. Issue #57 asked for them to be lifted so
-they are enforced by CI over `templates/*.xml` rather than by review. The tl;dw file keeps
-only what is genuinely about that set (its start order, its wiring, its cookie posture).
+they are enforced by CI over `templates/*.xml` rather than by review.
 
 Nothing here is caught by the leak guard (these are not internal values) or by the XML job
 (the file still parses either way), which is why it is caught here.
@@ -153,14 +152,10 @@ PUBLISHED_TAG_RULE = {
 }
 
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
-#   tldw-redis  redis:7-alpine              — upstream's own compose choice; the blast radius is
-#                                             a cache and a queue, stated in the template.
 #   kb-redis    redis:7.4-alpine        — the 7.4 patch line: an Update takes security fixes and never
 #                                         a new minor; the blast radius is a cache and a budget
 #                                         counter, stated in the template.
-ROLLING_TAG_EXCEPTIONS = frozenset(
-    {("tldw-redis", "redis:7-alpine"), ("kb-redis", "redis:7.4-alpine")}
-)
+ROLLING_TAG_EXCEPTIONS = frozenset({("kb-redis", "redis:7.4-alpine")})
 
 # No template in this repo currently needs Privileged by design. When one does, name it here
 # and carry the trust model in the README and the template's own field descriptions.
@@ -172,14 +167,13 @@ PRIVILEGED_BY_DESIGN = frozenset()
 DOCKER_SOCKET_BY_DESIGN = frozenset({"docker-proxy"})
 
 # PostArgs is appended after the image name: it is the container's COMMAND LINE, and a shell
-# command there can export anything over the values asserted in this file. tldw-redis is
-# tldw-redis needs it (how the redis image is configured); gambit-loop needs it because it runs the
-# gambit image with the paper-lab loop as its command. kb-redis runs an sh wrapper so the
+# command there can export anything over the values asserted in this file. gambit-loop needs it
+# because it runs the gambit image with the paper-lab loop as its command. kb-redis runs an sh wrapper so the
 # password comes from its REDIS_PASSWORD Variable instead of a template field; kb-litellm
 # points the proxy at its mounted config file (PostArgs replaces the image's CMD). kw-proxy's
 # PostArgs is the squid arguments behind its sync entry script; the host's --entrypoint bash
 # (ExtraParams, operator-owned) runs it, and the PostArgs holds no shell expansion.
-POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop", "kb-redis", "kb-litellm", "kw-proxy"})
+POSTARGS_BY_DESIGN = frozenset({"gambit-loop", "kb-redis", "kb-litellm", "kw-proxy"})
 
 # The privilege-posture rules are fleet policy, so a template that needs one is listed here
 # with the reason, and the entry is the review. Every list is empty today. An entry must name
@@ -460,7 +454,7 @@ def test_the_credential_shape_rule_actually_matches_the_fleets_secret_fields():
             if secret_bearing(cfg) and is_credential_name(var_name(cfg)):
                 seen.add(var_name(cfg))
     for spelling in ("DB_PASSWORD", "POSTGRES_PASSWORD", "TAPE_CLIENT_SECRET",
-                     "SCHWAB_PASS", "TOKEN_ENCRYPTION_KEY", "TAPE_API_KEY", "MCP_API_KEY_SALT"):
+                     "SCHWAB_PASS", "TOKEN_ENCRYPTION_KEY", "TAPE_API_KEY", "ADMIN_ENROLMENT_SECRET"):
         assert spelling in seen, f"the credential-shape rule no longer matches {spelling}"
 
 
@@ -468,8 +462,7 @@ def test_the_credential_shape_rule_actually_matches_the_fleets_secret_fields():
 def test_environment_mirror_agrees_with_config_for_every_shared_name(name):
     # A template exported from a configured container can carry BOTH a <Config> (what the Edit
     # page shows and lets the operator change) and an <Environment><Variable> mirror (what
-    # Unraid actually launches with) for the same name. `test_tldw_templates.py` checked this
-    # for three tl;dw-specific variables only; a mirror disagreeing on any OTHER shared name —
+    # Unraid actually launches with) for the same name. A mirror disagreeing on a shared name —
     # `LOG_LEVEL=debug` in <Environment> beside a Config default of "info" — passed unnoticed.
     # This checks it for every name that appears in both, repo-wide.
     root = template(name)

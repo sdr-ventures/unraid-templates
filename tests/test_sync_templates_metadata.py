@@ -171,7 +171,7 @@ def test_a_path_new_to_the_operator_takes_the_templates_mode(sync):
     assert st["mode_kept"] == []
 
 
-REAL_TLDW_REDIS = pathlib.Path(__file__).resolve().parents[1] / "templates" / "tldw-redis.xml"
+REAL_KB_REDIS = pathlib.Path(__file__).resolve().parents[1] / "templates" / "kb-redis.xml"
 
 
 def _old_redis_port_config(value):
@@ -181,23 +181,24 @@ def _old_redis_port_config(value):
     )
 
 
-def test_a_fresh_instance_synced_against_the_real_tldw_redis_template_gets_no_port(sync):
-    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+def test_a_fresh_instance_synced_against_the_real_kb_redis_template_gets_no_port(sync):
+    tpl_root = ET.parse(REAL_KB_REDIS).getroot()
     op_root = ET.fromstring(
-        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        '<Container version="2"><Name>kb-redis</Name><Repository>redis:7.4-alpine</Repository>'
         '<Config Name="Data" Target="/data" Default="" Mode="rw" Description="d" Type="Path" '
-        'Display="always" Required="true" Mask="false">/mnt/pool/appdata/tldw-redis/data'
+        'Display="always" Required="true" Mask="false">/mnt/pool/appdata/kb-redis/data'
         "</Config></Container>"
     )
     merged, st = sync.merge(op_root, tpl_root)
     assert not [c for c in merged.findall("Config") if c.get("Type") == "Port"]
-    assert st["added"] == []
+    # kb-redis also adds its REDIS_PASSWORD Variable; the point here is that no port is added.
+    assert st["added"] == ["REDIS_PASSWORD"]
 
 
 def test_an_instance_still_carrying_the_old_port_at_its_default_loses_it(sync):
-    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+    tpl_root = ET.parse(REAL_KB_REDIS).getroot()
     op_root = ET.fromstring(
-        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        '<Container version="2"><Name>kb-redis</Name><Repository>redis:7.4-alpine</Repository>'
         f"{_old_redis_port_config('6380')}</Container>"
     )
     merged, st = sync.merge(op_root, tpl_root)
@@ -206,9 +207,9 @@ def test_an_instance_still_carrying_the_old_port_at_its_default_loses_it(sync):
 
 
 def test_an_instance_with_the_port_set_to_a_real_value_loses_it_too(sync):
-    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+    tpl_root = ET.parse(REAL_KB_REDIS).getroot()
     op_root = ET.fromstring(
-        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        '<Container version="2"><Name>kb-redis</Name><Repository>redis:7.4-alpine</Repository>'
         f"{_old_redis_port_config('7777')}</Container>"
     )
     merged, st = sync.merge(op_root, tpl_root)
