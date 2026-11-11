@@ -35,6 +35,7 @@ WHAT THIS FILE DOES NOT CLAIM, so that a guard implying coverage it lacks does n
 """
 
 import copy
+import hashlib
 import pathlib
 import re
 import xml.etree.ElementTree as ET
@@ -851,6 +852,31 @@ def test_every_icon_file_is_named_by_a_template_and_listed_in_the_readme():
     for icon in sorted(p.name for p in ICONS.iterdir() if p.is_file() and not p.name.startswith(".")):
         assert icon in named, f"icons/{icon} is referenced by no template"
         assert f"icons/{icon}" in rows, f"icons/{icon} has no README row"
+
+
+# Every KW container, by name: the kw-* family and docker-proxy, which is kw-ops' socket proxy.
+KW_CONTAINERS = [n for n in NAMES if n.startswith("kw-") or n == "docker-proxy"]
+
+
+def test_no_two_kw_containers_share_an_icon_file():
+    # A KW container shows its own icon. Two KW templates pointing at one file (kw-vault shipped
+    # kw-extractor's bytes) is the defect; a shared file is allowed only for the same image, and
+    # no two KW containers are one image.
+    assert len(KW_CONTAINERS) >= 2, f"no KW templates found in {NAMES!r}"
+    by_digest = {}
+    for name in KW_CONTAINERS:
+        data = (ICONS / icon_basename(template(name))).read_bytes()
+        by_digest.setdefault(hashlib.sha256(data).hexdigest(), []).append(name)
+    shared = [names for names in by_digest.values() if len(names) > 1]
+    assert not shared, f"KW containers share an icon file: {shared}"
+
+
+def test_icons_planned_holds_only_containers_that_do_not_exist_yet():
+    # icons/planned/ is for icons drawn ahead of a template. Once a template lands, its icon
+    # moves to icons/ (kw-ops and kw-fincast did); a planned icon whose container exists is stale.
+    planned = sorted(p.stem for p in (ICONS / "planned").glob("*.png"))
+    built = [n for n in planned if n in NAMES]
+    assert not built, f"icons/planned/ holds icons for containers that already have templates: {built}"
 
 
 @pytest.mark.parametrize("name", NAMES)
