@@ -19,7 +19,7 @@
 -->
 <Container version="2">
   <Name>kw-ops</Name>
-  <Repository>ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.3</Repository>
+  <Repository>ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.4</Repository>
   <Registry>https://github.com/sdr-ventures/kw-ops/pkgs/container/kw-ops</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>

@@ -139,7 +139,7 @@ FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
     ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.34.0"),
     # kw-ops has no :stable yet (the first non-rc tag is the PM's to cut), so it runs the published
     # release candidate. Moves to a vX.Y.Z when a release is cut.
-    ("kw-ops", "ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.3"),
+    ("kw-ops", "ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.4"),
 })
 # The tag rule each publisher releases by, recorded here so the check runs offline. A tag outside
 # the rule is one the registry does not publish, so a template that names it cannot pull.
