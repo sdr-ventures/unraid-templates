@@ -2,7 +2,8 @@
 
 scripts/render_icons.py rebuilds each PNG from icons/src/<name>.svg. CI has no renderer, so this
 file checks what can be checked without one: each source is a 256-unit square, each PNG it renders
-into is 256 pixels square, and every icon a template names has a source.
+into is 256 pixels square, every icon a template names has a source, and every source belongs to
+an icon a template or the planned folder holds.
 """
 
 import struct
@@ -13,10 +14,6 @@ REPO = Path(__file__).resolve().parents[1]
 ICONS = REPO / "icons"
 SOURCES = ICONS / "src"
 PLANNED = ICONS / "planned"
-
-# Icons a template names that still have no SVG source (cef-tracker, iron-tide). A new icon gets
-# its source in icons/src in the same change; this list only shrinks as sources land.
-SOURCELESS_ICONS = frozenset({"cef-tracker", "iron-tide"})
 
 
 def png_size(path):
@@ -30,6 +27,15 @@ def rendered_pngs():
     pngs = {p.stem: p for p in ICONS.glob("*.png")}
     pngs.update({p.stem: p for p in PLANNED.glob("*.png")})
     return pngs
+
+
+def template_icons():
+    named = set()
+    for xml in (REPO / "templates").glob("*.xml"):
+        icon = (ET.parse(xml).getroot().findtext("Icon") or "").strip()
+        if icon:
+            named.add(icon.rsplit("/", 1)[-1].removesuffix(".png"))
+    return named
 
 
 def test_each_source_is_256_units_and_its_png_is_256_pixels():
@@ -46,15 +52,11 @@ def test_each_source_is_256_units_and_its_png_is_256_pixels():
 
 
 def test_every_icon_a_template_names_has_an_svg_source():
-    named = set()
-    for xml in (REPO / "templates").glob("*.xml"):
-        icon = (ET.parse(xml).getroot().findtext("Icon") or "").strip()
-        if icon:
-            named.add(icon.rsplit("/", 1)[-1].removesuffix(".png"))
-    missing = sorted(n for n in named if n not in SOURCELESS_ICONS and not (SOURCES / f"{n}.svg").is_file())
+    missing = sorted(n for n in template_icons() if not (SOURCES / f"{n}.svg").is_file())
     assert not missing, f"icons with no SVG source in icons/src: {missing}"
 
 
-def test_the_sourceless_list_names_only_icons_that_still_lack_a_source():
-    stale = sorted(n for n in SOURCELESS_ICONS if (SOURCES / f"{n}.svg").is_file())
-    assert not stale, f"these now have a source; drop them from SOURCELESS_ICONS: {stale}"
+def test_every_svg_source_belongs_to_a_template_or_the_planned_folder():
+    held = template_icons() | {p.stem for p in PLANNED.glob("*.png")}
+    orphans = sorted(p.stem for p in SOURCES.glob("*.svg") if p.stem not in held)
+    assert not orphans, f"sources for icons nothing names: {orphans}"
