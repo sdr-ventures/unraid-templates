@@ -12,6 +12,8 @@ private repos.
 https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name>.png
 ```
 
+Each PNG is a render of its `icons/src/<name>.svg`. `python scripts/render_icons.py` rebuilds them all from the sources; it needs `resvg-py` (see the script for the pinned version and venv).
+
 | Container | Icon | Template |
 |---|---|---|
 | tape (dev+prod) | `icons/tape.png` | `templates/tape.xml` |
@@ -41,7 +43,7 @@ https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name
 | kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
 | kw-proxy (KW edge, dev side; publishes no port, `internal` network; host ExtraParams `--entrypoint bash`) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
 | clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav-updater.png` | `templates/clamav-updater.xml` |
-| clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; **required** host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged --tmpfs /tmp:rw,uid=1000,gid=1000,mode=0750`: the first two because the default entrypoint fails on the read-only signature mount, the tmpfs so scratch is RAM and recreated owned by the runtime user on every start) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
+| clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; **required** host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged --tmpfs /tmp:rw,uid=1000,gid=1000,mode=0750 --memory=2g`: the first two because the default entrypoint fails on the read-only signature mount, the tmpfs so scratch is RAM and recreated owned by the runtime user on every start, the memory flag caps the daemon at 2 GB) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
 
 Every template + icon in this repo must have a row here — keep this table in sync when adding either (the reauth-bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.
 
