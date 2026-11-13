@@ -132,11 +132,11 @@ FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 # The kb stack publishes only vX.Y.Z release tags (PUBLISHED_TAG_RULE below), so each template
 # names the release its live instance runs.
 FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
-    ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.38.0"),
-    ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.38.0"),
-    ("kb-runner", "ghcr.io/sdr-ventures/kb-service:v0.38.0"),
-    ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.38.0"),
-    ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.38.0"),
+    ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.38.1"),
+    ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.38.1"),
+    ("kb-runner", "ghcr.io/sdr-ventures/kb-service:v0.38.1"),
+    ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.38.1"),
+    ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.38.1"),
     # kw-ops has no :stable yet (the first non-rc tag is the PM's to cut), so it runs the published
     # release candidate. Moves to a vX.Y.Z when a release is cut.
     ("kw-ops", "ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.4"),
