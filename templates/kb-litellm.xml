@@ -37,7 +37,7 @@
 
   THE IMAGE TAG IS PINNED to one release; an Update is a deliberate bump of that pin. The
   release's multi-arch index digest, for System Admin's verification, is
-      sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802
+      sha256:11175975a3093e05e92faee2fe2fe3412a3ae2fcaa849eb0fe25d5f0d8bcb2e9
   The Repository is pinned by tag, not tag@digest, so Unraid's own update check keeps working.
 
   THE FIVE CHECKS, answered from upstream at tag v1.105.1 (github.com/BerriAI/litellm):
@@ -96,7 +96,7 @@
 -->
 <Container version="2">
   <Name>kb-litellm</Name>
-  <Repository>ghcr.io/berriai/litellm:v1.105.7</Repository>
+  <Repository>ghcr.io/berriai/litellm:v1.109.1</Repository>
   <Registry>https://github.com/BerriAI/litellm/pkgs/container/litellm</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
