@@ -40,14 +40,14 @@
       kb_service/config.py    KB_STACK, KB_PERSONA_TOKENS, KB_EMBED_BASE_URL, KB_EMBED_API_KEY, KB_MCP_URL, KB_ROLES, KB_PROJECTS,
                               KB_WATCHDOG_PING_URL, KB_WATCH_OLLAMA_URL, KB_FUND_MODEL,
                               KB_FETCH_CONTACT, KB_FUND_INBOX, KB_FUND_KEEP,
-                              KB_TAPE_URL, KB_TAPE_CLIENT_ID, KB_TAPE_CLIENT_SECRET
+                              KB_TAPE_URL, KB_TAPE_CLIENT_ID, KB_TAPE_CLIENT_SECRET, KB_FILES_ROOT
       kb_service/watchdog.py  every 5 minutes: checks the kb stack, messages KB Analyst on change, pings healthchecks
       kb_service/__main__.py  listens on 0.0.0.0:8000; exits 2 when configuration is unusable
       kb_service/app.py       GET /health returns {"status": "ok"}; migrations run at start
 -->
 <Container version="2">
   <Name>kb-service</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.40.5</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.41.0</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -68,6 +68,7 @@
   <Config Name="Assets" Target="/assets" Default="" Mode="rw" Description="REQUIRED. Original files and derived images; losing this loses the originals. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/assets. Put it under backup." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Export" Target="/export" Default="" Mode="rw" Description="REQUIRED. The nightly plain-file export of the library. Set an absolute path on a POOL, e.g. /mnt/&lt;pool&gt;/appdata/kb-service/export." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Drop" Target="/drop" Default="" Mode="rw" Description="Optional. A share a person drops fund notice PDFs into (set KB_FUND_INBOX=/drop), e.g. /mnt/&lt;pool&gt;/&lt;drop-share&gt;. Files kb reads move out of it; nothing else is written there except a .problem.txt beside a file it cannot read." Type="Path" Display="always" Required="false" Mask="false"/>
+  <Config Name="Files" Target="/files" Default="" Mode="rw" Description="Optional. Project files (PDFs, images, office files) kept by the kb and served through kb-mcp (set KB_FILES_ROOT=/files), e.g. /mnt/POOL/&lt;files-share&gt;. kb-service is its only writer; export the share read-only if people browse it. Put it under backup." Type="Path" Display="always" Required="false" Mask="false"/>
   <Config Name="KB_PERSONA_TOKENS" Target="KB_PERSONA_TOKENS" Default="" Mode="" Description="REQUIRED. JSON object of caller name to bearer token, format {&quot;&lt;caller&gt;&quot;:&quot;&lt;token&gt;&quot;}. Every token is at least 32 characters, no two callers share one, and the object is not empty; otherwise the service exits 2 at start. Use long random values." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="KB_FUND_READER_PERSONAS" Target="KB_FUND_READER_PERSONAS" Default="" Mode="" Description="Comma-separated persona names that may only read the published fund datasets (versions lists, distributions, Form 8937); every other route answers 403. Blank: none." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_ADMIN_PERSONAS" Target="KB_ADMIN_PERSONAS" Default="system-admin" Mode="" Description="Comma-separated persona names with administrator rights: they approve tags and vocabulary and may call POST /v1/admin/reembed. Leave the default unless your admin persona is named otherwise. Blank makes no persona an administrator." Type="Variable" Display="advanced" Required="false" Mask="false">system-admin</Config>
@@ -85,6 +86,7 @@
   <Config Name="KB_WATCH_OLLAMA_URL" Target="KB_WATCH_OLLAMA_URL" Default="" Mode="" Description="Base address of a desktop Ollama (for example http://&lt;your-pc&gt;:11434) that the watchdog reports on: unreachable, or a model loaded on CPU only. Advisory only: it is messaged to KB Analyst and never fails the healthchecks ping, since the PC may be off. Blank leaves the PC unwatched." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="KB_FUND_MODEL" Target="KB_FUND_MODEL" Default="claude-haiku" Mode="" Description="Router model group (kb-litellm) for the second, independent read of fund distribution notices (Shared kb doc KB_Fund_Datasets.md). Public documents only. Blank means claude-haiku." Type="Variable" Display="advanced" Required="false" Mask="false">claude-haiku</Config>
   <Config Name="KB_FETCH_CONTACT" Target="KB_FETCH_CONTACT" Default="" Mode="" Description="Contact mailbox named in the fund fetcher&apos;s User-Agent (SEC EDGAR asks automated readers for one). Set per host; blank sends no address." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="KB_FILES_ROOT" Target="KB_FILES_ROOT" Default="" Mode="" Description="Where project files are kept inside the container: /files when the Files path is mapped; blank turns the file tools off." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_TAPE_URL" Target="KB_TAPE_URL" Default="" Mode="" Description="Base URL of tape&apos;s security master read API (D246), e.g. http://tape-dev:8000. With the client id and secret set, each fund dataset publish tags rows with tape&apos;s security id; blank leaves rows untagged." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_TAPE_CLIENT_ID" Target="KB_TAPE_CLIENT_ID" Default="" Mode="" Description="kb&apos;s tape client id (vault item tape-dev-client-kb, PM rotates it)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_TAPE_CLIENT_SECRET" Target="KB_TAPE_CLIENT_SECRET" Default="" Mode="" Description="kb&apos;s tape client secret (vault item tape-dev-client-kb, PM rotates it)." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
