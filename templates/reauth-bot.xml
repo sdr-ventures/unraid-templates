@@ -8,7 +8,7 @@
 -->
 <Container version="2">
   <Name>reauth-bot</Name>
-  <Repository>ghcr.io/sdr-ventures/reauth-bot:latest</Repository>
+  <Repository>ghcr.io/sdr-ventures/reauth-bot:v1.0.0</Repository>
   <Registry>https://github.com/sdr-ventures/reauth-bot/pkgs/container/reauth-bot</Registry>
   <Network>bridge</Network>                                           <!-- neutral default; the bot is outbound-only. Pick br0 + a fixed IP in the UI if you prefer. -->
   <Shell>sh</Shell>
