@@ -140,6 +140,9 @@ FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
     # kw-ops has no :stable yet (the first non-rc tag is the PM's to cut), so it runs the published
     # release candidate. Moves to a vX.Y.Z when a release is cut.
     ("kw-ops", "ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.4"),
+    # reauth-bot publishes vX.Y.Z from a version tag and moves :latest with it (D268); the
+    # template names the release the live instance runs.
+    ("reauth-bot", "ghcr.io/sdr-ventures/reauth-bot:v1.0.0"),
 })
 # The tag rule each publisher releases by, recorded here so the check runs offline. A tag outside
 # the rule is one the registry does not publish, so a template that names it cannot pull.
