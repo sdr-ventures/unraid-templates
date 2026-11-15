@@ -40,14 +40,15 @@
       kb_service/config.py    KB_STACK, KB_PERSONA_TOKENS, KB_EMBED_BASE_URL, KB_EMBED_API_KEY, KB_MCP_URL, KB_ROLES, KB_PROJECTS,
                               KB_WATCHDOG_PING_URL, KB_WATCH_OLLAMA_URL, KB_FUND_MODEL,
                               KB_FETCH_CONTACT, KB_FUND_INBOX, KB_FUND_KEEP,
-                              KB_TAPE_URL, KB_TAPE_CLIENT_ID, KB_TAPE_CLIENT_SECRET, KB_FILES_ROOT
+                              KB_TAPE_URL, KB_TAPE_CLIENT_ID, KB_TAPE_CLIENT_SECRET, KB_FILES_ROOT,
+                              KB_HC_TITAN_KEY, KB_HC_GENISYS_KEY
       kb_service/watchdog.py  every 5 minutes: checks the kb stack, messages KB Analyst on change, pings healthchecks
       kb_service/__main__.py  listens on 0.0.0.0:8000; exits 2 when configuration is unusable
       kb_service/app.py       GET /health returns {"status": "ok"}; migrations run at start
 -->
 <Container version="2">
   <Name>kb-service</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.42.1</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.42.2</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -87,6 +88,8 @@
   <Config Name="KB_FUND_MODEL" Target="KB_FUND_MODEL" Default="claude-haiku" Mode="" Description="Router model group (kb-litellm) for the second, independent read of fund distribution notices (Shared kb doc KB_Fund_Datasets.md). Public documents only. Blank means claude-haiku." Type="Variable" Display="advanced" Required="false" Mask="false">claude-haiku</Config>
   <Config Name="KB_FETCH_CONTACT" Target="KB_FETCH_CONTACT" Default="" Mode="" Description="Contact mailbox named in the fund fetcher&apos;s User-Agent (SEC EDGAR asks automated readers for one). Set per host; blank sends no address." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_FILES_ROOT" Target="KB_FILES_ROOT" Default="" Mode="" Description="Where project files are kept inside the container: /files when the Files path is mapped; blank turns the file tools off." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="KB_HC_TITAN_KEY" Target="KB_HC_TITAN_KEY" Default="" Mode="" Description="Optional. healthchecks.io API key for the Titan project. kb-service only reads with it (checks and pings, hourly) to record job start and end times in infra tracking; blank = that project is not collected." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="KB_HC_GENISYS_KEY" Target="KB_HC_GENISYS_KEY" Default="" Mode="" Description="Optional. healthchecks.io API key for the Genisys project. kb-service only reads with it (checks and pings, hourly) to record job start and end times in infra tracking; blank = that project is not collected." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
   <Config Name="KB_TAPE_URL" Target="KB_TAPE_URL" Default="" Mode="" Description="Base URL of tape&apos;s security master read API (D246), e.g. http://tape-dev:8000. With the client id and secret set, each fund dataset publish tags rows with tape&apos;s security id; blank leaves rows untagged." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_TAPE_CLIENT_ID" Target="KB_TAPE_CLIENT_ID" Default="" Mode="" Description="kb&apos;s tape client id (vault item tape-dev-client-kb, PM rotates it)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_TAPE_CLIENT_SECRET" Target="KB_TAPE_CLIENT_SECRET" Default="" Mode="" Description="kb&apos;s tape client secret (vault item tape-dev-client-kb, PM rotates it)." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
