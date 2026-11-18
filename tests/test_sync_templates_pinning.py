@@ -106,7 +106,7 @@ def test_the_run_reads_the_listing_and_the_body_at_the_resolved_commit(sync, htt
 def test_the_listing_is_the_commits_not_the_branchs(sync, http, tmp_path, capsys):
     """`stale-only` is in the branch listing only: a run listing by branch would accept it."""
     sync.TEMPLATE = "stale-only"
-    code, out = run(sync, tmp_path, capsys)
+    code, _out = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "is not a template" in code and SHA in code, code
     assert not any(tmp_path.iterdir())
 
@@ -118,7 +118,7 @@ def test_an_answer_that_is_not_a_commit_sha_refuses_before_any_write(
     http.routes[f"https://api.github.com/repos/{sync.REPO}/commits/main"] = answer
     (tmp_path / "my-app.xml").write_text(container([cfg("NEW_NAME", "applied")]), encoding="utf-8")
     before = (tmp_path / "my-app.xml").read_bytes()
-    code, out = run(sync, tmp_path, capsys)
+    code, _out = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "did not return a commit sha" in code and "Nothing changed" in code
     assert (tmp_path / "my-app.xml").read_bytes() == before
     assert len(http.seen) == 1, "nothing may be read after a failed resolve"
@@ -139,21 +139,69 @@ def _limited(headers, code=403, body=b""):
     ({"Retry-After": "60"}, 403, b"", "retry in 60 s"),
     ({}, 403, b'{"message": "You have exceeded a secondary rate limit."}', "retry later"),
     ({"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "9" * 30}, 403, b"", "retry later"),
+    # An out-of-range reset must not hide the Retry-After the same response carries.
+    ({"X-RateLimit-Reset": "9" * 30, "Retry-After": "45"}, 403, b"", "retry in 45 s"),
 ])
 def test_the_rate_limit_is_named_with_its_reset_and_nothing_changes(
         sync, tmp_path, capsys, monkeypatch, headers, code, body, expect):
     monkeypatch.setattr(sync.urllib.request, "urlopen", _limited(headers, code, body))
     (tmp_path / "my-app.xml").write_text(container([cfg("NEW_NAME", "applied")]), encoding="utf-8")
     before = (tmp_path / "my-app.xml").read_bytes()
-    code, out = run(sync, tmp_path, capsys)
+    code, _out = run(sync, tmp_path, capsys)
     assert isinstance(code, str) and "rate limit reached" in code and "60 unauthenticated" in code, code
     assert expect in code and "Nothing changed" in code, code
     assert (tmp_path / "my-app.xml").read_bytes() == before
+
+
+def _error(url, headers, body):
+    msg = email.message.Message()
+    for k, v in headers.items():
+        msg[k] = v
+    return urllib.error.HTTPError(url, 403, "Forbidden", msg, body)
+
+
+class _Unreadable(io.RawIOBase):
+    def read(self, size=-1):
+        raise OSError("connection reset")
+
+
+def test_an_unreadable_error_body_still_gets_the_rate_limit_named_from_the_headers(sync, monkeypatch):
+    def fail(req, timeout=None):
+        raise _error(req.full_url, {"Retry-After": "7"}, _Unreadable())
+    monkeypatch.setattr(sync.urllib.request, "urlopen", fail)
+    with pytest.raises(RuntimeError, match=r"rate limit reached.*retry in 7 s"):
+        sync._get("https://api.github.com/repos/x/y")
+
+
+def test_a_rate_limit_text_is_found_within_the_first_2000_bytes_and_no_further(sync, monkeypatch):
+    asked = []
+
+    class Body(io.BytesIO):
+        def read(self, size=-1):
+            asked.append(size)
+            return super().read(size)
+
+    def fail(req, timeout=None):
+        raise _error(req.full_url, {}, Body(b"rate limit" + b"x" * 5000))
+    monkeypatch.setattr(sync.urllib.request, "urlopen", fail)
+    with pytest.raises(RuntimeError, match="rate limit reached"):
+        sync._get("https://api.github.com/repos/x/y")
+    assert asked == [2000], "the read itself must be capped, not sliced after a full read"
+
+
+def test_a_raw_host_limit_is_not_labelled_with_the_api_hosts_figure(sync, monkeypatch):
+    def fail(req, timeout=None):
+        raise _error(req.full_url, {"Retry-After": "30"}, io.BytesIO(b""))
+    monkeypatch.setattr(sync.urllib.request, "urlopen", fail)
+    with pytest.raises(RuntimeError) as exc:
+        sync._get("https://raw.githubusercontent.com/x/y/z.xml")
+    assert "raw.githubusercontent.com" in str(exc.value) and "60" not in str(exc.value), exc.value
+    assert "retry in 30 s" in str(exc.value)
 
 
 @pytest.mark.parametrize("code", [403, 404])
 def test_an_error_that_is_not_the_rate_limit_is_not_called_one(sync, tmp_path, capsys, monkeypatch, code):
     monkeypatch.setattr(sync.urllib.request, "urlopen",
                         _limited({"X-RateLimit-Remaining": "59"}, code, b'{"message": "Not Found"}'))
-    code_, out = run(sync, tmp_path, capsys)
+    code_, _out = run(sync, tmp_path, capsys)
     assert isinstance(code_, str) and f"HTTP Error {code}" in code_ and "rate limit" not in code_

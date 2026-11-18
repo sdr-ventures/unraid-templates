@@ -8,7 +8,7 @@
 -->
 <Container version="2">
   <Name>reauth-bot</Name>
-  <Repository>ghcr.io/sdr-ventures/reauth-bot:latest</Repository>
+  <Repository>ghcr.io/sdr-ventures/reauth-bot:v1.0.0</Repository>
   <Registry>https://github.com/sdr-ventures/reauth-bot/pkgs/container/reauth-bot</Registry>
   <Network>bridge</Network>                                           <!-- neutral default; the bot is outbound-only. Pick br0 + a fixed IP in the UI if you prefer. -->
   <Shell>sh</Shell>
@@ -19,7 +19,7 @@
   <Category>Network:Other</Category>
   <WebUI/>                                                            <!-- steady state has no web UI; seed noVNC is at http://CONTAINER-IP:6080/vnc.html only while SEED_MODE=1 -->
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/reauth-bot.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/reauth_bot.png</Icon>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/reauth-bot.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>

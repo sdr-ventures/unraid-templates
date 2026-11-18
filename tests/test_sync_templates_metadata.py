@@ -20,7 +20,6 @@ repo template is dropped whatever it holds. Each one was checked by mutating
 
 import importlib.util
 import pathlib
-import sys
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -172,7 +171,7 @@ def test_a_path_new_to_the_operator_takes_the_templates_mode(sync):
     assert st["mode_kept"] == []
 
 
-REAL_TLDW_REDIS = pathlib.Path(__file__).resolve().parents[1] / "templates" / "tldw-redis.xml"
+REAL_KB_REDIS = pathlib.Path(__file__).resolve().parents[1] / "templates" / "kb-redis.xml"
 
 
 def _old_redis_port_config(value):
@@ -182,23 +181,24 @@ def _old_redis_port_config(value):
     )
 
 
-def test_a_fresh_instance_synced_against_the_real_tldw_redis_template_gets_no_port(sync):
-    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+def test_a_fresh_instance_synced_against_the_real_kb_redis_template_gets_no_port(sync):
+    tpl_root = ET.parse(REAL_KB_REDIS).getroot()
     op_root = ET.fromstring(
-        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        '<Container version="2"><Name>kb-redis</Name><Repository>redis:7.4-alpine</Repository>'
         '<Config Name="Data" Target="/data" Default="" Mode="rw" Description="d" Type="Path" '
-        'Display="always" Required="true" Mask="false">/mnt/pool/appdata/tldw-redis/data'
+        'Display="always" Required="true" Mask="false">/mnt/pool/appdata/kb-redis/data'
         "</Config></Container>"
     )
     merged, st = sync.merge(op_root, tpl_root)
     assert not [c for c in merged.findall("Config") if c.get("Type") == "Port"]
-    assert st["added"] == []
+    # kb-redis also adds its REDIS_PASSWORD Variable; the point here is that no port is added.
+    assert st["added"] == ["REDIS_PASSWORD"]
 
 
 def test_an_instance_still_carrying_the_old_port_at_its_default_loses_it(sync):
-    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+    tpl_root = ET.parse(REAL_KB_REDIS).getroot()
     op_root = ET.fromstring(
-        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        '<Container version="2"><Name>kb-redis</Name><Repository>redis:7.4-alpine</Repository>'
         f"{_old_redis_port_config('6380')}</Container>"
     )
     merged, st = sync.merge(op_root, tpl_root)
@@ -207,9 +207,9 @@ def test_an_instance_still_carrying_the_old_port_at_its_default_loses_it(sync):
 
 
 def test_an_instance_with_the_port_set_to_a_real_value_loses_it_too(sync):
-    tpl_root = ET.parse(REAL_TLDW_REDIS).getroot()
+    tpl_root = ET.parse(REAL_KB_REDIS).getroot()
     op_root = ET.fromstring(
-        '<Container version="2"><Name>tldw-redis</Name><Repository>redis:7-alpine</Repository>'
+        '<Container version="2"><Name>kb-redis</Name><Repository>redis:7.4-alpine</Repository>'
         f"{_old_redis_port_config('7777')}</Container>"
     )
     merged, st = sync.merge(op_root, tpl_root)
@@ -658,7 +658,7 @@ def test_a_masked_field_whose_ONLY_content_is_a_child_still_counts_as_holding_a_
     """The `len(el) > 0` branch, isolated. A mutation returning False there survived the test
     above, because that fixture had text before the child and was caught by the text branch."""
     root = ET.fromstring(instance_xml(extra=NESTED_SECRET_NO_TEXT))
-    nested = [c for c in root.findall("Config") if c.get("Target") == "NESTED2"][0]
+    nested = next(c for c in root.findall("Config") if c.get("Target") == "NESTED2")
     assert not (nested.text or "").strip(), "precondition: no text, the value is in the child"
     assert sync._element_holds_a_secret(nested), (
         "a masked field whose only content is a child element was judged empty — its secret "
@@ -697,7 +697,7 @@ def test_an_EMPTY_masked_field_is_not_marked_as_holding_a_secret(sync, inst, tmp
     operator reading a backup to see what was configured."""
     root = ET.fromstring(instance_xml(extra=EMPTY_SECRET))
     assert sync.redact_secrets(root) == 1, "only the ONE non-empty masked value is redacted"
-    spare = [c for c in root.findall("Config") if c.get("Target") == "SPARE_KEY"][0]
+    spare = next(c for c in root.findall("Config") if c.get("Target") == "SPARE_KEY")
     assert not (spare.text or "").strip(), "an empty masked field must stay empty"
 
 

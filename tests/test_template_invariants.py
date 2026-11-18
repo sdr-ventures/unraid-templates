@@ -1,12 +1,11 @@
 """Every template in this repo, held to the properties a PUBLIC Unraid template must have.
 
-These rules began life in `test_tldw_templates.py`, written for one two-container set, and
+These rules began life in a tl;dw-specific test file (removed when tl;dw was retired), and
 none of them was specific to it: a credential field that ships a working default, an image
 reference that moves under an Update, a `Default=` attribute that disagrees with the element
 text, an icon the README does not list — each is a defect in ANY template here, and each is
 silently undone by an edit that looks like tidying. Issue #57 asked for them to be lifted so
-they are enforced by CI over `templates/*.xml` rather than by review. The tl;dw file keeps
-only what is genuinely about that set (its start order, its wiring, its cookie posture).
+they are enforced by CI over `templates/*.xml` rather than by review.
 
 Nothing here is caught by the leak guard (these are not internal values) or by the XML job
 (the file still parses either way), which is why it is caught here.
@@ -34,6 +33,8 @@ WHAT THIS FILE DOES NOT CLAIM, so that a guard implying coverage it lacks does n
     without being noticed, so every entry carries the why.
 """
 
+import copy
+import hashlib
 import pathlib
 import re
 import xml.etree.ElementTree as ET
@@ -120,23 +121,67 @@ TWO_COMPONENT_TAG = re.compile(r"^\d+\.\d+(?:[.\-+][\w.\-]*)?$")   # 16.14, 16.1
 # from texasdaddy while everything already republished, gambit included, deploys from sdr-ventures.
 FLEET_IMAGE_PREFIX = ("ghcr.io/texasdaddy/", "ghcr.io/sdr-ventures/")
 FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
+# Fleet images that are version-pinned on purpose, each a visible decision: they ship a
+# (v-prefixed) release tag, never a channel, and an Update is a deliberate bump of that pin.
+# The kb stack publishes only vX.Y.Z release tags (PUBLISHED_TAG_RULE below), so each template
+# names the release its live instance runs.
+FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
+    ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.54.0"),
+    ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.54.0"),
+    ("kb-runner", "ghcr.io/sdr-ventures/kb-service:v0.54.0"),
+    ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.54.0"),
+    ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.54.0"),
+    # kw-ops has no :stable yet (the first non-rc tag is the PM's to cut), so it runs the published
+    # release candidate. Moves to a vX.Y.Z when a release is cut.
+    ("kw-ops", "ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.4"),
+    # reauth-bot publishes vX.Y.Z from a version tag and moves :latest with it (D268); the
+    # template names the release the live instance runs.
+    ("reauth-bot", "ghcr.io/sdr-ventures/reauth-bot:v1.0.0"),
+})
+# The tag rule each publisher releases by, recorded here so the check runs offline. A tag outside
+# the rule is one the registry does not publish, so a template that names it cannot pull.
+#   kb-service: its release workflow publishes only vX.Y.Z and says there is no floating tag.
+#   kb-ingest: the registry holds vX.Y.Z tags and no latest.
+#   kw-ops: its release workflow publishes vX.Y.Z and vX.Y.Z-rc.N, with a moving :dev for rc tags.
+PUBLISHED_TAG_RULE = {
+    "ghcr.io/sdr-ventures/kb-service": re.compile(r"^v\d+\.\d+\.\d+$"),
+    "ghcr.io/sdr-ventures/kb-ingest": re.compile(r"^v\d+\.\d+\.\d+$"),
+    "ghcr.io/sdr-ventures/kw-ops": re.compile(r"^v\d+\.\d+\.\d+(-rc\.\d+)?$"),
+}
 
 # Third-party references that do NOT satisfy the pin rule, each a visible decision:
-#   tldw-redis  redis:7-alpine              — upstream's own compose choice; the blast radius is
-#                                             a cache and a queue, stated in the template.
-ROLLING_TAG_EXCEPTIONS = frozenset(
-    {("tldw-redis", "redis:7-alpine")}
-)
+#   kb-redis    redis:7.4-alpine        — the 7.4 patch line: an Update takes security fixes and never
+#                                         a new minor; the blast radius is a cache and a budget
+#                                         counter, stated in the template.
+ROLLING_TAG_EXCEPTIONS = frozenset({("kb-redis", "redis:7.4-alpine")})
 
 # No template in this repo currently needs Privileged by design. When one does, name it here
 # and carry the trust model in the README and the template's own field descriptions.
 PRIVILEGED_BY_DESIGN = frozenset()
 
+# Templates that mount the Docker socket by design. kw-ops-proxy is the socket's ONLY holder: it
+# passes three GET requests and refuses the rest (docs in kw-ops, D222), and its mount is read-only.
+# (Named kw-ops-proxy, not docker-proxy: the kw- prefix files it under the KW stack.)
+# Anything else that names the socket still fails the check below.
+DOCKER_SOCKET_BY_DESIGN = frozenset({"kw-ops-proxy"})
+
 # PostArgs is appended after the image name: it is the container's COMMAND LINE, and a shell
-# command there can export anything over the values asserted in this file. tldw-redis is
-# tldw-redis needs it (how the redis image is configured); gambit-loop needs it because it runs the
-# gambit image with the paper-lab loop as its command.
-POSTARGS_BY_DESIGN = frozenset({"tldw-redis", "gambit-loop"})
+# command there can export anything over the values asserted in this file. gambit-loop needs it
+# because it runs the gambit image with the paper-lab loop as its command. kb-redis runs an sh wrapper so the
+# password comes from its REDIS_PASSWORD Variable instead of a template field; kb-litellm
+# points the proxy at its mounted config file (PostArgs replaces the image's CMD). kw-proxy's
+# PostArgs is the squid arguments behind its sync entry script; the host's --entrypoint bash
+# (ExtraParams, operator-owned) runs it, and the PostArgs holds no shell expansion.
+POSTARGS_BY_DESIGN = frozenset({"gambit-loop", "kb-redis", "kb-litellm", "kw-proxy"})
+
+# The privilege-posture rules are fleet policy, so a template that needs one is listed here
+# with the reason, and the entry is the review. Every list is empty today. An entry must name
+# a real template (and, for a Path or Device, one of its Configs) and state a non-blank reason;
+# test_every_posture_exception_states_a_reason refuses one that does not.
+# A Path entry names the exact host Default the Config may ship; any other host path is refused.
+HOST_PATH_BY_DESIGN: dict[tuple[str, str], tuple[str, str]] = {}   # (template, Target) -> (Default, reason)
+DEVICE_BY_DESIGN: dict[tuple[str, str], str] = {}                  # (template, Target) -> reason
+NETWORK_BY_DESIGN: dict[str, tuple[str, str]] = {}                 # template -> (Network, reason)
 
 # The attribute set every Config must carry. `sync-templates.py` keys on Type/Target/Name and
 # refreshes the rest from the repo copy; Unraid renders all nine. A Config missing one is
@@ -169,7 +214,7 @@ def var_name(cfg):
     """The environment variable a Config actually sets: `Target`, else `Name` — the same
     fallback `sync-templates.py` uses, so a Config with no Target is the same variable here
     that it is there. Stripped, because that script strips too."""
-    return ((cfg.get("Target") or cfg.get("Name") or "")).strip()
+    return (cfg.get("Target") or cfg.get("Name") or "").strip()
 
 
 def is_variable(cfg):
@@ -408,7 +453,7 @@ def test_the_credential_shape_rule_actually_matches_the_fleets_secret_fields():
             if secret_bearing(cfg) and is_credential_name(var_name(cfg)):
                 seen.add(var_name(cfg))
     for spelling in ("DB_PASSWORD", "POSTGRES_PASSWORD", "TAPE_CLIENT_SECRET",
-                     "SCHWAB_PASS", "TOKEN_ENCRYPTION_KEY", "TAPE_API_KEY", "MCP_API_KEY_SALT"):
+                     "SCHWAB_PASS", "TOKEN_ENCRYPTION_KEY", "TAPE_API_KEY", "ADMIN_ENROLMENT_SECRET"):
         assert spelling in seen, f"the credential-shape rule no longer matches {spelling}"
 
 
@@ -416,8 +461,7 @@ def test_the_credential_shape_rule_actually_matches_the_fleets_secret_fields():
 def test_environment_mirror_agrees_with_config_for_every_shared_name(name):
     # A template exported from a configured container can carry BOTH a <Config> (what the Edit
     # page shows and lets the operator change) and an <Environment><Variable> mirror (what
-    # Unraid actually launches with) for the same name. `test_tldw_templates.py` checked this
-    # for three tl;dw-specific variables only; a mirror disagreeing on any OTHER shared name —
+    # Unraid actually launches with) for the same name. A mirror disagreeing on a shared name —
     # `LOG_LEVEL=debug` in <Environment> beside a Config default of "info" — passed unnoticed.
     # This checks it for every name that appears in both, repo-wide.
     root = template(name)
@@ -479,6 +523,11 @@ def test_no_value_ships_a_working_password_inside_a_url(name):
 def test_the_image_reference_is_pinned_or_a_declared_fleet_channel(name):
     repository = (template(name).findtext("Repository") or "").strip()
     assert repository, f"{name}: no Repository"
+    if (name, repository) in FLEET_PINNED_BY_DESIGN:
+        assert PINNED_TAG.match(repository.rsplit(":", 1)[-1]), (
+            f"{name}: {repository!r} is declared pinned by design but its tag is not a release"
+        )
+        return
     if repository.startswith(FLEET_IMAGE_PREFIX):
         # The fleet's own release channel, by design — see FLEET_CHANNEL_TAGS. Checked FIRST,
         # before the digest arm: a fleet image frozen on a digest is exactly the defect.
@@ -511,14 +560,55 @@ def test_the_image_reference_is_pinned_or_a_declared_fleet_channel(name):
     assert word is None, f"{name}: {tag!r} carries the channel word {word!r}, so it moves"
 
 
+@pytest.mark.parametrize("name", NAMES)
+def test_a_publisher_with_a_release_rule_is_pulled_by_a_tag_it_publishes(name):
+    repository = (template(name).findtext("Repository") or "").strip()
+    ref = repository.partition("@")[0]
+    image, _, tag = ref.rpartition(":") if ":" in ref.rsplit("/", 1)[-1] else (ref, "", "latest")
+    rule = PUBLISHED_TAG_RULE.get(image)
+    if rule is None:
+        return
+    assert rule.match(tag), (
+        f"{name}: {repository!r} names {tag!r}, which the publisher does not release "
+        f"(its tags match {rule.pattern})"
+    )
+
+
+@pytest.mark.parametrize("tag, published", [
+    ("v0.9.2", True), ("latest", False), ("v0.9", False), ("0.9.2", False), ("v0.9.2-rc.1", False),
+])
+def test_the_publisher_tag_rule_names_only_the_releases_it_publishes(tag, published):
+    assert bool(PUBLISHED_TAG_RULE["ghcr.io/sdr-ventures/kb-service"].match(tag)) is published
+
+
 def test_the_rolling_tag_exceptions_are_all_live():
     # An exception that no longer matches a template is a stale decision, and the next
     # person to hit the rule will add a second entry rather than notice this one.
     live = {(n, (template(n).findtext("Repository") or "").strip()) for n in NAMES}
-    stale = ROLLING_TAG_EXCEPTIONS - live
-    assert not stale, f"ROLLING_TAG_EXCEPTIONS names references no template carries: {stale}"
-    assert PRIVILEGED_BY_DESIGN <= set(NAMES), f"PRIVILEGED_BY_DESIGN names a missing template"
-    assert POSTARGS_BY_DESIGN <= set(NAMES), f"POSTARGS_BY_DESIGN names a missing template"
+    stale = (ROLLING_TAG_EXCEPTIONS | FLEET_PINNED_BY_DESIGN) - live
+    assert not stale, f"a tag exception names references no template carries: {stale}"
+    assert PRIVILEGED_BY_DESIGN <= set(NAMES), "PRIVILEGED_BY_DESIGN names a missing template"
+    assert POSTARGS_BY_DESIGN <= set(NAMES), "POSTARGS_BY_DESIGN names a missing template"
+
+
+SHELL_VARIABLE_REFERENCE = re.compile(r"\$(?:\{(\w+)\}|(\w+))")
+
+
+def shell_variables_in(text):
+    return {a or b for a, b in SHELL_VARIABLE_REFERENCE.findall(text)}
+
+
+@pytest.mark.parametrize("name", sorted(POSTARGS_BY_DESIGN & set(NAMES)))
+def test_a_shell_reference_in_postargs_names_a_variable_the_template_declares(name):
+    # A secret reaches the container's command line as "$NAME", expanded inside the container.
+    # A misspelt NAME expands to nothing and silently ships the command without its secret.
+    declared = {var_name(c) for c in configs(template(name)) if is_variable(c)}
+    undeclared = shell_variables_in(template(name).findtext("PostArgs") or "") - declared
+    assert not undeclared, f"{name}: PostArgs expands {sorted(undeclared)}, which no Variable sets"
+
+
+def test_the_postargs_reference_check_bites_on_a_misspelt_variable():
+    assert shell_variables_in('sh -c \'exec x --pw "$REDIS_PASWORD" ${OTHER}\'') == {"REDIS_PASWORD", "OTHER"}
 
 
 @pytest.mark.parametrize("name", NAMES)
@@ -537,14 +627,19 @@ def test_the_privilege_posture_is_minimal(name):
         assert not (root.findtext("PostArgs") or "").strip(), (
             f"{name}: PostArgs is non-empty and can override any variable asserted here"
         )
-    assert (root.findtext("Network") or "").strip() == "bridge", (
-        f"{name}: Network is {root.findtext('Network')!r} — the neutral default is bridge; "
-        f"an operator picks br0 and an address in the UI"
+    network = (root.findtext("Network") or "").strip()
+    wanted = NETWORK_BY_DESIGN[name][0] if name in NETWORK_BY_DESIGN else "bridge"
+    assert network == wanted, (
+        f"{name}: Network is {network!r} — the fleet policy is {wanted!r} (a NETWORK_BY_DESIGN "
+        f"entry names another mode); an operator picks br0 and an address in the UI"
     )
     for cfg in configs(root):
         kind = (cfg.get("Type") or "").strip().lower()
         label = cfg.get("Name")
-        assert kind != "device", f"{name}: passes a host device through ({cfg.get('Target')})"
+        target = cfg.get("Target") or ""
+        assert kind != "device" or (name, target) in DEVICE_BY_DESIGN, (
+            f"{name}: passes a host device through ({target}); a device needs a DEVICE_BY_DESIGN entry"
+        )
         if kind != "path":
             continue
         # Target/Default only: Default is always "" by the blank-host-path rule enforced two
@@ -553,14 +648,104 @@ def test_the_privilege_posture_is_minimal(name):
         # documents WHAT a path is for even while the value itself stays blank, so it is the
         # one place this can actually catch a docker-socket mount before it ships.
         both = f"{cfg.get('Target') or ''} {cfg.get('Default') or ''} {cfg.get('Description') or ''}".lower()
-        assert "docker.sock" not in both, f"{name}: {label!r} mounts the docker socket"
+        if name not in DOCKER_SOCKET_BY_DESIGN:
+            assert "docker.sock" not in both, f"{name}: {label!r} mounts the docker socket"
+        elif "docker.sock" in both:
+            assert cfg.get("Mode") == "ro", f"{name}: {label!r} mounts the docker socket read-write"
         # The HOST side decides what the container can reach, and a host path is
         # operator-specific by definition: it ships BLANK and is filled in on import. (The
         # leak guard refuses the real share roots; this refuses any value at all.)
+        # The value is not echoed: this repo is public and a failing run prints its log.
         default, text = value_of(cfg)
-        assert default == "" and text == "", (
-            f"{name}: {label!r} ships a host path {default!r} — host paths are set at creation"
+        fixed = HOST_PATH_BY_DESIGN[(name, target)][0] if (name, target) in HOST_PATH_BY_DESIGN else ""
+        assert default == fixed and text == fixed, (
+            f"{name}: {label!r} ships a host path — host paths are set at creation "
+            f"(a HOST_PATH_BY_DESIGN entry names the one value it may ship)"
         )
+
+
+def posture_exception_problems(host_path, device, network):
+    """What is wrong with the three exception lists: a name that is not a template, a Target
+    that the template does not declare, or a blank reason. Takes the lists as arguments so a
+    synthetic entry can be checked."""
+    problems = []
+    for label, entries in (("HOST_PATH_BY_DESIGN", host_path), ("DEVICE_BY_DESIGN", device)):
+        for (name, target), value in entries.items():
+            reason = value[1] if label == "HOST_PATH_BY_DESIGN" else value
+            if name not in NAMES:
+                problems.append(f"{label}: {name!r} is not a template")
+            elif target not in {c.get("Target") for c in configs(template(name))}:
+                problems.append(f"{label}: {name} declares no Config with Target {target!r}")
+            if not str(reason).strip():
+                problems.append(f"{label}: {name} {target} has no reason")
+    for name, (_mode, reason) in network.items():
+        if name not in NAMES:
+            problems.append(f"NETWORK_BY_DESIGN: {name!r} is not a template")
+        if not str(reason).strip():
+            problems.append(f"NETWORK_BY_DESIGN: {name} has no reason")
+    return problems
+
+
+def test_a_listed_network_exception_is_honoured_for_its_template_only(monkeypatch):
+    # The template declares br0 and the list names it: the posture test passes for that template.
+    # The same declaration on any unlisted template still fails.
+    root = copy.deepcopy(template("tape"))   # never mutate the cached tree
+    root.find("Network").text = "br0"
+    monkeypatch.setitem(_CACHE, "tape", root)
+    monkeypatch.setitem(NETWORK_BY_DESIGN, "tape", ("br0", "synthetic test entry"))
+    test_the_privilege_posture_is_minimal("tape")
+    monkeypatch.setitem(NETWORK_BY_DESIGN, "tape", ("bridge", "synthetic test entry"))
+    with pytest.raises(AssertionError, match="Network is 'br0'"):
+        test_the_privilege_posture_is_minimal("tape")
+
+
+def _tape_with_a_localtime_path_and_a_device(monkeypatch):
+    root = copy.deepcopy(template("tape"))   # never mutate the cached tree
+    base = {"Display": "advanced", "Required": "false", "Mask": "false", "Description": "x"}
+    path = ET.SubElement(root, "Config", {**base, "Name": "tz", "Target": "/etc/localtime",
+                                          "Default": "/etc/localtime", "Mode": "ro", "Type": "Path"})
+    path.text = "/etc/localtime"
+    ET.SubElement(root, "Config", {**base, "Name": "gpu", "Target": "/dev/dri", "Default": "",
+                                   "Mode": "", "Type": "Device"})
+    monkeypatch.setitem(_CACHE, "tape", root)
+
+
+def test_a_listed_host_path_and_device_are_honoured_for_their_template(monkeypatch):
+    _tape_with_a_localtime_path_and_a_device(monkeypatch)
+    monkeypatch.setitem(HOST_PATH_BY_DESIGN, ("tape", "/etc/localtime"), ("/etc/localtime", "synthetic"))
+    monkeypatch.setitem(DEVICE_BY_DESIGN, ("tape", "/dev/dri"), "synthetic test entry")
+    test_the_privilege_posture_is_minimal("tape")
+
+
+def test_an_unlisted_host_path_or_device_is_refused(monkeypatch):
+    _tape_with_a_localtime_path_and_a_device(monkeypatch)
+    with pytest.raises(AssertionError, match="ships a host path"):
+        test_the_privilege_posture_is_minimal("tape")
+    monkeypatch.setitem(HOST_PATH_BY_DESIGN, ("tape", "/etc/localtime"), ("/etc/localtime", "synthetic"))
+    with pytest.raises(AssertionError, match="passes a host device through"):
+        test_the_privilege_posture_is_minimal("tape")
+
+
+def test_every_posture_exception_states_a_reason():
+    assert posture_exception_problems(HOST_PATH_BY_DESIGN, DEVICE_BY_DESIGN, NETWORK_BY_DESIGN) == []
+
+
+def test_a_posture_exception_without_a_reason_is_refused():
+    problems = posture_exception_problems({}, {}, {"tape": ("bridge", "  ")})
+    assert problems == ["NETWORK_BY_DESIGN: tape has no reason"]
+
+
+def test_a_host_path_or_device_exception_without_a_reason_is_refused():
+    target = next(c.get("Target") for c in configs(template("tape")) if c.get("Type") == "Path")
+    assert posture_exception_problems({("tape", target): ("", " ")}, {}, {}) == [
+        f"HOST_PATH_BY_DESIGN: tape {target} has no reason"]
+    assert posture_exception_problems({}, {("tape", target): ""}, {}) == [
+        f"DEVICE_BY_DESIGN: tape {target} has no reason"]
+
+
+def test_a_posture_exception_naming_no_template_is_refused():
+    problems = posture_exception_problems({}, {}, {"no-such-template": ("bridge", "a reason")})
+    assert problems == ["NETWORK_BY_DESIGN: 'no-such-template' is not a template"]
 
 
 @pytest.mark.parametrize("name", NAMES)
@@ -658,6 +843,31 @@ def test_every_icon_file_is_named_by_a_template_and_listed_in_the_readme():
     for icon in sorted(p.name for p in ICONS.iterdir() if p.is_file() and not p.name.startswith(".")):
         assert icon in named, f"icons/{icon} is referenced by no template"
         assert f"icons/{icon}" in rows, f"icons/{icon} has no README row"
+
+
+# Every KW container, by name: the kw-* family, which includes kw-ops-proxy (kw-ops' socket proxy).
+KW_CONTAINERS = [n for n in NAMES if n.startswith("kw-")]
+
+
+def test_no_two_kw_containers_share_an_icon_file():
+    # A KW container shows its own icon. Two KW templates pointing at one file (kw-vault shipped
+    # kw-extractor's bytes) is the defect; a shared file is allowed only for the same image, and
+    # no two KW containers are one image.
+    assert len(KW_CONTAINERS) >= 2, f"no KW templates found in {NAMES!r}"
+    by_digest = {}
+    for name in KW_CONTAINERS:
+        data = (ICONS / icon_basename(template(name))).read_bytes()
+        by_digest.setdefault(hashlib.sha256(data).hexdigest(), []).append(name)
+    shared = [names for names in by_digest.values() if len(names) > 1]
+    assert not shared, f"KW containers share an icon file: {shared}"
+
+
+def test_icons_planned_holds_only_containers_that_do_not_exist_yet():
+    # icons/planned/ is for icons drawn ahead of a template. Once a template lands, its icon
+    # moves to icons/ (kw-ops and kw-fincast did); a planned icon whose container exists is stale.
+    planned = sorted(p.stem for p in (ICONS / "planned").glob("*.png"))
+    built = [n for n in planned if n in NAMES]
+    assert not built, f"icons/planned/ holds icons for containers that already have templates: {built}"
 
 
 @pytest.mark.parametrize("name", NAMES)

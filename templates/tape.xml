@@ -100,4 +100,7 @@
     container path and are now hardcoded in app/alerting.py instead.
   -->
   <Config Name="DEPLOY_ENV" Target="DEPLOY_ENV" Default="" Mode="" Description="REQUIRED - type prod or dev. It selects which shared ntfy topic this container falls back to when NTFY_URL_TAPE is not set (NTFY_URL_PROD or NTFY_URL_DEV) and which keys the shared file must carry. DELIBERATELY BLANK: a default here would silently put a dev deployment on the prod topic, and the symptom of that is an incident that paged the wrong place. Case does not matter." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="HTTPS_PROXY" Target="HTTPS_PROXY" Default="" Mode="" Description="OPTIONAL. Outbound proxy for HTTPS calls, format http://&lt;proxy-host&gt;:&lt;port&gt;. Blank: no proxy, calls go direct. On the isolated network, set it to the proxy that network routes through." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="HTTP_PROXY" Target="HTTP_PROXY" Default="" Mode="" Description="OPTIONAL. Outbound proxy for plain HTTP calls, same format as HTTPS_PROXY. Blank: no proxy, calls go direct." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="NO_PROXY" Target="NO_PROXY" Default="" Mode="" Description="OPTIONAL. Comma-separated hosts that bypass the proxy: the container names of the services on the same network, and any address reached directly. Ignored while both proxies are blank." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 </Container>

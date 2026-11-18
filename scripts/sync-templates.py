@@ -26,8 +26,11 @@ for the ONE repo template that TEMPLATE (below) names:
   apart from its TEMPLATE line, so syncing one template can never ship another
   template's merged-but-not-intended changes.
 
-  CREATE  — seed my-<name>.xml for the template if it has no my- file yet,
-            so it is ready to pick in Add Container.
+  CREATE  — seed my-<name>.xml only when the host holds NO instance of the template
+            at all (no my-<name>.xml and no other my- file that maps to it, such as
+            my-<name>-dev.xml), so it is ready to pick in Add Container on a fresh host.
+            A host that already runs an instance gets no base stub, and the run says
+            so ("seed SKIPPED").
   UPDATE  — for EVERY live instance of a template (tape: my-tape.xml AND
             my-tape-dev.xml, ...; my-tape-db-dev.xml is tape-db's): keep each
             instance's applied values, refresh each variable's metadata from the
@@ -44,7 +47,9 @@ then set its value live. Never add a variable to a live instance only: the next 
 
   Container-level settings you set per instance — image tag, network/IP, WebUI,
   Extra Params, ports, the container Name — are ALWAYS preserved. Only <Config>
-  elements are reconciled.
+  elements and the identity fields Project, Repository, Registry, TemplateURL and Icon
+  are reconciled. Of Repository only the image name follows the repo; the tag or digest
+  stays the instance's.
   PATH MODE IS OPERATOR-OWNED, once seeded — a Path's Read/Write-vs-Read-only Mode you
   set on an instance survives every later sync, even when the template's own Mode
   changes; a template-side Mode change reaches only a newly-seeded my-<name>.xml, never
@@ -104,6 +109,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -156,23 +162,25 @@ def _get(url, accept=None):
         h = e.headers or {}
         if e.code in (403, 429):
             try:
-                body = e.read()[:2000].lower()
-            except Exception:
+                body = e.read(2000).lower()
+            except Exception:  # noqa: BLE001 - an unreadable error body falls back to empty, it is not a failure
                 body = b""
             if h.get("X-RateLimit-Remaining") == "0" or h.get("Retry-After") or b"rate limit" in body:
                 when = "later"
                 reset, after = h.get("X-RateLimit-Reset") or "", h.get("Retry-After") or ""
                 if reset.isdigit():
                     try:
-                        when = "after " + datetime.fromtimestamp(int(reset)).strftime(
+                        when = "after " + datetime.fromtimestamp(int(reset)).strftime(  # noqa: DTZ006 - reset is a host-local epoch, the message says host time
                             "%Y-%m-%d %H:%M:%S") + " host time"
                     except (OverflowError, OSError, ValueError):
                         pass
-                elif after:
+                if when == "later" and after:
                     when = f"in {after} s" if after.isdigit() else f"after {after}"
-                raise RuntimeError(f"GitHub rate limit reached (api.github.com allows 60 "
-                                   f"unauthenticated requests/hour per IP; a run makes 2); "
-                                   f"retry {when}") from e
+                host = urllib.parse.urlsplit(url).hostname
+                # The 60/hour figure is api.github.com's alone; another host gets no number it did not state.
+                scope = ("api.github.com allows 60 unauthenticated requests/hour per IP; a run makes 2"
+                         if host == "api.github.com" else f"{host} answered the limit")
+                raise RuntimeError(f"GitHub rate limit reached ({scope}); retry {when}") from e
         raise
 
 
@@ -287,11 +295,28 @@ def discover_instances(directory, repo_names):
     return by_template, unmapped, broken
 
 
+# Container fields that name where the template came from. A saved template keeps them from the
+# day it was created, so after a move they name the old owner. Only these five are refreshed.
+IDENTITY_FIELDS = ("Project", "Repository", "Registry", "TemplateURL", "Icon")
+_IMAGE_REF = re.compile(r"^(?P<name>[^@]+?)(?P<tail>:[^/@]+)?(?P<digest>@.+)?$")
+
+
+def _refreshed_repository(repo_ref, live_ref):
+    """The repo's image name with the live tag or digest, when the live image is the same image
+    under another owner. A different image is the operator's choice and is left as it is."""
+    name = _IMAGE_REF.match(repo_ref).group("name")
+    live_name = _IMAGE_REF.match(live_ref).group("name")
+    if name.rsplit("/", 1)[-1] != live_name.rsplit("/", 1)[-1]:
+        return live_ref
+    return name + (live_ref[len(live_name):] or repo_ref[len(name):])
+
+
 def merge(operator_root, template_root):
-    """Return (merged_root, stats). Base = operator tree; reconcile <Config> only.
+    """Return (merged_root, stats). Base = operator tree; reconcile <Config> and IDENTITY_FIELDS.
     A Config the operator has but the template lacks is deprecated and always dropped,
     whatever it holds; stats["dropped"] lists (label, held_a_value) for each, and
-    stats["mirror_dropped"] each legacy <Environment> mirror entry with no template Target."""
+    stats["mirror_dropped"] each legacy <Environment> mirror entry with no template Target.
+    stats["identity"] lists the IDENTITY_FIELDS whose value changed (names only)."""
     op_by_key, dup_keys = {}, []
     for c in operator_root.findall("Config"):
         k = config_key(c)
@@ -305,7 +330,17 @@ def merge(operator_root, template_root):
         merged.remove(c)
 
     stats = {"added": [], "retained": 0, "dropped": [], "dupes": dup_keys, "mode_kept": [],
-             "mirror_dropped": []}
+             "mirror_dropped": [], "identity": []}
+    for field in IDENTITY_FIELDS:               # replaces a value the instance holds; never fills one
+        src = template_root.findtext(field)
+        el = merged.find(field)
+        old = (el.text or "").strip() if el is not None else ""
+        if src is None or not old:
+            continue
+        new = _refreshed_repository(src.strip(), old) if field == "Repository" else src.strip()
+        if new != old:
+            el.text = new
+            stats["identity"].append(field)
     seen = set()
 
     for tc in template_root.findall("Config"):  # template order; refresh metadata
@@ -535,7 +570,7 @@ def _unused_backup_path(backup_dir, base):
     second is arbitrary, which is fine: they are simultaneous. Ordering against OTHER seconds is
     preserved, which is what "keep the newest N" actually depends on.
     """
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")  # noqa: DTZ005 - the backup name is host-local by design, changing it changes names
     dest = os.path.join(backup_dir, f"{base}.{stamp}.bak")
     n = 1
     while os.path.exists(dest):
@@ -792,6 +827,8 @@ def update_instance(inst_path, tpl_root, backup_dir):
         note = f", {masked} masked value(s) REDACTED" if masked else ""
         print(f"    * {fname:<22} UPDATED   (backup: {os.path.basename(b)}{note})")
     print(f"        values kept   : {st['retained']}")
+    if st["identity"]:
+        print(f"        identity refreshed from repo: {', '.join(st['identity'])}")
     if meta_only:
         print("        metadata refreshed (descriptions/defaults/visibility); no variables added or removed")
     if st["added"]:
@@ -816,7 +853,7 @@ def load_template(name, sha):
     or (None, why)."""
     try:
         tpl_root = ET.fromstring(fetch_template(name, sha))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - any fetch failure is reported as a result, not raised
         return None, f"could not fetch/parse repo template: {e}"
     err = validate(tpl_root)
     if err:
@@ -825,8 +862,9 @@ def load_template(name, sha):
 
 
 def process_template(name, tpl_root, instances_by_tpl, backup_dir):
-    """Process one loaded repo template: CREATE the stub if absent, UPDATE every live instance.
-    Returns the number of failures (unraid-templates#61/#62) — 0 means clean."""
+    """Process one loaded repo template: CREATE the stub if the host has no instance of it,
+    UPDATE every live instance. Returns the number of failures (unraid-templates#61/#62) — 0
+    means clean."""
     print(f"[{name}]")
     failures = 0
     base_path = os.path.join(TEMPLATES_USER, f"my-{name}.xml")
@@ -847,7 +885,13 @@ def process_template(name, tpl_root, instances_by_tpl, backup_dir):
         failures += 1
         base_exists = None
 
-    if base_exists is False:                     # CREATE the base stub if absent
+    live = sorted(os.path.basename(p) for p in instances_by_tpl.get(name, ()))
+    if base_exists is False and live:
+        # A host that runs only my-<name>-dev.xml (say) carries no base stub on purpose: seeding
+        # one would put back a template the operator removed.
+        print(f"    - my-{name}.xml         seed SKIPPED  (this host already has {', '.join(live)}; "
+              f"a base stub is seeded only where no instance of {name!r} exists)")
+    elif base_exists is False:                   # CREATE the base stub: no instance at all
         if DRY_RUN:
             print(f"    + my-{name}.xml         would CREATE  (does not exist yet)")
         else:
@@ -895,7 +939,7 @@ def main():
         sha = resolve_sha()
         all_repo = list_repo_templates(sha)
         why = ""
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - any listing failure is reported as a result, not raised
         all_repo, why = [], f" ({e})"
     if not all_repo:
         sys.exit(f"error: could not list repo templates from {REPO}@{BRANCH}"

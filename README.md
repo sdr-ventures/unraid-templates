@@ -12,22 +12,38 @@ private repos.
 https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/<name>.png
 ```
 
+Each PNG is a render of its `icons/src/<name>.svg`. `python scripts/render_icons.py` rebuilds them all from the sources; it needs `resvg-py` (see the script for the pinned version and venv).
+
 | Container | Icon | Template |
 |---|---|---|
 | tape (dev+prod) | `icons/tape.png` | `templates/tape.xml` |
-| tape-db (dev+prod) | `icons/tape_db.png` | `templates/tape-db.xml` |
+| tape-db (dev+prod) | `icons/tape-db.png` | `templates/tape-db.xml` |
 | cef-tracker (prod) | `icons/cef-tracker.png` | `templates/cef-tracker.xml` |
-| reauth-bot | `icons/reauth_bot.png` | `templates/reauth-bot.xml` |
-| keystone | `icons/keystone.png` | `templates/keystone.xml` |
-| keystone-db | `icons/keystone_db.png` | `templates/keystone-db.xml` |
-| keystone-web (dev+prod) | `icons/keystone-web.png` | `templates/keystone-web.xml` |
-| the-desk (prod) | `icons/the-desk.png` | `templates/the-desk.xml` |
+| reauth-bot | `icons/reauth-bot.png` | `templates/reauth-bot.xml` |
+| kw-core | `icons/kw-core.png` | `templates/kw-core.xml` |
+| kw-core-db | `icons/kw-core-db.png` | `templates/kw-core-db.xml` |
+| kw-web (dev+prod) | `icons/kw-web.png` | `templates/kw-web.xml` |
 | gambit (prod) | `icons/gambit.png` | `templates/gambit.xml` |
 | gambit-loop (same image, paper-lab loop) | `icons/gambit.png` | `templates/gambit-loop.xml` |
 | iron-tide | `icons/iron-tide.png` | `templates/iron-tide.xml` |
-| tldw-redis (start 1st) | `icons/tldw-redis.png` | `templates/tldw-redis.xml` |
-| tldw-server (start 2nd) | `icons/tldw-server.png` | `templates/tldw-server.xml` |
-| tldw-webui (start 3rd, needs manual network-alias setup) | `icons/tldw-webui.png` | `templates/tldw-webui.xml` |
+| kb-postgres (start 1st, `kb` network only) | `icons/kb-postgres.png` | `templates/kb-postgres.xml` |
+| kb-redis (start 2nd, after kb-postgres, `kb` network only) | `icons/kb-redis.png` | `templates/kb-redis.xml` |
+| kb-litellm (start 3rd, after kb-redis; needs a `litellm` database and a `config.yaml`) | `icons/kb-litellm.png` | `templates/kb-litellm.xml` |
+| kb-embed (after kb-litellm, before kb-service; `kb` network only, no port) | `icons/kb-embed.png` | `templates/kb-embed.xml` |
+| kb-service (start 4th, after kb-litellm) | `icons/kb-service.png` | `templates/kb-service.xml` |
+| kb-ingest (after kb-service; `kb` network only, no port, CPU capped; needs an `ingest-worker` token in kb-service) | `icons/kb-ingest.png` | `templates/kb-ingest.xml` |
+| kw-embedder (Keystone Wealth embedding engine; kb-service in embedder mode; internal network only, no port, no data volume, read-only root) | `icons/kw-embedder.png` | `templates/kw-embedder.xml` |
+| kb-runner (the kb scheduler's script runner; kb-service in runner mode; no port, no data volume, read-only root) | `icons/kb-runner.png` | `templates/kb-runner.xml` |
+| kw-extractor (Keystone Wealth statement reader; kb-service in extractor mode; internal network only, no port, no data volume, read-only root) | `icons/kw-extractor.png` | `templates/kw-extractor.xml` |
+| kw-fincast (Keystone Wealth planning engine; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-fincast.png` | `templates/kw-fincast.xml` |
+| kw-vault (Keystone Wealth file sandbox; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-vault.png` | `templates/kw-vault.xml` |
+| kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
+| kw-ops-proxy (start 1st for kw-ops; the only Docker socket holder, private network) | `icons/kw-ops-proxy.png` | `templates/kw-ops-proxy.xml` |
+| kw-ops (start 2nd, after kw-ops-proxy; no port, kw-internal and private network) | `icons/kw-ops.png` | `templates/kw-ops.xml` |
+| kw-ingress (KW edge, dev side; publishes no port, own LAN address as a second network) | `icons/kw-ingress.png` | `templates/kw-ingress.xml` |
+| kw-proxy (KW edge, dev side; publishes no port, `internal` network; host ExtraParams `--entrypoint bash`) | `icons/kw-proxy.png` | `templates/kw-proxy.xml` |
+| clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav-updater.png` | `templates/clamav-updater.xml` |
+| clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; **required** host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged --tmpfs /tmp:rw,uid=1000,gid=1000,mode=0750 --memory=2g`: the first two because the default entrypoint fails on the read-only signature mount, the tmpfs so scratch is RAM and recreated owned by the runtime user on every start, the memory flag caps the daemon at 2 GB) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
 
 Every template + icon in this repo must have a row here — keep this table in sync when adding either (the reauth-bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.
 
@@ -37,6 +53,22 @@ by design — fill them in Unraid on import.
 
 **`sync-templates.py` is the only thing that carries a template change toward a container that already exists — and it carries it as far as that container's *saved template*, not into the container itself.** Stock Unraid never merges a template change into an existing container, and that is deliberate rather than a bug: in `emhttp/plugins/dynamix.docker.manager/include/DockerClient.php`, `updateUserTemplate()` opens with `// Don't update templates, but leave code in place for future reference` and returns — on every release from 6.12 to current. Its sibling `downloadTemplates()` became a no-op only in **7.3.0**; on 6.12.x—7.2.x it is live, so registering this repo in `/boot/config/plugins/dockerMan/template-repos` there really does mirror it into `templates-usb` and refresh the *Default templates* list — but that path only populates the Add Container list (and deletes templates it no longer finds); it never touches an existing `my-*.xml`. Templates from this repo appear under **Docker → Add Container** in the *User templates* group because `sync-templates.py` seeds a `my-<name>.xml` for each; `<TemplateURL>` earns its keep by letting that script map an instance back to its template. **So: edit a template here, run `sync-templates.py`, then open the container's Edit page and press Apply.** The script rewrites `my-<name>.xml`; the container is rebuilt from that file by Apply, and equally by any container **Update** or *force update* — but never on its own. "Check for update" compares the image only.
 
+## Fleet posture exceptions
+
+Three rules in `tests/test_template_invariants.py` are fleet policy, not properties of a valid
+template: no `Path` ships a host value, no `Device` is passed through, and `Network` is `bridge`.
+A template that needs one of them is listed with its reason, and the list is the review:
+
+| List | Key | Value |
+|---|---|---|
+| `HOST_PATH_BY_DESIGN` | `(template, Target)` | `(Default, reason)`: the one host value that Config may ship |
+| `DEVICE_BY_DESIGN` | `(template, Target)` | `reason` |
+| `NETWORK_BY_DESIGN` | `template` | `(Network, reason)` |
+
+Every list is empty today. An entry must name a template and a Config of that template, and state
+a non-blank reason, or the test refuses it. A template not listed is checked as before. A
+`docker.sock` mount is refused whatever the lists say.
+
 ## Scripts
 
 `scripts/` holds the repo's operational + CI tooling. Every script here must have a row:
@@ -45,7 +77,7 @@ by design — fill them in Unraid on import.
 |---|---|---|
 | `scripts/sync-templates.py` | Reconciles the Unraid host's `my-*.xml` container templates against this repo | Unraid host, via **User Scripts** |
 
-> **The leak guard is the pinned kw-common `v1.7.0` guard** — nothing is vendored here. CI runs it as the
+> **The leak guard is the pinned kw-common `v1.14.0` guard** — nothing is vendored here. CI runs it as the
 > `leak-guard` job (the reusable `leak-guard.yml`); the local hooks are written into the git directory by
 > `kw-leak-guard --install-hooks` from a venv outside the tracked tree (`.venv-guard/`, ignored); allowances,
 > if ever needed, live in `.leakguard.json`. It matches shapes only, so a bare hostname, codename or
@@ -62,15 +94,21 @@ No parameters. Each run does **create / update / drop-deprecated** for the one
 managed container template in `/boot/config/plugins/dockerMan/templates-user` that
 its `TEMPLATE` setting names, **keeping each instance's applied values**:
 
-- **CREATE** — seeds `my-<name>.xml` for the template if it has no `my-` file yet, so it is ready to pick under *Add Container*.
+- **CREATE** — seeds `my-<name>.xml` only when the host holds **no instance** of the template at all (no `my-<name>.xml` and no other `my-` file that maps to it, such as `my-<name>-dev.xml`), so it is ready to pick under *Add Container* on a fresh host. A host that already runs an instance gets no base stub, and the run says so (`seed SKIPPED`).
 - **UPDATE** — for **every live instance** of a template (for `tape`: `my-tape.xml` *and* `my-tape-dev.xml`, …; `my-tape-db-dev.xml` is `tape-db`'s): keeps that instance's applied value for each variable, refreshes the variable's metadata (description, defaults, visibility) from the repo template, and adds variables the template has gained.
 - **DROP** — a variable the instance has and the repo template lacks is **deprecated and is dropped, whatever value it holds**. Each drop is named in the run output (`DROPPED, not in repo template (deprecated): NAME (held a value)`). The pre-sync backup (secrets redacted) is the only record of it.
 
 **The rule.** The repo template is the schema: variables, ports and paths by name, with neutral defaults. The live instance is the values. A sync copies each applied live value into the matching repo variable and adopts the repo's metadata. Not in the repo template means deprecated, and the sync drops it. To retire a variable, remove it from the repo template. To add one, add it to the repo template first, let the sync bring it to the instance, then set its value there. A variable added to a live instance only is dropped by the next sync.
 
-Container-level settings you set per instance — image tag, network/IP, WebUI, Extra
-Params, ports, the container Name — are **always preserved**; only `<Config>`
-elements are reconciled.
+Container-level settings you set per instance — image tag, network/IP, WebUI,
+Extra Params, ports, the container Name — are **always preserved**. Two things are
+reconciled from the repo: the `<Config>` elements, and the five identity fields
+`Project`, `Repository`, `Registry`, `TemplateURL` and `Icon`. An identity field is
+replaced only when the instance already holds a value for it; an empty or missing one
+is not filled. `Repository` is replaced only when the live image is the same image
+(same last path segment) under another owner, and the instance's tag or digest is kept.
+A different image is left alone: the operator chose it. The dry run prints
+`identity refreshed from repo: <field names>` for each instance it would change.
 
 **A Path's Mode (Read/Write vs Read-only) is operator-owned, once an instance is
 seeded** — a Mode you set on an existing instance survives every later sync even when
@@ -169,3 +207,6 @@ every copy and re-set each one's `TEMPLATE` line. A copy left at `TEMPLATE = Non
 refuses to run. An older single `sync-templates` copy whose `TEMPLATE = None` still runs every
 template (#102): delete it. Requires python3 ≥ 3.9; stdlib
 only, no dependencies to install.
+
+## Icons
+Every icon follows one style: a navy rounded tile with an outlined glyph, colored by stack (KW app gold `#D4AF37`, tape teal `#3FB8AF`, kb violet `#A78BFA`, edge and security silver `#C9D1D9`). The 256 px PNGs in `icons/` are what templates use; their SVG sources are in `icons/src/`. A new container takes its stack's color and one role glyph.

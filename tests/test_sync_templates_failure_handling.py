@@ -29,9 +29,9 @@ TOKEN = (
     'Type="Variable" Display="always" Required="true" Mask="true"{tail}'
 )
 TEMPLATE_BYTES = (
-    '<Container version="2"><Name>widget</Name>'
-    '<Repository>example/widget:1</Repository></Container>'
-).encode()
+    b'<Container version="2"><Name>widget</Name>'
+    b'<Repository>example/widget:1</Repository></Container>'
+)
 
 
 def template(desc="TEXT"):
