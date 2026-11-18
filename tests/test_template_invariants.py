@@ -45,12 +45,6 @@ TEMPLATES = REPO / "templates"
 ICONS = REPO / "icons"
 README = REPO / "README.md"
 RAW_PREFIX = "https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/"
-# gambit is frozen in place (not moved to the org, ORG-REPUBLISH-1) — its TemplateURL/Icon stay
-# on the old owner, the one visible exception to RAW_PREFIX.
-RAW_PREFIX_EXCEPTIONS = {
-    "gambit": "https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/",
-    "gambit-loop": "https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/",
-}
 
 # Every template, discovered — a new file is covered the day it lands, with no roster to update.
 NAMES = sorted(p.stem for p in TEMPLATES.glob("*.xml"))
@@ -122,8 +116,8 @@ TWO_COMPONENT_TAG = re.compile(r"^\d+\.\d+(?:[.\-+][\w.\-]*)?$")   # 16.14, 16.1
 # release for ever. Third-party images get the opposite rule, because nobody here controls
 # what a moving tag on Docker Hub will point at tomorrow.
 # Both prefixes are the fleet's own images, during the org-move transition (ORG-REPUBLISH-1):
-# GHCR packages don't move with a repo transfer, so gambit and iron-tide (not yet republished)
-# still deploy from texasdaddy while everything already republished deploys from sdr-ventures.
+# GHCR packages don't move with a repo transfer, so iron-tide (not yet republished) still deploys
+# from texasdaddy while everything already republished, gambit included, deploys from sdr-ventures.
 FLEET_IMAGE_PREFIX = ("ghcr.io/texasdaddy/", "ghcr.io/sdr-ventures/")
 FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 
@@ -574,7 +568,7 @@ def test_the_template_url_names_this_file_and_the_icon_exists(name):
     root = template(name)
     template_url = (root.findtext("TemplateURL") or "").strip()
     icon_url = (root.findtext("Icon") or "").strip()
-    raw_prefix = RAW_PREFIX_EXCEPTIONS.get(name, RAW_PREFIX)
+    raw_prefix = RAW_PREFIX
     assert template_url == f"{raw_prefix}templates/{name}.xml", (
         f"{name}: TemplateURL is {template_url!r} — sync-templates.py maps an installed "
         f"container back to its template with it, and Unraid fetches it from main"

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
   gambit — the rule-builder / dry-run dashboard of an autonomous trading-research bot (FastAPI;
-  its own repo: github.com/texasdaddy/gambit). Self-contained image built by that repo's CI → GHCR.
+  its own repo: github.com/sdr-ventures/gambit). Self-contained image built by that repo's CI → GHCR.
   It reads market data from a tape service over the LAN. Its only order path is an Alpaca PAPER
   account (never live); every other write is to its own paper-trading ledger on /data.
 
@@ -21,18 +21,18 @@
 -->
 <Container version="2">
   <Name>gambit</Name>
-  <Repository>ghcr.io/texasdaddy/gambit:stable</Repository>
-  <Registry>https://github.com/texasdaddy/gambit/pkgs/container/gambit</Registry>
+  <Repository>ghcr.io/sdr-ventures/gambit:stable</Repository>
+  <Registry>https://github.com/sdr-ventures/gambit/pkgs/container/gambit</Registry>
   <Network>bridge</Network>                                          <!-- neutral default; pick br0 + a fixed IP in the UI if you prefer. -->
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project>https://github.com/texasdaddy/gambit</Project>
+  <Project>https://github.com/sdr-ventures/gambit</Project>
   <Overview>gambit - the rule-builder / dry-run dashboard for an autonomous trading-research bot. Create paper accounts, attach trading rules, and watch positions, tax lots and simulated orders on a local SQLite ledger; compare every strategy against buy-and-hold; see each Alpaca paper account's state and the kill switch; and see every call gambit makes to tape (the Usage page). It reads market data from a tape service at TAPE_BASE_URL using its own data-scope client. Orders go only to an Alpaca PAPER account, when its keys are set. LOGIN: every page sits behind a sign-in that admits exactly ONE account (GAMBIT_ALLOWED_EMAIL). It REFUSES TO START unless a login method is set: GAMBIT_LAN_PASSWORD (email plus password, works at the container's plain-http LAN address) and/or the three Google variables (Google accepts https on a real domain or localhost, never a bare LAN IP). The Data path holds gambit.db, the paper-trading ledger - back it up. Runs as uid 99, gid 100 (nobody:users).</Overview>
   <Category>Productivity: Network:Other</Category>
   <WebUI>http://[IP]:[PORT:8000]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/templates/gambit.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/texasdaddy/unraid-templates/main/icons/gambit.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/gambit.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/gambit.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
