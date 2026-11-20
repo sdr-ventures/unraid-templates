@@ -48,7 +48,7 @@
 -->
 <Container version="2">
   <Name>kb-service</Name>
-  <Repository>ghcr.io/sdr-ventures/kb-service:v0.59.2</Repository>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.59.3</Repository>
   <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
@@ -101,4 +101,5 @@
   <Config Name="KB_UI_ACCESS_TEAM" Target="KB_UI_ACCESS_TEAM" Default="" Mode="" Description="Cloudflare Access team name (the part before .cloudflareaccess.com) for the phone task page /ui. All three UI values blank turns the page off (404)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_UI_ACCESS_AUD" Target="KB_UI_ACCESS_AUD" Default="" Mode="" Description="Audience tag of the Cloudflare Access application protecting the phone task page. Changes if Network Admin recreates the app." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="KB_UI_OWNER_EMAIL" Target="KB_UI_OWNER_EMAIL" Default="" Mode="" Description="The one Google login allowed to open the phone task page." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="KB_UI_SERVICE_CLIENT_ID" Target="KB_UI_SERVICE_CLIENT_ID" Default="" Mode="" Description="Client id of the one Cloudflare Access service token let into the read-only earnings calendar route of the phone page (never the task routes). Blank means no service token is accepted." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
 </Container>
