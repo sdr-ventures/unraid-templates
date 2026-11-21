@@ -175,8 +175,9 @@ DOCKER_SOCKET_BY_DESIGN = frozenset({"kw-ops-proxy"})
 # password comes from its REDIS_PASSWORD Variable instead of a template field; kb-litellm
 # points the proxy at its mounted config file (PostArgs replaces the image's CMD). kw-proxy's
 # PostArgs is the squid arguments behind its sync entry script; the host's --entrypoint bash
-# (ExtraParams, operator-owned) runs it, and the PostArgs holds no shell expansion.
-POSTARGS_BY_DESIGN = frozenset({"gambit-loop", "kb-redis", "kb-litellm", "kw-proxy"})
+# (ExtraParams, operator-owned) runs it, and the PostArgs holds no shell expansion. kb-browser is an
+# idle collector started on demand with docker exec, so its PostArgs is `sleep infinity` (no expansion).
+POSTARGS_BY_DESIGN = frozenset({"gambit-loop", "kb-redis", "kb-litellm", "kb-browser", "kw-proxy"})
 
 # The privilege-posture rules are fleet policy, so a template that needs one is listed here
 # with the reason, and the entry is the review. Every list is empty today. An entry must name

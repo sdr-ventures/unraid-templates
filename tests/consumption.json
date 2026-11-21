@@ -467,6 +467,15 @@
       "/facts": "host facts for scheduled script events, mounted read-only (Cyberdyne kb doc 30_operations/KB_Scheduler.md section 8): the approved script kb doc 30_operations/_scripts/update_watch/kb_run.py reads /facts/<host>/update_facts.txt; no kb-service release file reads it"
     }
   },
+  "kb-browser": {
+    "no_local_consumer": false,
+    "vars": {},
+    "paths": {
+      "/app": "reads /app: the run command python /app/collect.py loads the collector from this folder, mounted read-only (Cyberdyne kb doc 30_operations/_scripts/kb_browser/collect.py is the script; no repo holds it, so there is no file:line in a pinned release)",
+      "/inbox": "reads /inbox: Cyberdyne kb doc 30_operations/_scripts/kb_browser/collect.py:24 INBOX = Path(\"/inbox\") (the kb drop folder the PDFs are saved into; kb-service reads the same folder as its KB_FUND_INBOX)"
+    },
+    "declared_for": {}
+  },
   "kw-vault": {
     "no_local_consumer": false,
     "vars": {

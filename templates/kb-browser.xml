@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!--
+  kb-browser - the knowledge stack's headless-browser collector: Chromium (Microsoft's stock
+  Playwright image) that opens a fund sponsor's script-rendered notice list and saves the notice
+  PDFs into the knowledge base's drop folder, where kb-service picks them up. It is idle until
+  run. Nothing here is specific to any host or operator.
+
+  WHAT IT DOES AND DOES NOT DO. It checks robots.txt first, waits at least 5 seconds between
+  requests, and stops completely at the first bot challenge, 403, 429 or 5xx. It never tries to
+  pass a bot check.
+
+  HOW IT RUNS. The container only sleeps (Post Arguments "sleep infinity"). A collection is
+  started from outside with: docker exec <container> python /app/collect.py <sponsor>
+  The script is NOT in the image: the Collector path below mounts the folder that holds
+  collect.py read-only at /app.
+
+  HARDENING. Extra Parameters ships empty (repo rule). After import, add these docker run
+  options (each begins with two dashes, the two -e entries are environment variables):
+  user 99:100; read-only; tmpfs /tmp:size=256m; shm-size=512m; cap-drop=ALL; security-opt
+  no-new-privileges; cpus=1; memory=1g; -e HOME=/tmp; -e PYTHONPATH=/app/site
+  It gives: a non-root user, a read-only root with RAM scratch for /tmp, the shared memory
+  Chromium needs, all capabilities dropped, no new privileges, CPU and memory caps. No Docker
+  socket, not privileged. PYTHONPATH names the folder under /app that holds the Python
+  packages the collector imports.
+
+  NETWORK. Put it on the same user-defined network as kb-service (the operator creates it once
+  and sets the Network field; every template here keeps Network bridge). No port is published
+  and there is no Port config. It needs outbound internet to the sponsor's site.
+
+  START ORDER. After kb-service (the last group of the kb stack); it needs nothing from the
+  stack to start, only the drop folder to exist.
+
+  THE IMAGE TAG IS A FULL RELEASE (vX.Y.Z-noble), so the browser and the Python Playwright
+  package inside move only when this tag is deliberately changed.
+-->
+<Container version="2">
+  <Name>kb-browser</Name>
+  <Repository>mcr.microsoft.com/playwright/python:v1.52.0-noble</Repository>
+  <Registry>https://mcr.microsoft.com/en-us/product/playwright/python</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/microsoft/playwright-python/issues</Support>
+  <Project>https://github.com/microsoft/playwright-python</Project>
+  <Overview>Headless Chromium collector for the knowledge base: opens a sponsor's script-rendered notice list and saves the notice PDFs into the drop folder. robots.txt first, at least 5 s between requests, full stop at the first challenge, 403, 429 or 5xx; it never tries to pass a bot check. Idle until run: docker exec the container with python /app/collect.py and the sponsor name. Needs the Collector folder (holds collect.py) and the Inbox folder.</Overview>
+  <Description>Idle headless-browser collector for the knowledge base's fund notices; run on demand with docker exec.</Description>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-browser.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-browser.png</Icon>
+  <PostArgs>sleep infinity</PostArgs>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Config Name="Collector" Target="/app" Default="" Mode="ro" Description="REQUIRED. Folder on the host that holds collect.py, mounted read-only." Type="Path" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="Inbox" Target="/inbox" Default="" Mode="rw" Description="REQUIRED. The knowledge base's fund drop folder, the same folder kb-service reads (its KB_FUND_INBOX path, for example a fund_inbox folder under its assets)." Type="Path" Display="always" Required="true" Mask="false"></Config>
+</Container>
