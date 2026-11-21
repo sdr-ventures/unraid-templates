@@ -17,11 +17,11 @@
   HARDENING. Extra Parameters ships empty (repo rule). After import, add these docker run
   options (each begins with two dashes, the two -e entries are environment variables):
   user 99:100; read-only; tmpfs /tmp:size=256m; shm-size=512m; cap-drop=ALL; security-opt
-  no-new-privileges; cpus=1; memory=1g; -e HOME=/tmp; -e PYTHONPATH=/app/site
+  no-new-privileges; cpus=1; memory=1g; -e HOME=/tmp
   It gives: a non-root user, a read-only root with RAM scratch for /tmp, the shared memory
   Chromium needs, all capabilities dropped, no new privileges, CPU and memory caps. No Docker
-  socket, not privileged. PYTHONPATH names the folder under /app that holds the Python
-  packages the collector imports.
+  socket, not privileged. The Python path variable below names the folder under /app that
+  holds the Python packages the collector imports.
 
   NETWORK. Put it on the same user-defined network as kb-service (the operator creates it once
   and sets the Network field; every template here keeps Network bridge). No port is published
@@ -54,4 +54,5 @@
   <DateInstalled/>
   <Config Name="Collector" Target="/app" Default="" Mode="ro" Description="REQUIRED. Folder on the host that holds collect.py, mounted read-only." Type="Path" Display="always" Required="true" Mask="false"></Config>
   <Config Name="Inbox" Target="/inbox" Default="" Mode="rw" Description="REQUIRED. The knowledge base's fund drop folder, the same folder kb-service reads (its KB_FUND_INBOX path, for example a fund_inbox folder under its assets)." Type="Path" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="Python path" Target="PYTHONPATH" Default="/app/site" Mode="" Description="Folder inside the container, under the Collector mount, that holds the Python packages collect.py imports." Type="Variable" Display="advanced" Required="false" Mask="false">/app/site</Config>
 </Container>
