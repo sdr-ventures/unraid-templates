@@ -1049,7 +1049,7 @@ def test_mutation_a_fleet_project_link_on_another_owner_is_caught():
 def test_mutation_a_third_party_image_is_out_of_the_owner_rule():
     """A third-party image names its own owner in Registry and Project; that is not drift."""
     xml = """<Container><Name>x</Name>
-      <Repository>ghcr.io/berriai/litellm:v1.109.1</Repository>
+      <Repository>ghcr.io/berriai/litellm:v1.110.2</Repository>
       <Registry>https://github.com/BerriAI/litellm/pkgs/container/litellm</Registry>
       <Project>https://github.com/BerriAI/litellm</Project>
     </Container>"""
