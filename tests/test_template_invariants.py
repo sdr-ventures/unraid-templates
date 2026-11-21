@@ -121,6 +121,10 @@ TWO_COMPONENT_TAG = re.compile(r"^\d+\.\d+(?:[.\-+][\w.\-]*)?$")   # 16.14, 16.1
 # from texasdaddy while everything already republished, gambit included, deploys from sdr-ventures.
 FLEET_IMAGE_PREFIX = ("ghcr.io/texasdaddy/", "ghcr.io/sdr-ventures/")
 FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
+# The one owner every fleet template must publish under, in Repository, Registry and Project.
+# texasdaddy stays in FLEET_IMAGE_PREFIX while some fleet releases still publish there, so a
+# template that names it fails the owner rule below until it is repointed.
+FLEET_OWNER = "sdr-ventures"
 # Fleet images that are version-pinned on purpose, each a visible decision: they ship a
 # (v-prefixed) release tag, never a channel, and an Update is a deliberate bump of that pin.
 # The kb stack publishes only vX.Y.Z release tags (PUBLISHED_TAG_RULE below), so each template
@@ -591,6 +595,43 @@ def test_the_rolling_tag_exceptions_are_all_live():
     assert POSTARGS_BY_DESIGN <= set(NAMES), "POSTARGS_BY_DESIGN names a missing template"
 
 
+
+def github_owner(url):
+    parts = url.split("/")
+    return parts[3] if url.startswith("https://github.com/") and len(parts) > 4 else None
+
+
+def fleet_owner_problems(name, root):
+    """Why a fleet template does not name FLEET_OWNER in Repository, Registry or Project.
+    A third-party image (outside FLEET_IMAGE_PREFIX) is out of scope here and returns []."""
+    repository = (root.findtext("Repository") or "").strip()
+    if not repository.startswith(FLEET_IMAGE_PREFIX):
+        return []
+    problems = []
+    image_owner = repository.split("/")[1]
+    if image_owner != FLEET_OWNER:
+        problems.append(f"{name}: Repository {repository!r} is published under "
+                        f"{image_owner!r}, not {FLEET_OWNER!r}")
+    for field in ("Registry", "Project"):
+        url = (root.findtext(field) or "").strip()
+        if not url:
+            continue  # optional in Unraid: an absent link names no owner, so it cannot drift
+        owner = github_owner(url)
+        if owner != FLEET_OWNER:
+            problems.append(f"{name}: <{field}> {url!r} names owner {owner!r}, "
+                            f"not {FLEET_OWNER!r}")
+    return problems
+
+
+def test_the_fleet_owner_is_one_of_the_fleet_image_prefixes():
+    assert f"ghcr.io/{FLEET_OWNER}/" in FLEET_IMAGE_PREFIX
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_a_fleet_template_names_the_fleet_owner_in_repository_registry_and_project(name):
+    assert fleet_owner_problems(name, template(name)) == []
+
+
 SHELL_VARIABLE_REFERENCE = re.compile(r"\$(?:\{(\w+)\}|(\w+))")
 
 
@@ -980,3 +1021,43 @@ def test_mutation_dotfiles_are_not_treated_as_stray_icon_files(tmp_path):
     considered = sorted(p.name for p in tmp_path.iterdir()
                          if p.is_file() and not p.name.startswith("."))
     assert considered == ["real.png"], "a dotfile must be excluded from the stray-file scan"
+
+
+def test_mutation_a_fleet_image_re_pointed_at_another_owner_is_caught():
+    """A fleet template whose image or its Registry names a retired owner is flagged by name."""
+    xml = """<Container><Name>app</Name>
+      <Repository>ghcr.io/texasdaddy/app:stable</Repository>
+      <Registry>https://github.com/texasdaddy/app/pkgs/container/app</Registry>
+      <Project>https://github.com/sdr-ventures/app</Project>
+    </Container>"""
+    problems = fleet_owner_problems("app", ET.fromstring(xml))
+    assert len(problems) == 2, problems
+    assert "Repository" in problems[0] and "'texasdaddy'" in problems[0]
+    assert "<Registry>" in problems[1]
+
+
+def test_mutation_a_fleet_project_link_on_another_owner_is_caught():
+    xml = """<Container><Name>app</Name>
+      <Repository>ghcr.io/sdr-ventures/app:stable</Repository>
+      <Registry>https://github.com/sdr-ventures/app/pkgs/container/app</Registry>
+      <Project>https://github.com/other-owner/app</Project>
+    </Container>"""
+    problems = fleet_owner_problems("app", ET.fromstring(xml))
+    assert len(problems) == 1 and "<Project>" in problems[0], problems
+
+
+def test_mutation_a_third_party_image_is_out_of_the_owner_rule():
+    """A third-party image names its own owner in Registry and Project; that is not drift."""
+    xml = """<Container><Name>x</Name>
+      <Repository>ghcr.io/berriai/litellm:v1.109.1</Repository>
+      <Registry>https://github.com/BerriAI/litellm/pkgs/container/litellm</Registry>
+      <Project>https://github.com/BerriAI/litellm</Project>
+    </Container>"""
+    assert fleet_owner_problems("x", ET.fromstring(xml)) == []
+
+
+def test_mutation_an_absent_registry_or_project_link_names_no_owner_and_passes():
+    xml = """<Container><Name>app</Name>
+      <Repository>ghcr.io/sdr-ventures/app:stable</Repository>
+    </Container>"""
+    assert fleet_owner_problems("app", ET.fromstring(xml)) == []
