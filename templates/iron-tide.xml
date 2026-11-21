@@ -16,8 +16,7 @@
 -->
 <Container version="2">
   <Name>iron-tide</Name>
-  <!-- Repository stays on texasdaddy until Game Dev's next build publishes ghcr.io/sdr-ventures/iron-tide (ORG-REPUBLISH-1). -->
-  <Repository>ghcr.io/texasdaddy/iron-tide:stable</Repository>
+  <Repository>ghcr.io/sdr-ventures/iron-tide:stable</Repository>
   <Registry>https://github.com/sdr-ventures/iron-tide/pkgs/container/iron-tide</Registry>
   <Network>bridge</Network>                                          <!-- neutral default; pick br0 + a fixed IP in the UI if you prefer. -->
   <Shell>sh</Shell>
