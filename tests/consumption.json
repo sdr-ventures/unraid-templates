@@ -469,7 +469,7 @@
   },
   "kb-browser": {
     "no_local_consumer": false,
-    "vars": {},
+    "vars": {"PYTHONPATH": "reads PYTHONPATH: the Python interpreter at start (sys.path), consumed by the runtime and not by app code; /app/site under the Collector mount holds the packages collect.py imports"},
     "paths": {
       "/app": "reads /app: the run command python /app/collect.py loads the collector from this folder, mounted read-only (Cyberdyne kb doc 30_operations/_scripts/kb_browser/collect.py is the script; no repo holds it, so there is no file:line in a pinned release)",
       "/inbox": "reads /inbox: Cyberdyne kb doc 30_operations/_scripts/kb_browser/collect.py:24 INBOX = Path(\"/inbox\") (the kb drop folder the PDFs are saved into; kb-service reads the same folder as its KB_FUND_INBOX)"
