@@ -34,6 +34,7 @@ Each PNG is a render of its `icons/src/<name>.svg`. `python scripts/render_icons
 | kb-ingest (after kb-service; `kb` network only, no port, CPU capped; needs an `ingest-worker` token in kb-service) | `icons/kb-ingest.png` | `templates/kb-ingest.xml` |
 | kw-embedder (Keystone Wealth embedding engine; kb-service in embedder mode; internal network only, no port, no data volume, read-only root) | `icons/kw-embedder.png` | `templates/kw-embedder.xml` |
 | kb-runner (the kb scheduler's script runner; kb-service in runner mode; no port, no data volume, read-only root) | `icons/kb-runner.png` | `templates/kb-runner.xml` |
+| kb-browser (headless-browser collector for fund notices; idle until run with docker exec; no port, last in the kb start order, read-only root) | `icons/kb-browser.png` | `templates/kb-browser.xml` |
 | kw-extractor (Keystone Wealth statement reader; kb-service in extractor mode; internal network only, no port, no data volume, read-only root) | `icons/kw-extractor.png` | `templates/kw-extractor.xml` |
 | kw-fincast (Keystone Wealth planning engine; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-fincast.png` | `templates/kw-fincast.xml` |
 | kw-vault (Keystone Wealth file sandbox; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-vault.png` | `templates/kw-vault.xml` |
