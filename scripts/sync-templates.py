@@ -10,7 +10,7 @@ for the ONE repo template that TEMPLATE (below) names:
                       repo copy; there is no run over every template (unraid-templates#102).
   TEMPLATE = "tape"   ONLY the `tape` repo template and its live instances. Nothing
                       that maps to another template is created, updated, deleted,
-                      or has its backups redacted or pruned — `tape-db` included,
+                      or has its backups taken — `tape-db` included,
                       since instances are mapped against the FULL template list
                       (see MAPPING below). Refused before anything is written: a
                       name the repo does not have; a my-tape.xml that is really
@@ -61,17 +61,19 @@ DRY-RUN vs LIVE  —  the DRY_RUN constant below is the switch.
   * DRY_RUN = True   prints exactly what it WOULD create/update/drop, writes
                      nothing. This is the version you validate.
   * DRY_RUN = False  performs the changes (each overwritten file is backed up
-                     first, timestamped, under templates-user/.template-sync-backups/;
+                     first, timestamped, into BACKUP_DIR, which is OFF the flash drive;
                      writes are atomic; a result is validated before it replaces
-                     the original).
+                     the original). BACKUP_DIR blank = a live run refuses before any write.
 
 BACKUPS AND SECRETS  (unraid-templates#27)
   `Mask="true"` is a UI setting only -- it makes the Unraid web form render a
   password box. The XML on the flash drive holds the value in PLAINTEXT either
   way. So a backup is written with every masked value REDACTED (masked in the
-  instance file OR in the repo template, #104), and each run also redacts the
-  backups previous versions already wrote. Backups are
-  pruned to the newest KEEP_BACKUPS per instance.
+  instance file OR in the repo template, #104).
+  Backups go to BACKUP_DIR, the host's delete folder (purged after 2 days), never
+  to the flash drive (GLOBAL_RULES 26). The script neither prunes nor rewrites
+  anything there: the purge is the retention. Nothing under the flash templates
+  folder is touched beyond the instances this run owns.
 
   What that means for a restore: the structure and every non-secret value come
   back in full (except a mirror entry with no Config, redacted as unknown); a
@@ -101,6 +103,8 @@ REQUIRES  python3 >= 3.9 (stdlib only). Run on the Unraid host via User Scripts.
 # =============================================================================
 DRY_RUN = False    # LIVE — creates/updates/drops with timestamped backups. (dev phase used True)
 TEMPLATE = None    # "<name>" = only templates/<name>.xml and its instances. None = unset: refuses.
+BACKUP_DIR = ""    # host delete folder for the pre-write backups. Set by the host copy, never here.
+BACKUP_ROLE = ""   # optional `<role>` for the backup names (`<file>.<role>-sync-<stamp>`); blank = `<file>.sync-<stamp>`.
 # =============================================================================
 
 import copy
@@ -119,8 +123,7 @@ REPO            = "sdr-ventures/unraid-templates"
 BRANCH          = "main"
 TEMPLATE_SUBDIR = "templates"
 TEMPLATES_USER  = "/boot/config/plugins/dockerMan/templates-user"
-BACKUP_SUBDIR   = ".template-sync-backups"
-UA              = "sync-templates (unraid)"
+UA            = "sync-templates (unraid)"
 TIMEOUT         = 30
 
 # ----------------------------------------------------------------------------- secrets
@@ -138,11 +141,6 @@ TIMEOUT         = 30
 # dropped on purpose, so the backup is also the only record of one.) What a restore actually needs is the STRUCTURE and the non-secret values, and those
 # are preserved in full. A masked value is re-entered from wherever it came from.
 REDACTED = "***REDACTED***"
-
-# How many backups to keep per instance file. The old code kept every backup forever, which is
-# half of what #27 is about: even redacted, an unbounded pile of timestamped XML on a flash drive
-# is just accumulation. The newest are the ones with any recovery value.
-KEEP_BACKUPS = 10
 
 
 # ----------------------------------------------------------------------------- http
@@ -518,13 +516,6 @@ def redact_secrets(root, secret_targets=()):
     return n
 
 
-def count_secrets(root, secret_targets=()):
-    """How many masked values `root` still holds. The exact converse of `redact_secrets`, so the
-    reported count and the work actually done cannot drift apart."""
-    return sum(1 for el in _masked_configs(root, secret_targets)
-               + _mirrored_secrets(root, secret_targets) if _element_holds_a_secret(el))
-
-
 def backup(path, backup_dir, secret_targets=()):
     """Copy `path` aside before it is overwritten, with every masked value REDACTED — masked in
     the file OR in the repo template (`secret_targets`, unraid-templates#104).
@@ -541,11 +532,9 @@ def backup(path, backup_dir, secret_targets=()):
     except (ET.ParseError, OSError) as e:
         raise BackupUnsafe(f"{os.path.basename(path)}: {e}") from e
     n = redact_secrets(tree.getroot(), secret_targets)
-    # ⛔ A WRITE FAILURE HERE IS ALSO "could not back it up safely". `redact_existing_backups` was
-    # hardened so one bad file could not abort the sync, and this sibling path was left raising —
-    # so a full or read-only flash drive gave a traceback out of main(), a half-finished run, and
-    # an orphaned `.tmp` nothing ever cleans up (`_backup_files` only matches `.bak`). Same class,
-    # same handling: the caller's "no backup, no write" branch takes it from here.
+    # ⛔ A WRITE FAILURE HERE IS "could not back it up safely": a full or read-only destination
+    # gave a traceback out of main() and a half-finished run. The caller's "no backup, no write"
+    # branch takes it from here, and the `.tmp` is discarded.
     dest = ""
     try:
         os.makedirs(backup_dir, exist_ok=True)
@@ -565,56 +554,20 @@ def _unused_backup_path(backup_dir, base):
     collided and the second SILENTLY REPLACED the first. That is a backup destroying a backup —
     the one thing this file must not do, now that the backup is the whole recovery story.
 
-    The counter goes INSIDE the stamp segment (`...-2`) rather than after `.bak`, so the name
-    still matches `_BAK_RX` and stays prunable. Ordering between two backups taken in the same
-    second is arbitrary, which is fine: they are simultaneous. Ordering against OTHER seconds is
-    preserved, which is what "keep the newest N" actually depends on.
+    Name: `<instance-file>.[<BACKUP_ROLE>-]sync-<stamp>`, so the host's delete rule
+    `<file>.<role>-<topic>` holds when a role is set. The counter is appended to the stamp.
     """
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")  # noqa: DTZ005 - the backup name is host-local by design, changing it changes names
-    dest = os.path.join(backup_dir, f"{base}.{stamp}.bak")
+    tag = f"{BACKUP_ROLE}-" if BACKUP_ROLE else ""
+    dest = os.path.join(backup_dir, f"{base}.{tag}sync-{stamp}")
     n = 1
     while os.path.exists(dest):
         n += 1
-        dest = os.path.join(backup_dir, f"{base}.{stamp}-{n}.bak")
+        dest = os.path.join(backup_dir, f"{base}.{tag}sync-{stamp}-{n}")
     return dest
 
 
-# ----------------------------------------------------------------------------- backup hygiene
-# `<instance>.<YYYYmmdd-HHMMSS>[-<n>].bak` — the shape THIS script writes, and the only shape it
-# will ever delete. `rsplit(".", 2)` was doing this job by position and got it wrong for anything
-# else in the directory: an operator's `my-tape.xml.BEFORE-MIGRATION.bak` landed in the same group
-# as the real backups, and since letters sort after digits it counted as the NEWEST — so the three
-# genuine timestamped backups were pruned and the hand-named file became immortal.
-_BAK_RX = re.compile(r"^(?P<inst>.+)\.(?P<stamp>\d{8}-\d{6}(?:-\d+)?)\.bak$")
-
-
-def _backup_files(backup_dir):
-    """Every `.bak` in the backup dir, oldest first, and any error LISTING the directory.
-
-    Returns (files, error). Absent dir is a legitimate answer, not an error (a first run happens
-    before anything creates it) — `error` is only set when the dir EXISTS but `os.listdir` itself
-    raised (permission revoked, a flaky network mount): that used to propagate straight out of
-    `main()` before either caller (`redact_existing_backups`, `prune_backups`) processed a single
-    file, the same crash-mid-loop shape unraid-templates#61 fixed at every other call site.
-    """
-    if not os.path.isdir(backup_dir):
-        return [], None
-    try:
-        return sorted(f for f in os.listdir(backup_dir) if f.endswith(".bak")), None
-    except OSError as e:
-        return [], str(e)
-
-
-def _backup_owner(fname, instances):
-    """The instance file that backup `fname` was taken of, or None (an orphan).
-
-    The LONGEST of `instances` that `fname` extends with a dot: `my-tape-db.xml.*` is never a
-    `my-tape.xml` backup, and `my-tape.xml.old.xml.*` belongs to that instance, not `my-tape.xml`.
-    """
-    owners = [i for i in instances if fname.startswith(i + ".")]
-    return max(owners, key=len) if owners else None
-
-
+# ----------------------------------------------------------------------------- helpers
 def _same_file(a, b):
     """os.path.samefile, and False when either cannot be stat'd (absent, unreadable)."""
     try:
@@ -623,78 +576,23 @@ def _same_file(a, b):
         return False
 
 
-def redact_existing_backups(backup_dir, scope=None, secret_targets=()):
-    """ONE-TIME CLEAR-OUT of the plaintext accumulation already on the flash drive.
-
-    Fixing `backup()` stops NEW cleartext copies; it does nothing about the pile already written,
-    which is where every secret this script has ever seen is currently sitting. Each existing
-    `.bak` is rewritten in redacted form, ATOMICALLY (tmp + `os.replace`) so an interrupted run
-    cannot truncate one.
-
-    Rewritten rather than deleted: a backup is the operator's data and the recoverable part of it
-    — the structure and every non-secret value — is exactly what deleting would throw away.
-
-    Returns (n_redacted_files, n_values, unparseable). An unparseable `.bak` is REPORTED, never
-    silently deleted and never assumed safe: it may well hold a secret, and only the operator can
-    say whether it is worth keeping.
-
-    Idempotent — a second run finds nothing left to redact, because a redacted value no longer
-    differs from the marker.
-
-    `secret_targets` (the repo template's masked variables) also redacts a backup whose own Config
-    was not masked when it was taken (unraid-templates#104) — the scope must then be one
-    template's backups, since the set is that template's.
-    """
-    redacted_files, redacted_values, unreadable = 0, 0, []
-    files, list_error = _backup_files(backup_dir)
-    if list_error:
-        unreadable.append((os.path.basename(backup_dir.rstrip("/\\")),
-                            f"could not list the backup dir: {list_error}"))
-        return redacted_files, redacted_values, unreadable
-    for fname in files:
-        if scope is not None and not scope(fname):
-            continue
-        full = os.path.join(backup_dir, fname)
-        try:
-            tree = ET.parse(full)
-        except ET.ParseError as e:
-            unreadable.append((fname, str(e)))
-            continue
-        except OSError as e:
-            unreadable.append((fname, f"could not be read: {e}"))
-            continue
-        root = tree.getroot()
-        n = count_secrets(root, secret_targets)
-        if not n:
-            continue
-        if not DRY_RUN:
-            try:
-                redact_secrets(root, secret_targets)
-                atomic_write(full, root)
-                _wrote()
-            except OSError as e:
-                # ⛔ ONE BAD FILE MUST NOT ABORT THE SYNC. An uncaught OSError here (a full flash
-                # drive, a read-only mount) propagated out of main() BEFORE a single template was
-                # processed, so a disk problem in the housekeeping step silently became "the sync
-                # does nothing". Report it and carry on with the rest.
-                unreadable.append((fname, f"could not be rewritten: {e}"))
-                _discard(full + ".tmp")   # atomic_write's partial file, if it got that far
-                continue
-        redacted_files += 1
-        redacted_values += n
-    return redacted_files, redacted_values, unreadable
+def _under(path, root):
+    """True when `path` is `root` or inside it. Compared on absolute, case-folded paths."""
+    p = os.path.normcase(os.path.abspath(path))
+    r = os.path.normcase(os.path.abspath(root))
+    return p == r or p.startswith(r.rstrip(os.sep) + os.sep)
 
 
 def _discard(path):
     """Remove a leftover temp file, best-effort. It is redacted content, not a leak — but nothing
-    else ever cleans it up, since `_backup_files` only matches `.bak`."""
+    else ever cleans it up."""
     try:
         os.remove(path)
     except OSError:
         pass
 
 
-WRITES = 0         # live files written this run: stub, backup, instance, backup redaction, prune
+WRITES = 0         # live files written this run: stub, backup, instance
 
 
 def _wrote():
@@ -707,55 +605,6 @@ def _outcome():
     if DRY_RUN:
         return "(dry-run — nothing changed)"
     return f"(LIVE — changes written: {WRITES})" if WRITES else "(LIVE — nothing changed)"
-
-
-def prune_backups(backup_dir, protected=(), scope=None):
-    """Keep the newest KEEP_BACKUPS per instance file; drop the rest.
-
-    Returns (dropped, failed) — `dropped` is what was actually removed; `failed` is
-    [(filename, reason), ...] for a file this function chose to prune but an OSError (a
-    read-only mount, a concurrent delete) stopped it from removing. A failed remove is neither
-    dropped (it is still on disk) nor silently ignored — the caller reports and counts it,
-    the same policy as every other write/remove site in this script (unraid-templates#61).
-
-    Grouped per instance rather than over the directory as a whole, so a container synced often
-    cannot evict the only backup another container has. The stamp is `%Y%m%d-%H%M%S`, so a plain
-    lexicographic sort IS chronological.
-
-    ⛔ TWO THINGS THIS WILL NOT DELETE, both of which it used to:
-      * anything whose name is not the `<instance>.<stamp>.bak` shape THIS script writes. A file
-        an operator dropped in here by hand is not ours to remove, and treating it as a backup
-        also corrupted the ordering — see `_BAK_RX`.
-      * anything in `protected`. `redact_existing_backups` reports an unparseable `.bak` and
-        promises the operator it is left for them to review; pruning it three lines later in
-        `main()` deleted the very file the same run told them to go and look at, and printed its
-        name while doing so.
-    """
-    groups = {}
-    files, list_error = _backup_files(backup_dir)
-    dropped, failed = [], []
-    if list_error:
-        failed.append((os.path.basename(backup_dir.rstrip("/\\")),
-                        f"could not list the backup dir: {list_error}"))
-        return dropped, failed
-    for fname in files:
-        if fname in protected or (scope is not None and not scope(fname)):
-            continue
-        m = _BAK_RX.match(fname)
-        if not m:
-            continue
-        groups.setdefault(m.group("inst"), []).append(fname)
-    for _, files in sorted(groups.items()):
-        for fname in sorted(files)[:-KEEP_BACKUPS]:
-            if not DRY_RUN:
-                try:
-                    os.remove(os.path.join(backup_dir, fname))
-                except OSError as e:
-                    failed.append((fname, str(e)))
-                    continue
-                _wrote()
-            dropped.append(fname)
-    return dropped, failed
 
 
 # ----------------------------------------------------------------------------- per-instance
@@ -982,40 +831,18 @@ def main():
             sys.exit(f"error: {os.path.basename(p)} (the file at my-{TEMPLATE}.xml) {why}, so a "
                      f"TEMPLATE={TEMPLATE!r} run would rewrite it with the wrong template. Fix its "
                      f"<TemplateURL> or rename that container. Nothing changed.")
-    # A backup is this run's only if its owner — judged against EVERY instance name, not just
-    # this template's — is one of this template's instances. A backup whose instance is gone
-    # (other than the stub's) belongs to no run; the operator deletes those by hand (README).
-    own = {f"my-{TEMPLATE}.xml"} | {os.path.basename(p) for p in instances_by_tpl.get(TEMPLATE, ())}
-    known = ({os.path.basename(p) for paths in instances_by_tpl.values() for p in paths}
-             | set(unmapped) | {f for f, _ in broken} | {f"my-{t}.xml" for t in all_repo})
-
-    def scope(fname):
-        return _backup_owner(fname, known) in own
-
-    backup_dir = os.path.join(TEMPLATES_USER, BACKUP_SUBDIR)
+    # ⛔ THE BACKUP DESTINATION, checked before the first write. A live run needs BACKUP_DIR set
+    # to the host's delete folder, and it must not be on the flash drive (GLOBAL_RULES 26).
+    if not DRY_RUN:
+        if not BACKUP_DIR:
+            sys.exit("error: BACKUP_DIR is blank, so a live run has nowhere to put its backups. "
+                     "Set BACKUP_DIR to the host's delete folder in this copy. Nothing changed.")
+        if _under(BACKUP_DIR, TEMPLATES_USER) or _under(BACKUP_DIR, "/boot"):
+            sys.exit(f"error: BACKUP_DIR is on the flash drive ({BACKUP_DIR}). Backups must go to "
+                     f"the host's delete folder instead. Nothing changed.")
+    backup_dir = BACKUP_DIR
     failures = 0                                # unraid-templates#62: a run must be able to say so
-
-    # BEFORE anything else touches the backup dir. Every `.bak` written before this release is a
-    # cleartext copy of whatever secrets that instance held, and this is the run that clears
-    # them; doing it first means a crash later still leaves the flash drive better than it was.
-    # The template is loaded first, once: what counts as secret is its call as well as each
-    # file's (unraid-templates#104). If it cannot load, the files' own masks still apply.
     tpl_root, tpl_error = load_template(TEMPLATE, sha)
-    secret_targets = _masked_names(tpl_root) if tpl_root is not None else set()
-    files, values, unreadable = redact_existing_backups(backup_dir, scope, secret_targets)
-    if files:
-        print(f"{'would redact' if DRY_RUN else 'REDACTED'} {values} masked value(s) across "
-              f"{files} pre-existing backup(s) in {BACKUP_SUBDIR}/ (unraid-templates#27: "
-              f"`Mask` is a UI setting, so these were stored in PLAINTEXT)")
-    if unreadable:
-        failures += len(unreadable)
-        print(f"! {len(unreadable)} backup(s) could not be read, so could NOT be redacted - "
-              f"they may still hold secrets in plaintext. These are left in place for you to "
-              f"review and delete by hand:")
-        for fname, why in unreadable:
-            print(f"    {fname} ({why})")
-    if files or unreadable:
-        print()
 
     if broken:
         failures += len(broken)
@@ -1031,28 +858,6 @@ def main():
     else:
         failures += process_template(TEMPLATE, tpl_root, instances_by_tpl, backup_dir)
     print()
-
-    # ⭐ PRUNE LAST, once this run's own backups exist. Pruning first left KEEP_BACKUPS + 1 on
-    # disk afterwards, so the run ended one over the number it reported keeping. It also spent
-    # flash writes redacting files it was about to delete.
-    dropped, prune_failed = prune_backups(backup_dir, protected={f for f, _ in unreadable}, scope=scope)
-    if prune_failed:
-        failures += len(prune_failed)
-        print(f"! {len(prune_failed)} backup(s) could not be pruned:")
-        for fname, why in prune_failed:
-            print(f"    {fname} ({why})")
-    if dropped:
-        # ⚠️ THE DRY-RUN FIGURE IS A LOWER BOUND, and says so. The prune runs after the templates,
-        # so a live run has also written this run's own backups by now and a rehearsal has not —
-        # the rehearsal is short by up to one per updated instance. Stated rather than silently
-        # off by one: the whole point of DRY_RUN is that it predicts the live run.
-        if DRY_RUN:
-            print(f"would prune at least {len(dropped)} backup(s) beyond the newest "
-                  f"{KEEP_BACKUPS} per instance (a live run also prunes the backups it takes "
-                  f"itself, which this rehearsal has not written)\n")
-        else:
-            print(f"pruned {len(dropped)} backup(s) beyond the newest {KEEP_BACKUPS} "
-                  f"per instance\n")
 
     if unmapped:
         print("left untouched (foreign / not from these templates): " + ", ".join(sorted(unmapped)))

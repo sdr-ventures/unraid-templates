@@ -166,32 +166,6 @@ def test_an_instance_that_cannot_be_READ_is_skipped_not_crashed(sync, tmp_path, 
     assert "SKIP" in capsys.readouterr().out
 
 
-def test_a_prune_remove_that_fails_is_reported_not_silently_dropped(sync, tmp_path, monkeypatch):
-    """The prune `os.remove` was the last unwrapped call site — a file it could not delete (a
-    concurrent lock, a read-only mount) must stay counted as a FAILURE, and must stay on disk."""
-    backups = tmp_path / "b"
-    backups.mkdir()
-    victim = "my-noisy.xml.20260101-000000.bak"
-    for i in range(sync.KEEP_BACKUPS + 3):
-        (backups / f"my-noisy.xml.202601{i + 2:02d}-000000.bak").write_text(
-            "<Container/>", encoding="utf-8")
-    (backups / victim).write_text("<Container/>", encoding="utf-8")
-
-    real_remove = sync.os.remove
-
-    def flaky(path):
-        if victim in path:
-            raise OSError(13, "Permission denied")
-        return real_remove(path)
-
-    monkeypatch.setattr(sync.os, "remove", flaky)
-    dropped, failed = sync.prune_backups(str(backups))
-
-    assert victim not in dropped, "a remove that failed must not be reported as dropped"
-    assert failed and failed[0][0] == victim
-    assert (backups / victim).exists(), "the file that could not be removed must remain on disk"
-
-
 # ------------------------------------------------- #62: exit code, summary, and the two siblings
 
 
@@ -225,26 +199,6 @@ def test_a_clean_run_still_exits_zero(sync, tmp_path, monkeypatch):
     assert (tmp_path / "my-widget.xml").exists()
 
 
-def test_main_exits_nonzero_on_an_unreadable_pre_existing_backup_alone(
-    sync, tmp_path, monkeypatch,
-):
-    """Every contributor to `failures` in main() must actually move the exit code — not just
-    the process_template one exercised above. This one is an unparseable pre-existing .bak,
-    with everything else in the run clean."""
-    sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates", lambda sha: ["widget"])
-    monkeypatch.setattr(sync, "fetch_template", lambda name, sha: TEMPLATE_BYTES)
-    backups = tmp_path / ".template-sync-backups"
-    backups.mkdir()
-    (backups / "my-widget.xml.20260101-000000.bak").write_text(
-        "<Container><Name>x</Name>", encoding="utf-8")  # truncated: unparseable
-
-    with pytest.raises(SystemExit) as exc:
-        sync.main()
-
-    assert exc.value.code == 1, "an unreadable pre-existing backup alone must fail the run"
-
-
 def test_main_exits_nonzero_on_a_broken_instance_alone(sync, tmp_path, monkeypatch):
     """Same, for the `broken` bucket — one of our own corrupt instances, everything else clean.
 
@@ -268,68 +222,7 @@ def test_main_exits_nonzero_on_a_broken_instance_alone(sync, tmp_path, monkeypat
         "the unrelated template's own CREATE must still have succeeded")
 
 
-def test_main_exits_nonzero_on_a_prune_failure_alone(sync, tmp_path, monkeypatch):
-    """Same, for `prune_failed` — every template/instance clean, only the prune step fails."""
-    sync.TEMPLATES_USER = str(tmp_path)
-    monkeypatch.setattr(sync, "list_repo_templates", lambda sha: ["widget"])
-    monkeypatch.setattr(sync, "fetch_template", lambda name, sha: TEMPLATE_BYTES)
-    backups = tmp_path / ".template-sync-backups"
-    backups.mkdir()
-    victim = "my-widget.xml.20260101-000000.bak"
-    for i in range(sync.KEEP_BACKUPS + 3):
-        (backups / f"my-widget.xml.202601{i + 2:02d}-000000.bak").write_text(
-            "<Container/>", encoding="utf-8")
-    (backups / victim).write_text("<Container/>", encoding="utf-8")
-
-    real_remove = sync.os.remove
-
-    def flaky(path):
-        if victim in path:
-            raise OSError(13, "Permission denied")
-        return real_remove(path)
-
-    monkeypatch.setattr(sync.os, "remove", flaky)
-
-    with pytest.raises(SystemExit) as exc:
-        sync.main()
-
-    assert exc.value.code == 1, "a prune failure alone must fail the run"
-    assert (backups / victim).exists()
-
-
 # --------------------------------------------------- the two siblings _backup_files fed unwrapped
-
-
-def test_redact_existing_backups_reports_an_unlistable_dir_instead_of_crashing(
-    sync, tmp_path, monkeypatch,
-):
-    """`_backup_files`' own `os.listdir` was unwrapped, feeding BOTH redact_existing_backups and
-    prune_backups — the same crash-mid-loop shape #61 fixed at every other call site."""
-    backups = tmp_path / "b"
-    backups.mkdir()
-
-    def flaky(path):
-        raise OSError(13, "Permission denied")
-
-    monkeypatch.setattr(sync.os, "listdir", flaky)
-    files, values, unreadable = sync.redact_existing_backups(str(backups))
-
-    assert (files, values) == (0, 0)
-    assert unreadable, "a directory that cannot be listed must be reported, not silently empty"
-
-
-def test_prune_backups_reports_an_unlistable_dir_instead_of_crashing(sync, tmp_path, monkeypatch):
-    backups = tmp_path / "b"
-    backups.mkdir()
-
-    def flaky(path):
-        raise OSError(13, "Permission denied")
-
-    monkeypatch.setattr(sync.os, "listdir", flaky)
-    dropped, failed = sync.prune_backups(str(backups))
-
-    assert dropped == []
-    assert failed, "a directory that cannot be listed must be reported, not silently empty"
 
 
 def test_discover_instances_reports_an_unlistable_dir_instead_of_crashing(sync, tmp_path):
@@ -389,3 +282,8 @@ def test_map_instance_still_matches_by_naming_fallback_with_no_flag_to_pass(sync
 
     assert t == "tape", "the longest dash-prefix match must still win"
     assert error is None
+
+
+@pytest.fixture(autouse=True)
+def _backups_go_to_the_host_not_the_flash(sync, tmp_path_factory):
+    sync.BACKUP_DIR = str(tmp_path_factory.mktemp("host-delete"))

@@ -68,8 +68,8 @@ def run(sync, root, capsys):
     return code, capsys.readouterr().out
 
 
-def backups(root):
-    d = root / BACKUPS
+def backups(sync):
+    d = pathlib.Path(sync.BACKUP_DIR)
     return {p.name: p.read_text(encoding="utf-8") for p in d.iterdir()} if d.is_dir() else {}
 
 
@@ -84,7 +84,7 @@ def test_the_issue_repro_a_live_Mask_false_secret_is_redacted_when_the_template_
                   env=mirror(TOKEN=SECRET, PLAIN="kept")), encoding="utf-8")
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
-    (bak,) = backups(tmp_path).values()
+    (bak,) = backups(sync).values()
     assert SECRET not in bak, "the backup holds the secret the repo template masks"
     assert bak.count("***REDACTED***") == 2, "Config AND its mirror"
     assert "2 masked value(s) REDACTED" in out, "the count must include it"
@@ -112,67 +112,11 @@ def test_only_the_live_file_masks_it_still_redacted(sync, tmp_path, capsys):
                   env=mirror(TOKEN="t", PLAIN=SECRET)), encoding="utf-8")
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
-    (bak,) = backups(tmp_path).values()
+    (bak,) = backups(sync).values()
     assert SECRET not in bak
 
 
 # --------------------------------------------------------------- backups earlier runs left
-
-def test_the_existing_backups_pass_redacts_by_the_templates_masks_too(sync, tmp_path, capsys):
-    """An old backup taken while the live Config was unmasked holds the secret in clear, in both
-    halves. The scoped run's pass over its own backups redacts it; another template's backup is
-    not this run's and is left alone."""
-    (tmp_path / "my-app.xml").write_text(
-        container([cfg("TOKEN", "t", masked=True), cfg("PLAIN")]), encoding="utf-8")
-    (tmp_path / "my-other.xml").write_text(
-        container([cfg("OTHER_TOKEN", "o")], name="other"), encoding="utf-8")
-    b = tmp_path / BACKUPS
-    b.mkdir()
-    old = container([cfg("TOKEN", SECRET), cfg("PLAIN", "kept")], env=mirror(TOKEN=SECRET, PLAIN="kept"))
-    (b / "my-app.xml.20200101-000000.bak").write_text(old, encoding="utf-8")
-    foreign = container([cfg("TOKEN", "not-this-runs")], name="other")
-    (b / "my-other.xml.20200101-000000.bak").write_text(foreign, encoding="utf-8")
-
-    code, out = run(sync, tmp_path, capsys)
-    assert code == 0, out
-    assert "REDACTED 2 masked value(s) across 1 pre-existing backup(s)" in out
-    got = backups(tmp_path)
-    assert SECRET not in got["my-app.xml.20200101-000000.bak"]
-    assert got["my-app.xml.20200101-000000.bak"].count("kept") == 2
-    assert got["my-other.xml.20200101-000000.bak"] == foreign
-
-    capsys.readouterr()
-    code, out = run(sync, tmp_path, capsys)
-    assert "pre-existing backup" not in out, "the pass must be idempotent"
-
-
-def test_a_dry_run_reports_the_template_masked_backup_and_writes_nothing(sync, tmp_path, capsys):
-    b = tmp_path / BACKUPS
-    b.mkdir()
-    old = container([cfg("TOKEN", SECRET)], env=mirror(TOKEN=SECRET))
-    (b / "my-app.xml.20200101-000000.bak").write_text(old, encoding="utf-8")
-    sync.DRY_RUN = True
-    code, out = run(sync, tmp_path, capsys)
-    assert code == 0, out
-    assert "would redact 2 masked value(s) across 1 pre-existing backup(s)" in out
-    assert backups(tmp_path)["my-app.xml.20200101-000000.bak"] == old
-
-
-def test_a_template_that_cannot_load_still_runs_the_pass_on_the_files_own_masks(
-        sync, tmp_path, capsys, monkeypatch):
-    b = tmp_path / BACKUPS
-    b.mkdir()
-    (b / "my-app.xml.20200101-000000.bak").write_text(
-        container([cfg("TOKEN", SECRET, masked=True)]), encoding="utf-8")
-
-    def down(name, sha):
-        raise OSError("network down")
-
-    monkeypatch.setattr(sync, "fetch_template", down)
-    code, out = run(sync, tmp_path, capsys)
-    assert code == 1 and "could not fetch/parse repo template" in out, out
-    assert SECRET not in backups(tmp_path)["my-app.xml.20200101-000000.bak"]
-
 
 # -------------------------------------------- the legacy mirror of a dropped variable (RULE-2 #1)
 
@@ -188,25 +132,21 @@ def test_a_dropped_masked_variable_leaves_no_mirror_behind(sync, tmp_path, capsy
     assert SECRET not in live and "OLD_TOKEN" not in live
     assert "<Name>TOKEN</Name>" in live, "a mirror the template still has stays"
     assert "DROPPED legacy <Environment> mirror, not in repo template: OLD_TOKEN" in out
-    (bak,) = backups(tmp_path).values()
+    (bak,) = backups(sync).values()
     assert SECRET not in bak
 
 
-def test_a_mirror_whose_config_an_earlier_sync_dropped_is_redacted_and_pruned(sync, tmp_path, capsys):
+def test_a_mirror_whose_config_an_earlier_sync_dropped_is_not_backed_up_in_clear(sync, tmp_path, capsys):
     """The state an earlier sync left: OLD_TOKEN's Config is gone, its mirror is not, and nothing
     marks it secret. This run's backup must not copy it in clear, and the live file loses it."""
     (tmp_path / "my-app.xml").write_text(
         container([cfg("TOKEN", "t", masked=True), cfg("PLAIN", "kept")],
                   env=mirror(TOKEN="t", PLAIN="kept", OLD_TOKEN=SECRET)), encoding="utf-8")
-    b = tmp_path / BACKUPS
-    b.mkdir()
-    (b / "my-app.xml.20200101-000000.bak").write_text(
-        container([cfg("PLAIN", "kept")], env=mirror(PLAIN="kept", OLD_TOKEN=SECRET)), encoding="utf-8")
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
     assert SECRET not in (tmp_path / "my-app.xml").read_text(encoding="utf-8")
-    assert not any(SECRET in v for v in backups(tmp_path).values()), "a backup kept the orphan mirror"
-    assert all(v.count("kept") == 2 for v in backups(tmp_path).values()), "PLAIN over-redacted"
+    assert not any(SECRET in v for v in backups(sync).values()), "a backup kept the orphan mirror"
+    assert all(v.count("kept") == 2 for v in backups(sync).values()), "PLAIN over-redacted"
 
 
 def test_a_mirror_the_template_still_has_is_never_pruned_from_the_live_file(sync, tmp_path, capsys):
@@ -252,7 +192,7 @@ def test_a_padded_live_Target_still_matches_the_templates_mask(sync, tmp_path, c
         encoding="utf-8")
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
-    assert not any(SECRET in v for v in backups(tmp_path).values())
+    assert not any(SECRET in v for v in backups(sync).values())
 
 
 def test_a_Config_with_no_Target_matches_the_templates_mask_by_Name(sync, tmp_path, capsys, monkeypatch):
@@ -262,7 +202,7 @@ def test_a_Config_with_no_Target_matches_the_templates_mask_by_Name(sync, tmp_pa
     (tmp_path / "my-app.xml").write_text(no_target(container([cfg("TOKEN", SECRET)])), encoding="utf-8")
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
-    (bak,) = backups(tmp_path).values()
+    (bak,) = backups(sync).values()
     assert SECRET not in bak
 
 
@@ -290,3 +230,9 @@ def test_a_mirror_only_drop_is_not_reported_as_metadata_only(sync, tmp_path, cap
     assert code == 0, out
     assert "DROPPED legacy <Environment> mirror, not in repo template: GONE" in out
     assert "no variables added or removed" not in out, out
+
+
+@pytest.fixture(autouse=True)
+def _backups_go_to_the_host_not_the_flash(sync, tmp_path_factory):
+    """BACKUP_DIR is the host's delete folder: a folder outside the templates tree, never the flash."""
+    sync.BACKUP_DIR = str(tmp_path_factory.mktemp("host-delete"))
