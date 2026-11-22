@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!--
+  watchstate - keeps the played / unplayed state of the same media in step across media servers and
+  across users (Plex, Jellyfin, Emby). Stock image from the publisher's own registry; nothing here
+  is specific to any host or operator.
+
+  IMAGE TAG: ghcr.io/arabcoders/watchstate:v1.10.12 is a pinned release, as the repo requires for
+  third-party images. The pin rule forbids :latest, so an Update does not move the image until this
+  template changes. A rollback is the previous pinned version number.
+
+  USER: the publisher's Unraid instructions require the user flag 99:100 under Extra Parameters
+  (manual install), set before the first start. Extra Parameters stay empty in this repo (they belong to the
+  operator), so it is stated in the Overview and set on the live container.
+-->
+<Container version="2">
+  <Name>watchstate</Name>
+  <Repository>ghcr.io/arabcoders/watchstate:v1.10.12</Repository>
+  <Registry>https://github.com/arabcoders/watchstate/pkgs/container/watchstate</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/arabcoders/watchstate/issues</Support>
+  <Project>https://github.com/arabcoders/watchstate</Project>
+  <Overview>WatchState syncs watched / unwatched state between media servers (Plex, Jellyfin, Emby) and between the users of one server, with a web UI for backends, users, tasks and logs. EXTRA PARAMETERS (set these in the live container, not in this template): --user 99:100 . The publisher's manual Unraid install requires it; set it before the first start, and if files already exist under the Config path with another owner, run chown -R 99:100 on that folder. CONFIG: set the Config path to a folder on a pool. It holds the database, the backend tokens and the schedule, so treat it as a secret store and back it up. NETWORK: leave Network bridge. Backends are reached by URL from inside the container, so use the media server's own LAN address, not localhost. TIMEZONE: set TZ to the same zone as the media servers; the publisher's FAQ says they must agree or state changes are skipped as stale. SCHEDULE AND BACKENDS: both are configured in the web UI (Configuration > Env, Backends), not through this template. HEALTH: the image defines no health check and the publisher documents none; a working web UI at the host port is the check.</Overview>
+  <Category>MediaApp:Other Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/watchstate.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/watchstate.png</Icon>
+  <ExtraParams/>
+  <DateInstalled/>
+  <Description>Syncs watched state between media servers and between users, with a web UI. Needs one host port and one config folder.</Description>
+
+  <Config Name="HTTP Port" Target="8080" Default="8080" Mode="tcp" Description="Host port for the web UI; the container always listens on 8080 internally - change the host side only. The publisher's install instructions map 8080 to 8080." Type="Port" Display="always" Required="false" Mask="false">8080</Config>
+  <Config Name="Config" Target="/config" Default="" Mode="rw" Description="REQUIRED. Host folder for the database, backend tokens and schedule, e.g. /mnt/&lt;pool&gt;/appdata/watchstate. Must be owned by 99:100 (see Extra Parameters in the Overview). The publisher's install instructions mount their data folder at /config." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Timezone, same as your media servers (for example America/Chicago). The publisher's FAQ names TZ as the Docker fallback when WS_TZ is not set in the web UI." Type="Variable" Display="always" Required="false" Mask="false">UTC</Config>
+</Container>

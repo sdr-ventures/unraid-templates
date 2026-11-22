@@ -469,7 +469,9 @@
   },
   "kb-browser": {
     "no_local_consumer": false,
-    "vars": {"PYTHONPATH": "reads PYTHONPATH: the Python interpreter at start (sys.path), consumed by the runtime and not by app code; /app/site under the Collector mount holds the packages collect.py imports"},
+    "vars": {
+      "PYTHONPATH": "reads PYTHONPATH: the Python interpreter at start (sys.path), consumed by the runtime and not by app code; /app/site under the Collector mount holds the packages collect.py imports"
+    },
     "paths": {
       "/app": "reads /app: the run command python /app/collect.py loads the collector from this folder, mounted read-only (Cyberdyne kb doc 30_operations/_scripts/kb_browser/collect.py is the script; no repo holds it, so there is no file:line in a pinned release)",
       "/inbox": "reads /inbox: Cyberdyne kb doc 30_operations/_scripts/kb_browser/collect.py:24 INBOX = Path(\"/inbox\") (the kb drop folder the PDFs are saved into; kb-service reads the same folder as its KB_FUND_INBOX)"
@@ -494,5 +496,14 @@
     },
     "paths": {},
     "declared_for": {}
+  },
+  "watchstate": {
+    "no_local_consumer": false,
+    "vars": {
+      "TZ": "reads TZ via the container's own libc/PHP runtime: the publisher's FAQ (FAQ.md, \"Watch state changes skipped with stale_database_date?\") says to set TZ only in compose.yaml / docker run, as the fallback when WS_TZ is not set in the web UI"
+    },
+    "paths": {
+      "/config": "reads /config as the application data folder of the watchstate image: the publisher's README install section mounts the data folder at /config (rw) and the app writes its database, config and logs there"
+    }
   }
 }
