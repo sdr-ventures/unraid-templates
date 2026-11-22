@@ -60,7 +60,7 @@ CREDENTIAL_SHAPE = re.compile(
 )                    # the dot is for a Label such as `com.example.password`
 
 # Names that LOOK credential-shaped and are not. Keep it SMALL: every entry is a hole.
-#   SEL_PASS — reauth-bot's CSS selector for the password FIELD on a login page; a selector,
+#   SEL_PASS — the re-consent bot's CSS selector for the password FIELD on a login page; a selector,
 #              not a secret, and the first false positive this rule met in a shipped template.
 #   SORT_KEY, PARTITION_KEY, SECOND_PASS — no template carries these yet; they are the
 #              ordinary non-secret spellings a wider version of this rule met, kept so the
@@ -118,7 +118,7 @@ TWO_COMPONENT_TAG = re.compile(r"^\d+\.\d+(?:[.\-+][\w.\-]*)?$")   # 16.14, 16.1
 # what a moving tag on Docker Hub will point at tomorrow.
 # Both prefixes are the fleet's own images, during the org-move transition (ORG-REPUBLISH-1):
 # GHCR packages don't move with a repo transfer, so iron-tide (not yet republished) still deploys
-# from texasdaddy while everything already republished, gambit included, deploys from sdr-ventures.
+# from texasdaddy while everything already republished, the trading-research bot included, deploys from sdr-ventures.
 FLEET_IMAGE_PREFIX = ("ghcr.io/texasdaddy/", "ghcr.io/sdr-ventures/")
 FLEET_CHANNEL_TAGS = frozenset({"stable", "latest"})
 # The one owner every fleet template must publish under, in Repository, Registry and Project.
@@ -138,7 +138,7 @@ FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
     # kw-ops has no :stable yet (the first non-rc tag is the PM's to cut), so it runs the published
     # release candidate. Moves to a vX.Y.Z when a release is cut.
     ("kw-ops", "ghcr.io/sdr-ventures/kw-ops:v0.1.0-rc.4"),
-    # reauth-bot publishes vX.Y.Z from a version tag and moves :latest with it (D268); the
+    # The re-consent bot publishes vX.Y.Z from a version tag and moves :latest with it (D268); the
     # template names the release the live instance runs.
     ("reauth-bot", "ghcr.io/sdr-ventures/reauth-bot:v1.0.0"),
 })
@@ -170,8 +170,8 @@ PRIVILEGED_BY_DESIGN = frozenset()
 DOCKER_SOCKET_BY_DESIGN = frozenset({"kw-ops-proxy"})
 
 # PostArgs is appended after the image name: it is the container's COMMAND LINE, and a shell
-# command there can export anything over the values asserted in this file. gambit-loop needs it
-# because it runs the gambit image with the paper-lab loop as its command. kb-redis runs an sh wrapper so the
+# command there can export anything over the values asserted in this file. the paper-trading loop needs it
+# because it runs the trading-research bot's image with the paper-lab loop as its command. kb-redis runs an sh wrapper so the
 # password comes from its REDIS_PASSWORD Variable instead of a template field; kb-litellm
 # points the proxy at its mounted config file (PostArgs replaces the image's CMD). kw-proxy's
 # PostArgs is the squid arguments behind its sync entry script; the host's --entrypoint bash

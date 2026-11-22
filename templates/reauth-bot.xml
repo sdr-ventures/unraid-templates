@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <!--
-  reauth-bot — standalone Schwab trusted-device re-consent bot (its own repo:
+  Re-consent bot — standalone Schwab trusted-device re-consent bot (its own repo:
   github.com/sdr-ventures/reauth-bot). Self-contained image built by that repo's CI → GHCR:
   deploys the Unraid way — UI import → set IP + variables → Apply. One-time interactive seed is
-  a SEED_MODE variable toggle (no docker-run, no mounted script). This template targets Tape;
-  LOGIN_URL/TOKEN_URL have no default and are set at creation. Full runbook: reauth-bot repo README.
+  a SEED_MODE variable toggle (no docker-run, no mounted script). This template targets the market-data service;
+  LOGIN_URL/TOKEN_URL have no default and are set at creation. Full runbook: the bot's own repo README.
 -->
 <Container version="2">
   <Name>reauth-bot</Name>
@@ -15,7 +15,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/sdr-ventures/reauth-bot</Project>
-  <Overview>Standalone Schwab trusted-device re-consent bot (repo: github.com/sdr-ventures/reauth-bot). Self-contained image; on a ~96h cadence it drives a target service's login flow inside a persistent trusted-device profile (skips 2FA) so the Schwab 7-day consent refreshes itself. This template targets Tape; LOGIN_URL/TOKEN_URL have no default and must be set at creation. REQUIRES a one-time interactive trusted-device seed: set SEED_MODE=1 + SEED_VNC_PASSWORD, Apply, complete the consent over noVNC (http://CONTAINER-IP:6080/vnc.html), then clear SEED_MODE and Apply. The trusted-device cookie MUST persist across updates (Profile volume). Alerting follows the fleet's shared ops-alerting convention: set DEPLOY_ENV and mount the shared alerting config read-only at /kw_shared (see github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md); each run reports OK/ERROR to both email and ntfy. Unlike most of the fleet this container is FAIL-OPEN on a bad alerting config — it degrades every channel to unconfigured rather than refusing to start, so a missing mount or a broken DEPLOY_ENV never stops the reauth loop itself. See the reauth-bot repo README.</Overview>
+  <Overview>Standalone Schwab trusted-device re-consent bot (repo: github.com/sdr-ventures/reauth-bot). Self-contained image; on a ~96h cadence it drives a target service's login flow inside a persistent trusted-device profile (skips 2FA) so the Schwab 7-day consent refreshes itself. This template targets the market-data service; LOGIN_URL/TOKEN_URL have no default and must be set at creation. REQUIRES a one-time interactive trusted-device seed: set SEED_MODE=1 + SEED_VNC_PASSWORD, Apply, complete the consent over noVNC (http://CONTAINER-IP:6080/vnc.html), then clear SEED_MODE and Apply. The trusted-device cookie MUST persist across updates (Profile volume). Alerting follows the fleet's shared ops-alerting convention: set DEPLOY_ENV and mount the shared alerting config read-only at /kw_shared (see github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md); each run reports OK/ERROR to both email and ntfy. Unlike most of the fleet this container is FAIL-OPEN on a bad alerting config — it degrades every channel to unconfigured rather than refusing to start, so a missing mount or a broken DEPLOY_ENV never stops the reauth loop itself. See the bot's own repo README.</Overview>
   <Category>Network:Other</Category>
   <WebUI/>                                                            <!-- steady state has no web UI; seed noVNC is at http://CONTAINER-IP:6080/vnc.html only while SEED_MODE=1 -->
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/reauth-bot.xml</TemplateURL>
@@ -23,7 +23,7 @@
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>Standalone Schwab trusted-device re-consent bot (github.com/sdr-ventures/reauth-bot). Self-contained image; UI-deployed; one-time seed via SEED_MODE. This template targets Tape.</Description>
+  <Description>Standalone Schwab trusted-device re-consent bot (github.com/sdr-ventures/reauth-bot). Self-contained image; UI-deployed; one-time seed via SEED_MODE. This template targets the market-data service.</Description>
 
   <!-- Trusted-device profile MUST persist across container updates (losing it forces a manual re-seed). -->
   <Config Name="Profile" Target="/profile" Default="" Mode="rw" Description="Trusted-device browser profile + /profile/shots debug captures. REQUIRED - an absolute path on a POOL. It MUST survive updates and reboots: losing it forces the manual interactive re-seed." Type="Path" Display="always" Required="true" Mask="false"/>
@@ -33,7 +33,7 @@
   <Config Name="SCHWAB_USER" Target="SCHWAB_USER" Default="" Mode="" Description="Schwab login id (drives the trusted-device browser login)" Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="SCHWAB_PASS" Target="SCHWAB_PASS" Default="" Mode="" Description="Schwab password" Type="Variable" Display="always" Required="true" Mask="true"/>
 
-  <!-- Target service's OWN OAuth endpoints (default: tape-dev; swap host for prod / another service). -->
+  <!-- Target service's OWN OAuth endpoints (default: the market-data dev host; swap host for prod / another service). -->
   <Config Name="LOGIN_URL" Target="LOGIN_URL" Default="" Mode="" Description="The service's login endpoint the bot navigates to start consent — a credential-less browser route, e.g. https://tape.your-domain.example/v1/public/login" Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="TOKEN_URL" Target="TOKEN_URL" Default="" Mode="" Description="Set at creation. The target service's token-status endpoint the bot reads (HTTP GET, sending TAPE_CLIENT_ID/TAPE_CLIENT_SECRET as X-Client-Id/X-Client-Secret) to confirm consent advanced. Use the service's DIRECT/internal URL (its container IP:port) — NOT a public CDN host (Cloudflare 403s non-browser requests). Format: http://SERVICE-IP:PORT/v1/auth/token (the auth-scoped path)" Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="TAPE_CLIENT_ID" Target="TAPE_CLIENT_ID" Default="" Mode="" Description="Client id (X-Client-Id) the bot presents on the TOKEN_URL read. Register a client dedicated to the bot holding ONLY the auth scope via the service's /v1/admin/clients (client_id=reauth-bot, scopes=auth) so it can be rotated or revoked on its own. Set together with TAPE_CLIENT_SECRET — this tool has no other reason to run." Type="Variable" Display="always" Required="true" Mask="false"/>
@@ -43,7 +43,7 @@
        DEPLOY_ENV, below, plus the shared file on the read-only /kw_shared mount — every email
        setting, the SMTP password, AND the ntfy topic(s) live there, so moving the inbox or
        rotating the password is one edit fleet-wide instead of one per container. Full setup:
-       github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md. reauth-bot is
+       github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md. The re-consent bot is
        deliberately FAIL-OPEN here, unlike most of the fleet: a bad or missing Variable below, or
        a missing mount, degrades every alert channel to unconfigured rather than refusing to
        start — the reauth loop itself must never be the price of a broken alerting Variable. -->

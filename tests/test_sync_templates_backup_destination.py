@@ -122,11 +122,11 @@ def test_a_BACKUP_ROLE_goes_in_front_of_sync_in_the_backup_name(sync, tmp_path, 
     root = world(tmp_path / "flash")
     host = tmp_path / "host-delete"
     sync.BACKUP_DIR = str(host)
-    sync.BACKUP_ROLE = "gambit"
+    sync.BACKUP_ROLE = "demo"
     code, out = run(sync, root, capsys)
     assert code == 0, out
     (bak,) = list(host.iterdir())
-    assert bak.name.startswith("my-app.xml.gambit-sync-"), bak.name
+    assert bak.name.startswith("my-app.xml.demo-sync-"), bak.name
 
 
 def test_two_backups_of_one_instance_never_share_a_name(sync, tmp_path):

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  cef-tracker — closed-end fund discount-to-NAV tracker (Flask/SQLite; its own repo:
+  fund tracker — closed-end fund discount-to-NAV tracker (Flask/SQLite; its own repo:
   github.com/sdr-ventures/cef-tracker). Self-contained image built by that repo's CI → GHCR.
   Deploys the Unraid way: UI import → set FLASK_SECRET_KEY (+ optional OAuth) → Apply.
   /data (the SQLite DB) and /data/backups (its scheduled backup) are the two required
@@ -18,7 +18,7 @@
   alerting root" below to enable outbound email. It is OPTIONAL and this container does
   NOT refuse to boot without it: email has always been an optional feature here (this app
   degrades a broken/missing setting to a visible 503 or a skipped feature, never a
-  crash-loop — see cef#9/#5/#4), unlike a sibling such as the-desk where alerting is core.
+  crash-loop), unlike a sibling service where alerting is core.
   Leave it unset to run with outbound email disabled, same as leaving smtp_host blank used
   to mean before this change. Setup + the annotated template for that shared file:
   github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md
@@ -32,7 +32,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/sdr-ventures/cef-tracker</Project>
-  <Overview>CEF Tracker — closed-end fund discount-to-NAV surveillance (BUY/WATCH/HOLD/SELL/AVOID signals) over ~367 CEFs, with a CEFConnect/FRED/sponsor data pipeline (APScheduler). Flask/SQLite, single gunicorn worker. Two required persistent volumes: /data (the SQLite DB) and /data/backups (the scheduled SQLite backup the app writes every 3 days at 2am ET) — both on the appdata pool. Set FLASK_SECRET_KEY (required; without it the container starts but stays UNHEALTHY, serving only a 503 that names the missing variable). Google/Microsoft OAuth are optional. FRED key, Anthropic key and ntfy remain managed in-app under Admin → System Settings. SMTP infra creds (host/port/user/password/from) now come from kw-common's fleet-shared configs/alerting.env instead — set the Shared alerting root below to enable outbound email; it is OPTIONAL, and this container runs fine with it unset (email is simply disabled, exactly as an unset smtp_host meant before). See github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md.</Overview>
+  <Overview>Fund tracker — closed-end fund discount-to-NAV surveillance (BUY/WATCH/HOLD/SELL/AVOID signals) over ~367 CEFs, with a CEFConnect/FRED/sponsor data pipeline (APScheduler). Flask/SQLite, single gunicorn worker. Two required persistent volumes: /data (the SQLite DB) and /data/backups (the scheduled SQLite backup the app writes every 3 days at 2am ET) — both on the appdata pool. Set FLASK_SECRET_KEY (required; without it the container starts but stays UNHEALTHY, serving only a 503 that names the missing variable). Google/Microsoft OAuth are optional. FRED key, Anthropic key and ntfy remain managed in-app under Admin → System Settings. SMTP infra creds (host/port/user/password/from) now come from kw-common's fleet-shared configs/alerting.env instead — set the Shared alerting root below to enable outbound email; it is OPTIONAL, and this container runs fine with it unset (email is simply disabled, exactly as an unset smtp_host meant before). See github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md.</Overview>
   <Category>Network:Other</Category>
   <WebUI>http://[IP]:[PORT:5000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/cef-tracker.xml</TemplateURL>
@@ -40,7 +40,7 @@
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>CEF Tracker — closed-end fund discount-to-NAV tracker (Flask/SQLite).</Description>
+  <Description>Fund tracker — closed-end fund discount-to-NAV tracker (Flask/SQLite).</Description>
   <Config Name="HTTP Port" Target="5000" Default="5000" Mode="tcp" Description="App HTTP port" Type="Port" Display="always" Required="false" Mask="false">5000</Config>
   <Config Name="Data" Target="/data" Default="" Mode="rw" Description="SQLite DB directory - the only persistent volume. REQUIRED - an absolute path on a POOL." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Backups" Target="/data/backups" Default="" Mode="rw" Description="Where the scheduled SQLite backup lands (system_database_backup, every 3 days at 2am ET, keeps the newest 3 copies and prunes older ones). REQUIRED: the app derives this directory from DB_PATH's own directory below, not from a separate setting — WITHOUT a mount at this exact path the backup writes into the unmounted container filesystem and is destroyed by the next image update, while the job still logs success. Set an absolute path on a POOL; a DIFFERENT pool from the Data mount above is safer (so one pool failure cannot take both the database and its only backup) — Docker mounts this path cleanly underneath the Data mount with no conflict. ⚠️ If you change DB_PATH below to a directory other than /data, the backup job follows it there instead of here — keep this path in sync with DB_PATH's directory, or leave DB_PATH at its default." Type="Path" Display="always" Required="true" Mask="false"/>
@@ -54,22 +54,22 @@
   <Config Name="FLASK_ENV" Target="FLASK_ENV" Default="production" Mode="" Description="production (default) or development. Only set development for debugging — it enables debug mode. Blank is treated as production." Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
 
   <!--
-    TAPE (CT-TAPE-CLIENT-1) — read-only, dual-run only. Feeds the NAV parity report, not the
+    Market-data client — read-only, dual-run only. Feeds the NAV parity report, not the
     app's own signal/history path. All three are OPTIONAL and blank by default: the app boots
     fine with none of them set, and partial config (any one set without the other two) is
     treated the same as none — the integration only turns on once all three are present.
   -->
-  <Config Name="TAPE_BASE_URL" Target="TAPE_BASE_URL" Default="" Mode="" Description="Base URL of the Tape market-data API this deployment reads from, e.g. https://tape.example.com (no trailing path). Read-only, dual-run only — feeds the NAV parity report, not the app's own signal/history path. OPTIONAL, blank by default; all three TAPE_* values must be set together or the integration stays off." Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="TAPE_CLIENT_ID" Target="TAPE_CLIENT_ID" Default="" Mode="" Description="Tape API client id (X-Client-Id), data-scoped. Provisioned in Tape's client registry. OPTIONAL, blank by default." Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="TAPE_CLIENT_SECRET" Target="TAPE_CLIENT_SECRET" Default="" Mode="" Description="Tape API client secret (X-Client-Secret). Provisioned in Tape's client registry. OPTIONAL, blank by default." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="TAPE_BASE_URL" Target="TAPE_BASE_URL" Default="" Mode="" Description="Base URL of the market-data API this deployment reads from, e.g. https://market-data.example.com (no trailing path). Read-only, dual-run only — feeds the NAV parity report, not the app's own signal/history path. OPTIONAL, blank by default; all three TAPE_* values must be set together or the integration stays off." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="TAPE_CLIENT_ID" Target="TAPE_CLIENT_ID" Default="" Mode="" Description="Market-data API client id (X-Client-Id), data-scoped. Provisioned in the market-data service's client registry. OPTIONAL, blank by default." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="TAPE_CLIENT_SECRET" Target="TAPE_CLIENT_SECRET" Default="" Mode="" Description="Market-data API client secret (X-Client-Secret). Provisioned in the market-data service's client registry. OPTIONAL, blank by default." Type="Variable" Display="advanced" Required="false" Mask="true"/>
 
   <!--
-    ALERTING (CEF-N3) — SMTP infra creds only, and OPTIONAL, unlike the-desk's alerting.
+    ALERTING (CEF-N3) — SMTP infra creds only, and OPTIONAL, unlike a sibling service's alerting.
     This app's own per-admin notify mode/threshold and its ntfy settings stay in-app under
     Admin -> System Settings; only the SMTP host/port/user/password/from move here, to the
-    ONE file every Keystone container reads. Leave both settings below blank to run with
+    ONE file every finance-platform container reads. Leave both settings below blank to run with
     outbound email disabled. Setup + the annotated template for that file:
     github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md
   -->
-  <Config Name="Shared alerting root" Target="/kw_shared" Default="" Mode="ro" Description="OPTIONAL. The host directory holding configs/alerting.env - the ONE file every Keystone container reads its SMTP settings from. Mounted READ-ONLY: this container never writes to it. Leave blank to run with outbound email disabled (job-error alert emails and invitation emails will not send; the app itself is unaffected). Full instructions: github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md" Type="Path" Display="always" Required="false" Mask="false"/>
+  <Config Name="Shared alerting root" Target="/kw_shared" Default="" Mode="ro" Description="OPTIONAL. The host directory holding configs/alerting.env - the ONE file every finance-platform container reads its SMTP settings from. Mounted READ-ONLY: this container never writes to it. Leave blank to run with outbound email disabled (job-error alert emails and invitation emails will not send; the app itself is unaffected). Full instructions: github.com/sdr-ventures/kw-common/blob/main/docs/alerting-setup.md" Type="Path" Display="always" Required="false" Mask="false"/>
 </Container>

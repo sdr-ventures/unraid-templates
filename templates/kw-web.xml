@@ -8,7 +8,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/sdr-ventures/kw-web</Project>
-  <Overview>Keystone Web — the browser frontend for the Keystone platform (Next.js, standalone). A backend-for-frontend: its own server holds the browser session (refresh token in an httpOnly cookie, access token in memory) and calls the keystone API container server-to-server; it never connects to the database. Stateless — no volumes. ONE neutral template for dev and prod: at creation set Name (kw-web / kw-web-dev), image tag (:stable / :dev), network mode / static IP, and KEYSTONE_API_URL pointing at the matching keystone API container (http://&lt;api-ip&gt;:8000). Put both containers behind the same public hostname on the reverse proxy: /v1/*, /docs and /openapi.json to the API, everything else to this container — and add this container's IP to the API's TRUSTED_PROXIES so per-IP auth throttling sees the browser rather than this container. Deploy check: GET /api/health reports release/sha plus API reachability.</Overview>
+  <Overview>Web frontend — the browser frontend for the finance platform (Next.js, standalone). A backend-for-frontend: its own server holds the browser session (refresh token in an httpOnly cookie, access token in memory) and calls the finance platform API container server-to-server; it never connects to the database. Stateless — no volumes. ONE neutral template for dev and prod: at creation set Name (kw-web / kw-web-dev), image tag (:stable / :dev), network mode / static IP, and KEYSTONE_API_URL pointing at the matching finance platform API container (http://&lt;api-ip&gt;:8000). Put both containers behind the same public hostname on the reverse proxy: /v1/*, /docs and /openapi.json to the API, everything else to this container — and add this container's IP to the API's TRUSTED_PROXIES so per-IP auth throttling sees the browser rather than this container. Deploy check: GET /api/health reports release/sha plus API reachability.</Overview>
   <Category>Network:Web</Category>
   <!-- No WebUI link on purpose: the session cookie is Secure-only, so opening the container
        directly over plain http signs in and then never restores. Reach it through the reverse
@@ -19,14 +19,14 @@
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>Keystone Web — browser frontend (Next.js BFF) for the Keystone platform. Neutral template; set Name (kw-web / kw-web-dev), IP, image tag and KEYSTONE_API_URL at creation.</Description>
+  <Description>Web frontend — browser frontend (Next.js BFF) for the finance platform. Neutral template; set Name (kw-web / kw-web-dev), IP, image tag and KEYSTONE_API_URL at creation.</Description>
 
   <Config Name="HTTP Port" Target="3000" Default="3000" Mode="tcp" Description="App HTTP port (Node standalone server)" Type="Port" Display="always" Required="false" Mask="false">3000</Config>
 
   <!-- The API this frontend talks to. Server-side only: it is read by the container's own
        Route Handlers and never shipped to the browser, so the internal container address is
        the right value here (no CORS — the browser only ever sees the one public hostname). -->
-  <Config Name="KEYSTONE_API_URL" Target="KEYSTONE_API_URL" Default="" Mode="" Description="Base URL of the keystone API container THIS instance talks to, e.g. http://&lt;keystone-api-ip&gt;:8000 (dev web -> dev API). Reached over the container network, never via the public hostname." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="KEYSTONE_API_URL" Target="KEYSTONE_API_URL" Default="" Mode="" Description="Base URL of the finance platform API container THIS instance talks to, e.g. http://&lt;api-ip&gt;:8000 (dev web -> dev API). Reached over the container network, never via the public hostname." Type="Variable" Display="always" Required="true" Mask="false"/>
   <!-- The two sites this instance serves (D127). The exact Host the proxy sends, lower case, no scheme. -->
   <Config Name="HOUSEHOLD_HOST" Target="HOUSEHOLD_HOST" Default="" Mode="" Description="REQUIRED. Hostname of the household app, e.g. &lt;household-host-name&gt; (no scheme, no path; a port only if the proxy sends one). Blank: the household site does not exist and only /api/health answers there." Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="ADMIN_HOST" Target="ADMIN_HOST" Default="" Mode="" Description="REQUIRED. Hostname of the admin console, e.g. admin.&lt;household-host-name&gt;, a sub-name of HOUSEHOLD_HOST so one passkey relying party covers both. Blank: the admin console does not exist." Type="Variable" Display="always" Required="true" Mask="false"/>

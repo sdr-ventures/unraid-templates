@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <!--
-  tape — ONE neutral template for the Tape data tier (dev AND prod). Per INFRASTRUCTURE §2 B.7
+  Market-data service — ONE neutral template for the market-data tier (dev AND prod). Per INFRASTRUCTURE §2 B.7
   there is no separate -dev file: the operator sets the host-specific values at CREATION —
   Name (tape / tape-dev), image tag (:stable prod / :dev), network + static IP, and the
   discrete DB_* vars. Nothing environment-specific is baked here.
 
-  ⭐ SHRUNK TO THE BOOT-REQUIRED MINIMUM (T-CRED-PURGE-1). Every tape setting lives in exactly
+  ⭐ SHRUNK TO THE BOOT-REQUIRED MINIMUM (T-CRED-PURGE-1). Every market-data setting lives in exactly
   one of three places: `app_config` (scalars, migrations 0052+0053), `job_schedules`
   (cron/enabled settings, migration 0049), or — only if the container cannot boot without it —
   this template. What remains below: the DB-connection vars, TOKEN_ENCRYPTION_KEY (decrypts
@@ -31,10 +31,10 @@
       same way now, with no Variable and no separate mount either.
     - The retired per-container NTFY_URL. ALERTING IS CONFIGURED ONCE FOR THE WHOLE FLEET, NOT
       HERE: the "Shared alerting config" mount below and DEPLOY_ENV together point this
-      container at the shared configs/alerting.env file every Keystone container reads. The
+      container at the shared configs/alerting.env file every finance-platform container reads. The
       ntfy topic — NTFY_URL_TAPE if set, else the shared NTFY_URL_DEV / NTFY_URL_PROD — and the
       email/SMTP settings both live in that file now, so the old per-container NTFY_URL
-      Variable is not offered; it would only race it. Tape's OWN ALERT_LOG_DIR / ALERT_ERROR_LOG
+      Variable is not offered; it would only race it. The market-data service's OWN ALERT_LOG_DIR / ALERT_ERROR_LOG
       / TAPE_OPS_LOG are a different thing — this container's own retrievable-log-path knobs,
       unrelated to which alert channel fires — and stay excluded here exactly as before: their
       defaults (a subdirectory of the Data mount) suit almost every deployment, and an operator
@@ -44,7 +44,7 @@
 
   ⚠️ BLANK IS UNSET. Unraid passes every optional Variable to the container as an EMPTY STRING
   whether or not it was filled in, so the app treats a blank as "use the shipped default" for
-  everything here (a deliberate class-wide guard, tape#128).
+  everything here (a deliberate class-wide guard).
 
   ⚠️ A blank Variable marked Required does NOT stop the container — Unraid does not enforce
   that, and the app falls back to its own default. DB_PASSWORD blank connects with the default
@@ -59,7 +59,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/sdr-ventures/tape</Project>
-  <Overview>Tape — Schwab-backed market + account data tier for CEF Tracker + Keystone. ONE neutral template for dev and prod: at creation set Name (tape / tape-dev), image tag (:stable for prod, :dev for dev), network + a static IP if you use one, and the discrete DB_* vars pointing at the tape-db container. The app assembles the DB connection string from DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME (§2 B.10), or set DATABASE_URL to override with a full connection string. Everything else, including the Schwab/FRED/Tiingo credentials, is database-managed via the admin API, seeded with shipped defaults — see the header comment.</Overview>
+  <Overview>Market-data service — Schwab-backed market + account data tier for the fund tracker and the finance platform. ONE neutral template for dev and prod: at creation set Name (tape / tape-dev), image tag (:stable for prod, :dev for dev), network + a static IP if you use one, and the discrete DB_* vars pointing at the market-data database container. The app assembles the DB connection string from DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME (§2 B.10), or set DATABASE_URL to override with a full connection string. Everything else, including the Schwab/FRED/Tiingo credentials, is database-managed via the admin API, seeded with shipped defaults — see the header comment.</Overview>
   <Category>Network:Other</Category>
   <WebUI>http://[IP]:[PORT:8000]/v1/health</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/tape.xml</TemplateURL>
@@ -67,23 +67,23 @@
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>Tape — Schwab-backed market + account data tier (one neutral template, dev+prod).</Description>
+  <Description>Market-data service — Schwab-backed market + account data tier (one neutral template, dev+prod).</Description>
 
   <!-- ===== Ports and volumes ===== -->
   <Config Name="HTTP Port" Target="8000" Default="8000" Mode="tcp" Description="App HTTP port" Type="Port" Display="always" Required="false" Mask="false">8000</Config>
-  <Config Name="Data" Target="/data" Default="" Mode="rw" Description="Encrypted token store. REQUIRED - set an absolute path on a POOL (e.g. /mnt/&lt;pool&gt;/appdata/tape/data, or .../tape-dev/data for a dev container). Do NOT leave it blank and do not point it at the RAM-backed root filesystem. The retrievable ops/error logs also default to a subdirectory of this mount." Type="Path" Display="always" Required="true" Mask="false"/>
-  <Config Name="Backups" Target="/backups" Default="" Mode="rw" Description="Where the scheduled pg_dump lands. REQUIRED for a real backup: WITHOUT this mount the dump is written INSIDE the container and destroyed by the next update — the job still reports success, which is why it went unnoticed for months. Set an absolute path on a POOL DIFFERENT from the one holding the DB container&apos;s data (e.g. /mnt/&lt;other-pool&gt;/appdata/tape/backups), so one pool failure cannot take both the warehouse and its only backup. The app WARNS (ntfy) at boot and at every dump if this path is not a persistent mount. ⚠️ THIS MOUNT IS THE BACKUP_DIR SETTING — there is deliberately no BACKUP_DIR Variable, because the two must never disagree: a Variable pointing anywhere other than this mount point would send dumps into the container filesystem, which is the exact silent failure above." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Data" Target="/data" Default="" Mode="rw" Description="Encrypted token store. REQUIRED - set an absolute path on a POOL (e.g. /mnt/&lt;pool&gt;/appdata/app/data, or .../app-dev/data for a dev container). Do NOT leave it blank and do not point it at the RAM-backed root filesystem. The retrievable ops/error logs also default to a subdirectory of this mount." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Backups" Target="/backups" Default="" Mode="rw" Description="Where the scheduled pg_dump lands. REQUIRED for a real backup: WITHOUT this mount the dump is written INSIDE the container and destroyed by the next update — the job still reports success, which is why it went unnoticed for months. Set an absolute path on a POOL DIFFERENT from the one holding the DB container&apos;s data (e.g. /mnt/&lt;other-pool&gt;/appdata/app/backups), so one pool failure cannot take both the warehouse and its only backup. The app WARNS (ntfy) at boot and at every dump if this path is not a persistent mount. ⚠️ THIS MOUNT IS THE BACKUP_DIR SETTING — there is deliberately no BACKUP_DIR Variable, because the two must never disagree: a Variable pointing anywhere other than this mount point would send dumps into the container filesystem, which is the exact silent failure above." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Shared alerting config" Target="/kw_shared" Default="" Mode="ro" Description="READ-ONLY mount of the shared fleet config directory — set the host path to the directory holding configs/alerting.env (EMAIL_TO, EMAIL_FROM, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and the ntfy topics NTFY_URL_TAPE / NTFY_URL_DEV / NTFY_URL_PROD). THIS MOUNT IS BOTH ALERT CHANNELS, ntfy AND email: both are deliberately read from that file at send time and NEVER from a per-container environment variable, because an environment variable is visible to anyone who can run a container inspect and both an SMTP password and an ntfy topic are real credentials. The container path is FIXED at /kw_shared (T-CRED-PURGE-1 — the app hardcodes it, there is no SHARED_ROOT Variable to keep in sync any more). Without this mount both channels are unreachable and every alert this service raises goes NOWHERE (it says so loudly in the boot log). One file serves the whole fleet, so rotating the password, moving the inbox or repointing a topic is one edit rather than one per container." Type="Path" Display="always" Required="true" Mask="false"/>
 
   <!-- ===== Encryption ===== -->
   <Config Name="TOKEN_ENCRYPTION_KEY" Target="TOKEN_ENCRYPTION_KEY" Default="" Mode="" Description="Fernet key for token-at-rest encryption AND for every encrypted app_config credential row (Schwab app key/secret, FRED/Tiingo API keys, the legacy shared API key — set those via the admin API once this container is up). REQUIRED - the key that decrypts the store cannot itself live inside it." Type="Variable" Display="always" Required="true" Mask="true"/>
 
   <!-- ===== Warehouse database ===== -->
-  <Config Name="DB_HOST" Target="DB_HOST" Default="" Mode="" Description="Warehouse DB host - the address of the tape-db container serving THIS environment" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="DB_HOST" Target="DB_HOST" Default="" Mode="" Description="Warehouse DB host - the address of the market-data database container serving THIS environment" Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="DB_PORT" Target="DB_PORT" Default="5432" Mode="" Description="Warehouse DB port" Type="Variable" Display="always" Required="true" Mask="false">5432</Config>
-  <Config Name="DB_USER" Target="DB_USER" Default="tape" Mode="" Description="Warehouse DB user (matches the tape-db container's POSTGRES_USER)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
-  <Config Name="DB_PASSWORD" Target="DB_PASSWORD" Default="" Mode="" Description="Warehouse DB password (matches the tape-db container's POSTGRES_PASSWORD)" Type="Variable" Display="always" Required="true" Mask="true"/>
-  <Config Name="DB_NAME" Target="DB_NAME" Default="tape" Mode="" Description="Warehouse DB name (matches the tape-db container's POSTGRES_DB)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
+  <Config Name="DB_USER" Target="DB_USER" Default="tape" Mode="" Description="Warehouse DB user (matches the market-data database container's POSTGRES_USER)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
+  <Config Name="DB_PASSWORD" Target="DB_PASSWORD" Default="" Mode="" Description="Warehouse DB password (matches the market-data database container's POSTGRES_PASSWORD)" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="DB_NAME" Target="DB_NAME" Default="tape" Mode="" Description="Warehouse DB name (matches the market-data database container's POSTGRES_DB)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
   <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="" Mode="" Description="OPTIONAL override — full SQLAlchemy URL (postgresql+psycopg://user:pass@host:port/db). Leave BLANK to use the discrete DB_* vars above; if set, it wins." Type="Variable" Display="advanced" Required="false" Mask="true"/>
 
   <!-- ===== Alerting (fleet standard) ===== -->

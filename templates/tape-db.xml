@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  tape-db — ONE neutral template for Tape's TimescaleDB warehouse (dev AND prod). Per §2 B.7
+  Market-database — ONE neutral template for the market-data service's TimescaleDB warehouse (dev AND prod). Per §2 B.7
   no separate -dev file: the operator sets Name (tape-db / tape-db-dev), network + static IP
   (if you use one), the appdata path, and POSTGRES_PASSWORD at CREATION. The public image is
   pinned (not env-specific). Start the DB BEFORE its app (the app connects on boot).
@@ -14,17 +14,17 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/timescale/timescaledb</Project>
-  <Overview>TimescaleDB — Tape's market-data warehouse. ONE neutral template for dev and prod: at creation set Name (tape-db / tape-db-dev), network + a static IP if you use one (start the DB before the app), the appdata data path on a pool, and POSTGRES_PASSWORD. The tape app's DB_HOST/DB_USER/DB_PASSWORD/DB_NAME must match this container's IP + POSTGRES_USER/PASSWORD/DB.</Overview>
+  <Overview>TimescaleDB — the market-data warehouse. ONE neutral template for dev and prod: at creation set Name (tape-db / tape-db-dev), network + a static IP if you use one (start the DB before the app), the appdata data path on a pool, and POSTGRES_PASSWORD. The market-data service's DB_HOST/DB_USER/DB_PASSWORD/DB_NAME must match this container's IP + POSTGRES_USER/PASSWORD/DB.</Overview>
   <Category>Database:</Category>
   <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/tape-db.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/tape-db.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <DateInstalled/>
-  <Description>TimescaleDB — Tape's market-data warehouse (one neutral template, dev+prod).</Description>
+  <Description>TimescaleDB — the market-data warehouse (one neutral template, dev+prod).</Description>
   <Config Name="Postgres Port" Target="5432" Default="5432" Mode="tcp" Description="Postgres port" Type="Port" Display="always" Required="false" Mask="false">5432</Config>
-  <Config Name="Data" Target="/var/lib/postgresql/data" Default="" Mode="rw" Description="Postgres data dir. REQUIRED - an absolute path on a POOL (e.g. /mnt/&lt;pool&gt;/appdata/tape-db/data, or .../tape-db-dev/data for a dev container)." Type="Path" Display="always" Required="true" Mask="false"/>
-  <Config Name="POSTGRES_USER" Target="POSTGRES_USER" Default="tape" Mode="" Description="DB user (must match the tape app's DB_USER)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
-  <Config Name="POSTGRES_PASSWORD" Target="POSTGRES_PASSWORD" Default="" Mode="" Description="DB password (must match the tape app's DB_PASSWORD)" Type="Variable" Display="always" Required="true" Mask="true"/>
-  <Config Name="POSTGRES_DB" Target="POSTGRES_DB" Default="tape" Mode="" Description="DB name (must match the tape app's DB_NAME)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
+  <Config Name="Data" Target="/var/lib/postgresql/data" Default="" Mode="rw" Description="Postgres data dir. REQUIRED - an absolute path on a POOL (e.g. /mnt/&lt;pool&gt;/appdata/db/data, or .../db-dev/data for a dev container)." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="POSTGRES_USER" Target="POSTGRES_USER" Default="tape" Mode="" Description="DB user (must match the market-data service's DB_USER)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
+  <Config Name="POSTGRES_PASSWORD" Target="POSTGRES_PASSWORD" Default="" Mode="" Description="DB password (must match the market-data service's DB_PASSWORD)" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="POSTGRES_DB" Target="POSTGRES_DB" Default="tape" Mode="" Description="DB name (must match the market-data service's DB_NAME)" Type="Variable" Display="always" Required="true" Mask="false">tape</Config>
 </Container>
