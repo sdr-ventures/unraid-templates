@@ -10,7 +10,7 @@ package returns.
 WHY THIS CANNOT BE A LIVE GREP AGAINST THE CONSUMING REPO, IN THIS REPO'S CI: this repo is
 PUBLIC and its CI runs on GitHub-hosted runners only (a public repo never uses the fleet's
 self-hosted runners — see _worker-common "A PUBLIC REPO NEVER USES THE SELF-HOSTED RUNNER
-FLEET"). Every consuming app (keystone, tape, cef-tracker, reauth-bot) is a
+FLEET"). Every consuming app (the finance platform, the market-data service, the fund tracker, the re-consent bot) is a
 SEPARATE, PRIVATE repo — its source is not, and must not be, available to a public repo's
 CI job. So the live "does the app actually read this" check cannot run here; it can only
 run by hand, by whoever edits a template's Variables, against a checkout of the consumer.

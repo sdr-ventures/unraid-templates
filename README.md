@@ -1,7 +1,7 @@
 # unraid-templates
 
 Public Unraid Docker templates + icons for the self-hosted stack
-(**Tape**, **CEF Tracker**, **Keystone**, **reauth-bot**). Public so Unraid can fetch icons
+(**market-data service**, **fund tracker**, **finance platform**, **re-consent bot**). Public so Unraid can fetch icons
 anonymously via `raw.githubusercontent.com`; the application source stays in its own
 private repos.
 
@@ -16,15 +16,15 @@ Each PNG is a render of its `icons/src/<name>.svg`. `python scripts/render_icons
 
 | Container | Icon | Template |
 |---|---|---|
-| tape (dev+prod) | `icons/tape.png` | `templates/tape.xml` |
-| tape-db (dev+prod) | `icons/tape-db.png` | `templates/tape-db.xml` |
-| cef-tracker (prod) | `icons/cef-tracker.png` | `templates/cef-tracker.xml` |
-| reauth-bot | `icons/reauth-bot.png` | `templates/reauth-bot.xml` |
+| market-data service (dev+prod) | `icons/tape.png` | `templates/tape.xml` |
+| market-data database (dev+prod) | `icons/tape-db.png` | `templates/tape-db.xml` |
+| fund tracker (prod) | `icons/cef-tracker.png` | `templates/cef-tracker.xml` |
+| re-consent bot | `icons/reauth-bot.png` | `templates/reauth-bot.xml` |
 | kw-core | `icons/kw-core.png` | `templates/kw-core.xml` |
 | kw-core-db | `icons/kw-core-db.png` | `templates/kw-core-db.xml` |
 | kw-web (dev+prod) | `icons/kw-web.png` | `templates/kw-web.xml` |
-| gambit (prod) | `icons/gambit.png` | `templates/gambit.xml` |
-| gambit-loop (same image, paper-lab loop) | `icons/gambit.png` | `templates/gambit-loop.xml` |
+| trading-research bot (prod) | `icons/gambit.png` | `templates/gambit.xml` |
+| paper-trading loop (same image, paper-lab loop) | `icons/gambit.png` | `templates/gambit-loop.xml` |
 | iron-tide | `icons/iron-tide.png` | `templates/iron-tide.xml` |
 | kb-postgres (start 1st, `kb` network only) | `icons/kb-postgres.png` | `templates/kb-postgres.xml` |
 | kb-redis (start 2nd, after kb-postgres, `kb` network only) | `icons/kb-redis.png` | `templates/kb-redis.xml` |
@@ -32,12 +32,12 @@ Each PNG is a render of its `icons/src/<name>.svg`. `python scripts/render_icons
 | kb-embed (after kb-litellm, before kb-service; `kb` network only, no port) | `icons/kb-embed.png` | `templates/kb-embed.xml` |
 | kb-service (start 4th, after kb-litellm) | `icons/kb-service.png` | `templates/kb-service.xml` |
 | kb-ingest (after kb-service; `kb` network only, no port, CPU capped; needs an `ingest-worker` token in kb-service) | `icons/kb-ingest.png` | `templates/kb-ingest.xml` |
-| kw-embedder (Keystone Wealth embedding engine; kb-service in embedder mode; internal network only, no port, no data volume, read-only root) | `icons/kw-embedder.png` | `templates/kw-embedder.xml` |
+| kw-embedder (finance platform embedding engine; kb-service in embedder mode; internal network only, no port, no data volume, read-only root) | `icons/kw-embedder.png` | `templates/kw-embedder.xml` |
 | kb-runner (the kb scheduler's script runner; kb-service in runner mode; no port, no data volume, read-only root) | `icons/kb-runner.png` | `templates/kb-runner.xml` |
 | kb-browser (headless-browser collector for fund notices; idle until run with docker exec; no port, last in the kb start order, read-only root) | `icons/kb-browser.png` | `templates/kb-browser.xml` |
-| kw-extractor (Keystone Wealth statement reader; kb-service in extractor mode; internal network only, no port, no data volume, read-only root) | `icons/kw-extractor.png` | `templates/kw-extractor.xml` |
-| kw-fincast (Keystone Wealth planning engine; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-fincast.png` | `templates/kw-fincast.xml` |
-| kw-vault (Keystone Wealth file sandbox; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-vault.png` | `templates/kw-vault.xml` |
+| kw-extractor (finance platform statement reader; kb-service in extractor mode; internal network only, no port, no data volume, read-only root) | `icons/kw-extractor.png` | `templates/kw-extractor.xml` |
+| kw-fincast (finance platform planning engine; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-fincast.png` | `templates/kw-fincast.xml` |
+| kw-vault (finance platform file sandbox; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-vault.png` | `templates/kw-vault.xml` |
 | kb-webui (start 5th, after kb-service) | `icons/kb-webui.png` | `templates/kb-webui.xml` |
 | kw-ops-proxy (start 1st for kw-ops; the only Docker socket holder, private network) | `icons/kw-ops-proxy.png` | `templates/kw-ops-proxy.xml` |
 | kw-ops (start 2nd, after kw-ops-proxy; no port, kw-internal and private network) | `icons/kw-ops.png` | `templates/kw-ops.xml` |
@@ -46,7 +46,7 @@ Each PNG is a render of its `icons/src/<name>.svg`. `python scripts/render_icons
 | clamav-updater (one per host; writes the signature folder, runs no scanner; bridge network, direct internet) | `icons/clamav-updater.png` | `templates/clamav-updater.xml` |
 | clamav-scanner (one per stack; daemon only, reads the signature folder read-only, scratch in RAM; no port published; **required** host ExtraParams `--user 1000:1000 --entrypoint /init-unprivileged --tmpfs /tmp:rw,uid=1000,gid=1000,mode=0750 --memory=2g`: the first two because the default entrypoint fails on the read-only signature mount, the tmpfs so scratch is RAM and recreated owned by the runtime user on every start, the memory flag caps the daemon at 2 GB) | `icons/clamav-scanner.png` | `templates/clamav-scanner.xml` |
 
-Every template + icon in this repo must have a row here — keep this table in sync when adding either (the reauth-bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.
+Every template + icon in this repo must have a row here — keep this table in sync when adding either (the re-consent bot icon was added 2026-07-25 but not listed until 2026-07-27). Scripts have their own manifest under [Scripts](#scripts); the same rule applies there.
 
 ## Templates
 `templates/` holds the Unraid container templates (`<Icon>` pre-set). Secrets are blank
@@ -203,4 +203,4 @@ template (#102): delete it. Requires python3 ≥ 3.9; stdlib
 only, no dependencies to install.
 
 ## Icons
-Every icon follows one style: a navy rounded tile with an outlined glyph, colored by stack (KW app gold `#D4AF37`, tape teal `#3FB8AF`, kb violet `#A78BFA`, edge and security silver `#C9D1D9`). The 256 px PNGs in `icons/` are what templates use; their SVG sources are in `icons/src/`. A new container takes its stack's color and one role glyph.
+Every icon follows one style: a navy rounded tile with an outlined glyph, colored by stack (KW app gold `#D4AF37`, market-data teal `#3FB8AF`, kb violet `#A78BFA`, edge and security silver `#C9D1D9`). The 256 px PNGs in `icons/` are what templates use; their SVG sources are in `icons/src/`. A new container takes its stack's color and one role glyph.

@@ -8,19 +8,19 @@ for the ONE repo template that TEMPLATE (below) names:
 
   TEMPLATE = None     NOT SET: refuses before anything is read or written. This is the
                       repo copy; there is no run over every template (unraid-templates#102).
-  TEMPLATE = "tape"   ONLY the `tape` repo template and its live instances. Nothing
+  TEMPLATE = "app"   ONLY the `app` repo template and its live instances. Nothing
                       that maps to another template is created, updated, deleted,
-                      or has its backups taken — `tape-db` included,
+                      or has its backups taken — `app-db` included,
                       since instances are mapped against the FULL template list
                       (see MAPPING below). Refused before anything is written: a
-                      name the repo does not have; a my-tape.xml that is really
+                      name the repo does not have; a my-app.xml that is really
                       another template's instance or a foreign container (case
-                      variants of the name, e.g. my-Tape.xml, included); and a
+                      variants of the name, e.g. my-App.xml, included); and a
                       templates dir that cannot be listed. A backup whose
                       instance is gone, unmapped or unreadable belongs to no
-                      run (delete it by hand) — except my-tape.xml's, which are
-                      tape's (unless that file maps to another template, when
-                      tape refuses).
+                      run (delete it by hand) — except my-app.xml's, which are
+                      app's (unless that file maps to another template, when
+                      app refuses).
 
   ONE USER SCRIPT PER TEMPLATE: each installed copy is identical to this file
   apart from its TEMPLATE line, so syncing one template can never ship another
@@ -31,8 +31,8 @@ for the ONE repo template that TEMPLATE (below) names:
             my-<name>-dev.xml), so it is ready to pick in Add Container on a fresh host.
             A host that already runs an instance gets no base stub, and the run says
             so ("seed SKIPPED").
-  UPDATE  — for EVERY live instance of a template (tape: my-tape.xml AND
-            my-tape-dev.xml, ...; my-tape-db-dev.xml is tape-db's): keep each
+  UPDATE  — for EVERY live instance of a template (app: my-app.xml AND
+            my-app-dev.xml, ...; my-app-db-dev.xml is app-db's): keep each
             instance's applied values, refresh each variable's metadata from the
             template, and ADD new template vars.
   DROP    — a variable the instance has and the repo template lacks is deprecated and is
@@ -93,9 +93,9 @@ ONE COMMIT PER RUN  (unraid-templates#103)
   run right after a merge may use the commit before it; the first line shows which.
 
 INSTANCE -> TEMPLATE MAPPING
-  Primary: the instance's <TemplateURL> basename (my-tape-dev.xml -> tape.xml).
-  Fallback: longest dash-prefix of the filename (my-tape-db-dev.xml -> tape-db,
-  never tape; my-tapeworm.xml -> nothing). Foreign containers are never touched.
+  Primary: the instance's <TemplateURL> basename (my-app-dev.xml -> app.xml).
+  Fallback: longest dash-prefix of the filename (my-app-db-dev.xml -> app-db,
+  never app; my-appworm.xml -> nothing). Foreign containers are never touched.
 
 REQUIRES  python3 >= 3.9 (stdlib only). Run on the Unraid host via User Scripts.
 """
@@ -808,13 +808,13 @@ def main():
     print(f"templates: {TEMPLATE}\n")
 
     # ⚠️ Map against the FULL list, then pick this run's templates out of the result. Mapping
-    # against [TEMPLATE] alone leaves it the only candidate prefix, so a `tape` run would claim
-    # `my-tape-db-dev.xml` — the exact trap the longest-dash-prefix rule exists to avoid.
+    # against [TEMPLATE] alone leaves it the only candidate prefix, so a `app` run would claim
+    # `my-app-db-dev.xml` — the exact trap the longest-dash-prefix rule exists to avoid.
     instances_by_tpl, unmapped, broken = discover_instances(TEMPLATES_USER, all_repo)
     # ⛔ The stub my-<TEMPLATE>.xml is always processed as TEMPLATE's (process_template), so a
     # file there that is really another template's instance, or a foreign container, would be
     # rewritten with the wrong template's variables. SAME FILE, not same name: /boot is FAT32,
-    # where my-Tape.xml IS my-tape.xml. Refuse rather than guess.
+    # where my-App.xml IS my-app.xml. Refuse rather than guess.
     # Without a listing there is nothing to tell this template's instances from anyone else's.
     # The listing the scope is built from, not a second one: discover_instances reports its
     # failure as a `broken` entry named for the dir itself (no instance name looks like that).
