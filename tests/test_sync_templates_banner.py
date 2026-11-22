@@ -70,7 +70,7 @@ def test_a_live_run_that_updates_an_instance_counts_the_backup_and_the_instance(
     (tmp_path / "my-widget.xml").write_bytes(TPL.format(desc="old", mask="false", value="5").encode())
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
-    assert len(list((tmp_path / BACKUPS).iterdir())) == 1
+    assert len(list(pathlib.Path(sync.BACKUP_DIR).iterdir())) == 1
     assert closing_line(out) == "done.  (LIVE — changes written: 2)"
 
 
@@ -87,7 +87,7 @@ def test_a_backup_written_before_a_failed_instance_write_is_counted(sync, tmp_pa
     monkeypatch.setattr(sync, "atomic_write", fail_the_instance)
     code, out = run(sync, tmp_path, capsys)
     assert code == 1, out
-    assert len(list((tmp_path / BACKUPS).iterdir())) == 1
+    assert len(list(pathlib.Path(sync.BACKUP_DIR).iterdir())) == 1
     assert closing_line(out) == "done. 1 failure(s) — see above  (LIVE — changes written: 1)"
 
 
@@ -95,32 +95,6 @@ def test_a_live_run_that_creates_the_stub_counts_it_as_a_write(sync, tmp_path, c
     code, out = run(sync, tmp_path, capsys)
     assert code == 0, out
     assert (tmp_path / "my-widget.xml").exists()
-    assert closing_line(out) == "done.  (LIVE — changes written: 1)"
-
-
-def test_a_live_run_whose_only_change_is_a_prune_says_it_wrote(sync, tmp_path, capsys):
-    """Pruning deletes a file, so it is a change: the banner must not call that a no-op."""
-    (tmp_path / "my-widget.xml").write_bytes(TPL.format(desc="w", mask="false", value="5").encode())
-    b = tmp_path / BACKUPS
-    b.mkdir()
-    for i in range(sync.KEEP_BACKUPS + 2):
-        (b / f"my-widget.xml.20200101-0000{i:02d}.bak").write_bytes(
-            TPL.format(desc="w", mask="false", value="5").encode())
-    code, out = run(sync, tmp_path, capsys)
-    assert code == 0, out
-    assert len(list(b.iterdir())) == sync.KEEP_BACKUPS
-    assert closing_line(out) == "done.  (LIVE — changes written: 2)"
-
-
-def test_a_live_run_that_redacts_an_old_backup_says_it_wrote(sync, tmp_path, capsys):
-    (tmp_path / "my-widget.xml").write_bytes(TPL.format(desc="w", mask="false", value="5").encode())
-    b = tmp_path / BACKUPS
-    b.mkdir()
-    (b / "my-widget.xml.20200101-000000.bak").write_bytes(
-        TPL.format(desc="w", mask="true", value="s3cret").encode())
-    code, out = run(sync, tmp_path, capsys)
-    assert code == 0, out
-    assert b"s3cret" not in (b / "my-widget.xml.20200101-000000.bak").read_bytes()
     assert closing_line(out) == "done.  (LIVE — changes written: 1)"
 
 
@@ -139,3 +113,9 @@ def test_a_dry_run_says_nothing_changed_and_writes_nothing(sync, tmp_path, capsy
     assert code == 0, out
     assert (tmp_path / "my-widget.xml").read_bytes() == before
     assert closing_line(out) == "done.  (dry-run — nothing changed)"
+
+
+@pytest.fixture(autouse=True)
+def _backups_go_to_the_host_not_the_flash(sync, tmp_path_factory):
+    """BACKUP_DIR is the host's delete folder: a folder outside the templates tree, never the flash."""
+    sync.BACKUP_DIR = str(tmp_path_factory.mktemp("host-delete"))

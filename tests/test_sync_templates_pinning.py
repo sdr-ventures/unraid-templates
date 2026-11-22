@@ -205,3 +205,8 @@ def test_an_error_that_is_not_the_rate_limit_is_not_called_one(sync, tmp_path, c
                         _limited({"X-RateLimit-Remaining": "59"}, code, b'{"message": "Not Found"}'))
     code_, _out = run(sync, tmp_path, capsys)
     assert isinstance(code_, str) and f"HTTP Error {code}" in code_ and "rate limit" not in code_
+
+
+@pytest.fixture(autouse=True)
+def _backups_go_to_the_host_not_the_flash(sync, tmp_path_factory):
+    sync.BACKUP_DIR = str(tmp_path_factory.mktemp("host-delete"))

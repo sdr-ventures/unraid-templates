@@ -97,7 +97,7 @@ its `TEMPLATE` setting names, **keeping each instance's applied values**:
 
 - **CREATE** — seeds `my-<name>.xml` only when the host holds **no instance** of the template at all (no `my-<name>.xml` and no other `my-` file that maps to it, such as `my-<name>-dev.xml`), so it is ready to pick under *Add Container* on a fresh host. A host that already runs an instance gets no base stub, and the run says so (`seed SKIPPED`).
 - **UPDATE** — for **every live instance** of a template (for `tape`: `my-tape.xml` *and* `my-tape-dev.xml`, …; `my-tape-db-dev.xml` is `tape-db`'s): keeps that instance's applied value for each variable, refreshes the variable's metadata (description, defaults, visibility) from the repo template, and adds variables the template has gained.
-- **DROP** — a variable the instance has and the repo template lacks is **deprecated and is dropped, whatever value it holds**. Each drop is named in the run output (`DROPPED, not in repo template (deprecated): NAME (held a value)`). The pre-sync backup (secrets redacted) is the only record of it.
+- **DROP** — a variable the instance has and the repo template lacks is **deprecated and is dropped, whatever value it holds**. Each drop is named in the run output (`DROPPED, not in repo template (deprecated): NAME (held a value)`). The pre-sync backup in `BACKUP_DIR` (secrets redacted) is the only record of it, for as long as the host's delete folder keeps it.
 
 **The rule.** The repo template is the schema: variables, ports and paths by name, with neutral defaults. The live instance is the values. A sync copies each applied live value into the matching repo variable and adopts the repo's metadata. Not in the repo template means deprecated, and the sync drops it. To retire a variable, remove it from the repo template. To add one, add it to the repo template first, let the sync bring it to the instance, then set its value there. A variable added to a live instance only is dropped by the next sync.
 
@@ -139,9 +139,9 @@ anything and says when to retry.
 | | |
 |---|---|
 | `TEMPLATE = None` | Not set: the run refuses before it reads or writes anything (exit non-zero, `Nothing changed.`). There is no run over every template (#102: it reconciled a `my-<name>.xml` against two templates). |
-| `TEMPLATE = "tape"` | **Only** `templates/tape.xml` and its live instances. Nothing that maps to another template is created, updated, deleted, or has its backups redacted or pruned — `tape-db` included, because instances are mapped against the *full* template list before the scope is applied. The output's `scope:` line names the template, so a dry run shows the scope before a live run acts on it. **Refused before anything is written** (exit non-zero, `Nothing changed.`): a name the repo does not have; a `my-tape.xml` that is really a *different* template's instance (by its `<TemplateURL>`) or a foreign container — case variants of the name such as `my-Tape.xml` included, since `/boot` is FAT32 — so fix that file's `<TemplateURL>` or rename the container; and a templates dir that cannot be listed. |
+| `TEMPLATE = "tape"` | **Only** `templates/tape.xml` and its live instances. Nothing that maps to another template is created, updated, deleted, or has its backups taken — `tape-db` included, because instances are mapped against the *full* template list before the scope is applied. The output's `scope:` line names the template, so a dry run shows the scope before a live run acts on it. **Refused before anything is written** (exit non-zero, `Nothing changed.`): a name the repo does not have; a `my-tape.xml` that is really a *different* template's instance (by its `<TemplateURL>`) or a foreign container — case variants of the name such as `my-Tape.xml` included, since `/boot` is FAT32 — so fix that file's `<TemplateURL>` or rename the container; and a templates dir that cannot be listed. |
 | `DRY_RUN = True` | Prints exactly what it *would* create/update/drop. Writes nothing. |
-| `DRY_RUN = False` | Performs the changes. Every overwritten file is backed up first (timestamped, under `templates-user/.template-sync-backups/`), writes are atomic, and a merged result is validated before it replaces the original. |
+| `DRY_RUN = False` | Performs the changes. Every overwritten file is backed up first into `BACKUP_DIR`, the host's delete folder (never the flash drive). A live run refuses before any write while `BACKUP_DIR` is blank or sits on the flash drive. Writes are atomic, and a merged result is validated before it replaces the original. |
 
 The committed copy is live but unset (`DRY_RUN = False`, `TEMPLATE = None`), so it
 refuses until a copy names its template.
@@ -153,16 +153,13 @@ flip it back.
 repo template — each **identical to the repo copy except for its `TEMPLATE` line**.
 A template added to the repo later gets its own copy then; no per-template copy seeds it.
 
-A backup whose instance is gone, is not a repo template's (a foreign container, or a
-template since removed from the repo), or cannot be read belongs to no template —
-except the backups of a template's own `my-<name>.xml`, which are that template's
-(unless that file maps to another template, in which case its run refuses). No
-per-template copy redacts, prunes or reports an orphan, even one that cannot be parsed.
-Every backup this script writes is already redacted, so such an orphan holds a secret
-only if it predates #27 or was dropped there by hand. Delete orphans by hand: in
-`templates-user/.template-sync-backups/`, remove the backups whose `my-*.xml` is gone
-or no longer synced — but keep those of a `my-*.xml` that cannot be read, since they
-are how you restore it.
+**Where backups go.** `BACKUP_DIR` is the host's delete folder (a `_delete` folder on the Unraid
+server, which a scheduled job purges after 2 days). It is set in each host copy, never in this repo, and
+the repo copy leaves it blank. A backup is named `<instance-file>.sync-<stamp>`, or
+`<instance-file>.<BACKUP_ROLE>-sync-<stamp>` when `BACKUP_ROLE` is set, so the delete rule
+`<file>.<role>-<topic>` holds. The script never prunes a backup or rewrites one: the purge is the
+retention. Backups written before this change stay in `templates-user/.template-sync-backups/` on
+the flash drive. Move that folder out to the host's delete folder by hand; the script does not touch it.
 
 > **Backups redact your `Mask="true"` values** (#27). `Mask="true"` is a *UI* setting —
 > it makes the Unraid form render a password box, but the XML on the flash drive
@@ -171,11 +168,8 @@ are how you restore it.
 > nothing pruned them.
 >
 > Now a backup is written with every masked value replaced by `***REDACTED***`,
-> the **first run also redacts the backups earlier versions already wrote**, and
-> backups are pruned to the newest `KEEP_BACKUPS` (10) per instance. A `.bak`
-> that cannot be parsed is *reported by name and left alone* by the run that owns
-> it (an orphan has no owning run; see orphans above) — it may still hold a secret,
-> so review and delete those by hand.
+> the backup goes to `BACKUP_DIR` and not to the flash drive. The script does not
+> redact or prune the backups earlier versions left on the flash drive; move them out by hand.
 >
 > **What this costs a restore:** the structure and every non-secret value come
 > back in full (except a mirror entry with no `<Config>`, redacted as unknown); a
@@ -183,13 +177,12 @@ are how you restore it.
 > `merge()` copies applied values across verbatim, so a merge cannot damage a
 > secret; the backup is there in case a *merge* goes wrong.
 >
-> `DRY_RUN = True` covers all of this: it reports what it would redact and prune
-> and writes nothing.
+> `DRY_RUN = True` covers all of this: it writes nothing, whatever `BACKUP_DIR` is.
 >
 > **What is redacted, stated exactly** — a `<Config>` that is `Mask="true"` in the
 > instance file **or in the repo template** (#104: a live file can hold a secret with
 > `Mask="false"`), and the `<Environment><Variable><Value>` mirror dockerMan writes for
-> the same variable. The same rule applies to the backups earlier runs left. A mirror
+> the same variable. A mirror
 > entry with no `<Config>` of its name is redacted too, since nothing says it is safe;
 > and a sync drops a mirror entry the repo template has no variable for, along with
 > the `<Config>` it mirrored (`DROPPED legacy <Environment> mirror, not in repo template: NAME`).

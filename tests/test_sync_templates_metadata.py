@@ -515,7 +515,7 @@ NESTED_SECRET_NO_TEXT = (
 
 
 def _backups(d):
-    return sorted(p for p in d.iterdir() if p.name.endswith(".bak"))
+    return sorted(p for p in d.iterdir())
 
 
 def test_a_masked_value_is_REDACTED_in_the_backup(sync, inst, tmp_path):
@@ -559,26 +559,20 @@ def test_the_ENVIRONMENT_mirror_of_a_masked_variable_is_redacted_too(sync, inst,
 def test_a_masked_value_held_in_a_CHILD_element_is_redacted_and_counted_honestly(sync, tmp_path):
     """⚠️ `el.text` is only the text BEFORE the first child.
 
-    Setting it alone left the secret in the child while COUNTING the field as redacted — so the
-    run reported the file clean, and the idempotence check then saw a redacted `text` and never
-    looked at that file again. The value was permanently classified as cleared. A false "this is
-    now safe" is worse than no clear-out at all, which is why this is not merely cosmetic.
+    Setting it alone left the secret in the child while COUNTING the field as redacted, so the
+    run reported the backup clean. A false "this is now safe" is worse than no redaction at all.
     """
-    backups = tmp_path / "b"
-    backups.mkdir()
-    bak = backups / "my-widget.xml.20260101-000000.bak"
+    live = tmp_path / "my-widget.xml"
     # BOTH nested shapes: one with text before the child, one with the child alone. Only the
-    # second exercises the "a child is content too" branch — with leading text the element is
-    # already caught by its own text, so a version ignoring children entirely still passed.
-    bak.write_text(instance_xml(extra=NESTED_SECRET + NESTED_SECRET_NO_TEXT), encoding="utf-8")
+    # second exercises the "a child is content too" branch.
+    live.write_text(instance_xml(extra=NESTED_SECRET + NESTED_SECRET_NO_TEXT), encoding="utf-8")
+    backups = tmp_path / "b"
 
-    files, values, unreadable = sync.redact_existing_backups(str(backups))
+    dest, n = sync.backup(str(live), str(backups))
 
-    text = bak.read_text(encoding="utf-8")
+    text = pathlib.Path(dest).read_text(encoding="utf-8")
     assert SECRET not in text, "the secret survived inside a child element"
-    assert (files, values, unreadable) == (1, 3, []), (
-        "the count must include BOTH nested fields, or the report is a false all-clear")
-    assert sync.redact_existing_backups(str(backups)) == (0, 0, []), "not idempotent"
+    assert n == 3, "the count must include BOTH nested fields, or the report is a false all-clear"
 
 
 def test_the_mirror_matches_the_VARIABLE_name_not_the_human_label(sync):
@@ -715,100 +709,6 @@ def test_a_file_that_cannot_be_backed_up_safely_is_NOT_overwritten(sync, tmp_pat
     assert not backups.exists() or not _backups(backups), "an unsafe backup was written anyway"
 
 
-def test_the_one_time_clear_out_redacts_backups_previous_versions_already_wrote(sync, tmp_path):
-    """⭐ Fixing `backup()` stops NEW cleartext copies and does nothing about the pile already on
-    the flash drive, which is where every secret this script has ever seen currently sits."""
-    backups = tmp_path / "b"
-    backups.mkdir()
-    old = backups / "my-widget.xml.20260101-000000.bak"
-    old.write_text(instance_xml(), encoding="utf-8")
-    assert SECRET in old.read_text(encoding="utf-8"), "precondition: plaintext accumulation"
-
-    files, values, unparseable = sync.redact_existing_backups(str(backups))
-
-    assert (files, values, unparseable) == (1, 1, [])
-    assert SECRET not in old.read_text(encoding="utf-8"), "the pre-existing plaintext survived"
-    assert sync.REDACTED in old.read_text(encoding="utf-8")
-
-
-def test_the_clear_out_is_idempotent(sync, tmp_path):
-    """A second run must find nothing left to do — otherwise every run reports a clear-out it did
-    not perform, and the operator cannot tell when the accumulation is actually gone."""
-    backups = tmp_path / "b"
-    backups.mkdir()
-    (backups / "my-widget.xml.20260101-000000.bak").write_text(instance_xml(), encoding="utf-8")
-    sync.redact_existing_backups(str(backups))
-    assert sync.redact_existing_backups(str(backups)) == (0, 0, [])
-
-
-def test_an_unparseable_backup_is_REPORTED_and_never_silently_deleted(sync, tmp_path):
-    """It may well hold a secret, and only the operator can say whether it is worth keeping.
-    Deleting the operator's data to make a report look clean is the wrong trade."""
-    backups = tmp_path / "b"
-    backups.mkdir()
-    broken = backups / "my-widget.xml.20260101-000000.bak"
-    broken.write_text("<Container><Name>x</Name>", encoding="utf-8")
-
-    files, values, unreadable = sync.redact_existing_backups(str(backups))
-
-    assert (files, values) == (0, 0)
-    assert len(unreadable) == 1 and unreadable[0][0] == broken.name, unreadable
-    assert broken.exists(), "an unparseable backup was deleted rather than reported"
-
-
-def test_the_backup_that_the_run_told_you_to_review_is_not_then_PRUNED(sync, tmp_path):
-    """⛔ THE RUN MUST NOT DELETE THE FILE IT JUST NAMED.
-
-    `redact_existing_backups` reports an unparseable `.bak` and promises it is left for the
-    operator to review. `prune_backups` ran moments later in `main()` and took it out on age —
-    so the run printed "review and delete them by hand" about a file it had already removed. A
-    truncated `.bak` is exactly what the old plaintext-copy path left behind, so this is reachable
-    in the field, and the file it deletes is the one most likely to still hold a secret.
-    """
-    backups = tmp_path / "b"
-    backups.mkdir()
-    broken = backups / "my-widget.xml.20260101-000000.bak"
-    broken.write_text("<Container><Name>x</Name>", encoding="utf-8")
-    for i in range(sync.KEEP_BACKUPS + 2):
-        (backups / f"my-widget.xml.202602{i + 1:02d}-000000.bak").write_text(
-            "<Container/>", encoding="utf-8")
-
-    _, _, unreadable = sync.redact_existing_backups(str(backups))
-    dropped, _ = sync.prune_backups(str(backups), protected={f for f, _ in unreadable})
-
-    assert broken.name not in dropped, "pruned the very file the run told the operator to review"
-    assert broken.exists(), "the unparseable backup was deleted after being reported"
-    assert dropped, "precondition: the prune must actually have had work to do"
-
-
-def test_prune_never_touches_a_file_this_script_did_not_write(sync, tmp_path):
-    """⛔ NOT OURS TO DELETE — and it also corrupted the ordering.
-
-    An operator's `my-tape.xml.BEFORE-MIGRATION.bak` landed in the same group as the real backups
-    under the old positional `rsplit(".", 2)`, and since letters sort after digits it counted as
-    the NEWEST. The three genuine timestamped backups were pruned and the hand-named files became
-    immortal — precisely inverted.
-    """
-    backups = tmp_path / "b"
-    backups.mkdir()
-    for i in range(sync.KEEP_BACKUPS + 3):
-        (backups / f"my-tape.xml.202601{i + 1:02d}-000000.bak").write_text(
-            "<Container/>", encoding="utf-8")
-    hand_named = ["my-tape.xml.BEFORE-MIGRATION.bak", "my-tape.xml.orig.bak", "notes.bak"]
-    for name in hand_named:
-        (backups / name).write_text("<Container/>", encoding="utf-8")
-
-    dropped, failed = sync.prune_backups(str(backups))
-
-    assert failed == []
-    for name in hand_named:
-        assert name not in dropped, f"deleted {name}, which this script never wrote"
-        assert (backups / name).exists(), f"{name} was removed"
-    assert len(dropped) == 3 and all(d.startswith("my-tape.xml.2026") for d in dropped), dropped
-    assert "my-tape.xml.20260101-000000.bak" in dropped, "the OLDEST should go"
-    assert "my-tape.xml.20260113-000000.bak" not in dropped, "the NEWEST must stay"
-
-
 def test_two_backups_in_the_same_second_do_not_overwrite_each_other(sync, inst, tmp_path):
     """⛔ A BACKUP MUST NOT DESTROY A BACKUP. The stamp is one-second resolution, so a second
     write in the same second silently replaced the first — and the backup is the whole recovery
@@ -823,44 +723,7 @@ def test_two_backups_in_the_same_second_do_not_overwrite_each_other(sync, inst, 
     assert len(_backups(backups)) == 2
     assert "ONE" in pathlib.Path(first).read_text(encoding="utf-8")
     assert "TWO" in pathlib.Path(second).read_text(encoding="utf-8")
-    # The collision name must still be prunable, or these accumulate forever.
-    assert sync._BAK_RX.match(pathlib.Path(second).name), (
-        f"{pathlib.Path(second).name} does not match the name shape prune_backups recognises")
-
-
-def test_neither_housekeeping_step_explodes_on_a_first_ever_run(sync, tmp_path):
-    """Both are called from `main()` BEFORE anything creates the backup dir, so a missing guard
-    here is an uncaught FileNotFoundError that aborts the entire sync on a brand-new install."""
-    absent = str(tmp_path / "never-created")
-    assert sync.redact_existing_backups(absent) == (0, 0, [])
-    assert sync.prune_backups(absent) == ([], [])
-
-
-def test_an_unwritable_backup_does_not_abort_the_whole_sync(sync, tmp_path, monkeypatch):
-    """⛔ ONE BAD FILE MUST NOT STOP EVERY TEMPLATE FROM SYNCING.
-
-    An uncaught OSError here propagated out of `main()` before a single template was processed, so
-    a full flash drive in the housekeeping step silently became "the sync does nothing at all".
-    """
-    backups = tmp_path / "b"
-    backups.mkdir()
-    (backups / "my-a.xml.20260101-000000.bak").write_text(instance_xml(), encoding="utf-8")
-    (backups / "my-b.xml.20260101-000000.bak").write_text(instance_xml(), encoding="utf-8")
-
-    real = sync.atomic_write
-
-    def explode(path, root):
-        if "my-a.xml" in path:
-            raise OSError(28, "No space left on device")
-        return real(path, root)
-
-    monkeypatch.setattr(sync, "atomic_write", explode)
-    files, values, unreadable = sync.redact_existing_backups(str(backups))
-
-    assert files == 1 and values == 1, "the healthy file was still redacted"
-    assert [f for f, _ in unreadable] == ["my-a.xml.20260101-000000.bak"], unreadable
-    assert SECRET not in (backups / "my-b.xml.20260101-000000.bak").read_text(encoding="utf-8")
-    assert not list(backups.glob("*.tmp")), "a partial .tmp file was left behind"
+    assert pathlib.Path(second).name.startswith("my-widget.xml.sync-"), pathlib.Path(second).name
 
 
 def test_update_instance_REFUSES_to_write_when_the_backup_cannot_be_made(sync, inst, tmp_path,
@@ -886,50 +749,7 @@ def test_update_instance_REFUSES_to_write_when_the_backup_cannot_be_made(sync, i
     assert "SKIP" in capsys.readouterr().out
 
 
-def test_prune_keeps_the_newest_N_and_never_borrows_from_another_instance(sync, tmp_path):
-    """Grouped PER INSTANCE: a container synced often must not evict the only backup another
-    container has. The stamp format makes a lexicographic sort chronological."""
-    backups = tmp_path / "b"
-    backups.mkdir()
-    for i in range(sync.KEEP_BACKUPS + 3):
-        (backups / f"my-noisy.xml.202601{i + 1:02d}-000000.bak").write_text("<Container/>",
-                                                                            encoding="utf-8")
-    (backups / "my-quiet.xml.20260101-000000.bak").write_text("<Container/>", encoding="utf-8")
-
-    dropped, failed = sync.prune_backups(str(backups))
-
-    assert failed == []
-    assert len(dropped) == 3, f"expected the 3 oldest noisy backups to go, got {dropped}"
-    assert all(d.startswith("my-noisy") for d in dropped), dropped
-    kept = {p.name for p in _backups(backups)}
-    assert "my-quiet.xml.20260101-000000.bak" in kept, "the quiet instance lost its only backup"
-    assert len([k for k in kept if k.startswith("my-noisy")]) == sync.KEEP_BACKUPS
-    # The OLDEST are the ones dropped, not an arbitrary three.
-    assert "my-noisy.xml.20260101-000000.bak" in dropped
-    assert "my-noisy.xml.20260113-000000.bak" in kept
-
-
-def test_dry_run_neither_rewrites_nor_deletes_a_backup(sync, tmp_path):
-    """The DRY_RUN contract is 'writes NOTHING'. It covers the backup dir too — and this is the
-    run an operator uses to decide whether to trust the clear-out at all."""
-    backups = tmp_path / "b"
-    backups.mkdir()
-    plain = backups / "my-widget.xml.20260101-000000.bak"
-    plain.write_text(instance_xml(), encoding="utf-8")
-    for i in range(sync.KEEP_BACKUPS + 2):
-        (backups / f"my-noisy.xml.202601{i + 1:02d}-000000.bak").write_text("<Container/>",
-                                                                            encoding="utf-8")
-    before = {p.name: p.read_bytes() for p in _backups(backups)}
-
-    sync.DRY_RUN = True
-    try:
-        files, values, _ = sync.redact_existing_backups(str(backups))
-        dropped, failed = sync.prune_backups(str(backups))
-    finally:
-        sync.DRY_RUN = False
-
-    assert (files, values) == (1, 1), "dry-run must still REPORT what it would redact"
-    assert len(dropped) == 2, "dry-run must still report what it would prune"
-    assert failed == []
-    assert {p.name: p.read_bytes() for p in _backups(backups)} == before, (
-        "DRY_RUN wrote to or deleted from the backup directory")
+@pytest.fixture(autouse=True)
+def _backups_go_to_the_host_not_the_flash(sync, tmp_path_factory):
+    """BACKUP_DIR is the host's delete folder: a folder outside the templates tree, never the flash."""
+    sync.BACKUP_DIR = str(tmp_path_factory.mktemp("host-delete"))
