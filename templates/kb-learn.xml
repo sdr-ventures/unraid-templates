@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<!--
+  kb-learn: the kb's nightly learning pass (github.com/sdr-ventures/kb-service, image kb-service,
+  command python -m kb_service.learn). Nothing here is specific to any host or operator.
+
+  WHAT IT DOES. It re-analyzes stored video transcripts with the ingest worker's analysis step on
+  the kb-litellm group kb-learning and writes the new analysis to the library database. It ships
+  off: it does nothing until learning_pass.enabled is true and a model-call budget is set
+  (kb-service README, "Learning pass (kb-learn)"). No port, no data volume.
+
+  START ORDER: after kb-service, which applies the database migrations it needs. Same network as
+  the rest of the set: set the Network field to kb, so kb-postgres, kb-litellm and kb-service
+  resolve by container name. It needs no other network.
+
+  HOST GATE. It runs only while the host's role file says active and is under 15 minutes old, and
+  no host maintenance flag is set. Mount the host's facts folder (the directory, not the file: the
+  role file is replaced by a rename, which a file mount would not follow) read-only at /facts.
+
+  COMMAND. PostArgs replaces the image's CMD with the learning pass; it holds no shell expansion.
+
+  LIMITS. Extra Parameters ships empty (repo rule). After import, add these docker run options
+  (each begins with two dashes): cpus=2; memory=3g; restart=unless-stopped
+
+  THE IMAGE TAG IS PINNED to the kb-service release; an Update is a deliberate bump of that pin.
+
+  UPSTREAM REFERENCE (names verified at the pinned tag):
+      kb_service/config.py   load_learn_settings: every variable below
+      kb_service/learn.py    main(); exits 2 when configuration is unusable
+-->
+<Container version="2">
+  <Name>kb-learn</Name>
+  <Repository>ghcr.io/sdr-ventures/kb-service:v0.100.0</Repository>
+  <Registry>https://github.com/sdr-ventures/kb-service/pkgs/container/kb-service</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sdr-ventures/kb-service/issues</Support>
+  <Project>https://github.com/sdr-ventures/kb-service</Project>
+  <Overview>The kb's nightly learning pass: re-analyzes stored video transcripts through kb-litellm and writes the result to the library database. Ships off until it is enabled with a budget. Runs only while the host's role file says active. STARTED IN ORDER: after kb-service. NETWORK: set the Network field to kb. No port, no data volume; mount the host's facts folder read-only at /facts.</Overview>
+  <Description>Nightly learning pass for the knowledge library (kb-service image, python -m kb_service.learn). Start after kb-service.</Description>
+  <Category>Productivity: Tools:Utilities</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/templates/kb-learn.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/sdr-ventures/unraid-templates/main/icons/kb-service.png</Icon>
+  <ExtraParams/>
+  <PostArgs>python -m kb_service.learn</PostArgs>
+  <DateInstalled/>
+  <Config Name="Facts" Target="/facts" Default="" Mode="ro" Description="REQUIRED. This host's facts folder, read-only: the folder holding the role file (kb_role) and the maintenance flag (maintenance.until). Mount the folder, not the files: the role file is replaced by a rename. Set per host." Type="Path" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="KB_DATABASE_URL" Target="KB_DATABASE_URL" Default="" Mode="" Description="REQUIRED. The same PostgreSQL URL and role as kb-service, format postgresql://&lt;user&gt;:&lt;password&gt;@kb-postgres:5432/&lt;db&gt;. kb-service applies the migrations. Blank: the container exits 2." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="LITELLM_URL" Target="LITELLM_URL" Default="http://kb-litellm:4000" Mode="" Description="REQUIRED. Base URL of the model router: the kb-litellm container on the kb network. Leave the default." Type="Variable" Display="always" Required="true" Mask="false">http://kb-litellm:4000</Config>
+  <Config Name="LITELLM_KEY" Target="LITELLM_KEY" Default="" Mode="" Description="REQUIRED. Key for kb-litellm; it must allow the model group below. Blank: the container exits 2." Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="KB_LEARN_MODEL" Target="KB_LEARN_MODEL" Default="kb-learning" Mode="" Description="kb-litellm model group for the re-analysis; its nightly cap lives in kb-litellm's config. Blank means kb-learning." Type="Variable" Display="advanced" Required="false" Mask="false">kb-learning</Config>
+  <Config Name="KB_LEARN_WORKERS" Target="KB_LEARN_WORKERS" Default="2" Mode="" Description="Items analyzed at once, 1 to 3; anything else makes the container exit 2. Blank means 2." Type="Variable" Display="advanced" Required="false" Mask="false">2</Config>
+  <Config Name="KB_EMBED_BASE_URL" Target="KB_EMBED_BASE_URL" Default="http://kb-litellm:4000/v1" Mode="" Description="REQUIRED. Embedding endpoint, as kb-service. Blank: the container exits 2." Type="Variable" Display="always" Required="true" Mask="false">http://kb-litellm:4000/v1</Config>
+  <Config Name="KB_EMBED_MODEL" Target="KB_EMBED_MODEL" Default="embed" Mode="" Description="Embedding model name as kb-litellm lists it, as kb-service. Blank: qwen3-embedding:0.6b." Type="Variable" Display="always" Required="false" Mask="false">embed</Config>
+  <Config Name="KB_EMBED_API_KEY" Target="KB_EMBED_API_KEY" Default="" Mode="" Description="Key for the embedding endpoint, as kb-service. Blank if the endpoint takes none." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="KB_ROLES" Target="KB_ROLES" Default="{&quot;PM&quot;: &quot;pm&quot;, &quot;System Admin&quot;: &quot;system-admin&quot;, &quot;Network Admin&quot;: &quot;network-admin&quot;, &quot;Backup Admin&quot;: &quot;backup-admin&quot;, &quot;Media Admin&quot;: &quot;media-admin&quot;, &quot;Game Dev&quot;: &quot;game-dev&quot;, &quot;KB Analyst&quot;: &quot;kb-analyst&quot;, &quot;Financial Analyst&quot;: &quot;financial-analyst&quot;, &quot;Travel Planner&quot;: &quot;travel-planner&quot;}" Mode="" Description="The messaging roles, the same value as kb-service's KB_ROLES. The morning report goes to the role KB Analyst; blank sends no report. Malformed JSON makes the container exit 2." Type="Variable" Display="advanced" Required="false" Mask="false">{&quot;PM&quot;: &quot;pm&quot;, &quot;System Admin&quot;: &quot;system-admin&quot;, &quot;Network Admin&quot;: &quot;network-admin&quot;, &quot;Backup Admin&quot;: &quot;backup-admin&quot;, &quot;Media Admin&quot;: &quot;media-admin&quot;, &quot;Game Dev&quot;: &quot;game-dev&quot;, &quot;KB Analyst&quot;: &quot;kb-analyst&quot;, &quot;Financial Analyst&quot;: &quot;financial-analyst&quot;, &quot;Travel Planner&quot;: &quot;travel-planner&quot;}</Config>
+  <Config Name="KB_LEARN_ROLE_FILE" Target="KB_LEARN_ROLE_FILE" Default="/facts/kb_role" Mode="" Description="The host's role file inside the container. The pass runs only while it says active and is under 15 minutes old. Leave the default: it is under the Facts mount." Type="Variable" Display="advanced" Required="false" Mask="false">/facts/kb_role</Config>
+  <Config Name="KB_LEARN_MAINT_FILE" Target="KB_LEARN_MAINT_FILE" Default="/facts/maintenance.until" Mode="" Description="The host's maintenance flag inside the container (a UTC end time); the pass does not run before it. Leave the default: it is under the Facts mount." Type="Variable" Display="advanced" Required="false" Mask="false">/facts/maintenance.until</Config>
+  <Config Name="KB_LEARN_SERVICE_URL" Target="KB_LEARN_SERVICE_URL" Default="http://kb-service:8000" Mode="" Description="kb-service on this host; the pass runs only while its /health answers. Leave the default." Type="Variable" Display="advanced" Required="false" Mask="false">http://kb-service:8000</Config>
+  <Config Name="KB_LEARN_STOP_FILE" Target="KB_LEARN_STOP_FILE" Default="/tmp/kb-learn.stop" Mode="" Description="A hand stop: while this file exists inside the container the pass starts nothing new (docker exec kb-learn touch it). Blank means /tmp/kb-learn.stop." Type="Variable" Display="advanced" Required="false" Mask="false">/tmp/kb-learn.stop</Config>
+</Container>
