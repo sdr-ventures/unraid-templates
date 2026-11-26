@@ -34,6 +34,7 @@ Each PNG is a render of its `icons/src/<name>.svg`. `python scripts/render_icons
 | kb-ingest (after kb-service; `kb` network only, no port, CPU capped; needs an `ingest-worker` token in kb-service) | `icons/kb-ingest.png` | `templates/kb-ingest.xml` |
 | kw-embedder (finance platform embedding engine; kb-service in embedder mode; internal network only, no port, no data volume, read-only root) | `icons/kw-embedder.png` | `templates/kw-embedder.xml` |
 | kb-runner (the kb scheduler's script runner; kb-service in runner mode; no port, no data volume, read-only root) | `icons/kb-runner.png` | `templates/kb-runner.xml` |
+| kb-learn (the kb's nightly learning pass; kb-service image with PostArgs `python -m kb_service.learn`, same icon; after kb-service, `kb` network only, no port, no data volume, host facts folder read-only at `/facts`) | `icons/kb-service.png` | `templates/kb-learn.xml` |
 | kb-browser (headless-browser collector for fund notices; idle until run with docker exec; no port, last in the kb start order, read-only root) | `icons/kb-browser.png` | `templates/kb-browser.xml` |
 | kw-extractor (finance platform statement reader; kb-service in extractor mode; internal network only, no port, no data volume, read-only root) | `icons/kw-extractor.png` | `templates/kw-extractor.xml` |
 | kw-fincast (finance platform planning engine; internal network only, no port, no data volume, no egress, read-only root) | `icons/kw-fincast.png` | `templates/kw-fincast.xml` |

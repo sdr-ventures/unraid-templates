@@ -133,6 +133,7 @@ FLEET_PINNED_BY_DESIGN: frozenset[tuple[str, str]] = frozenset({
     ("kb-service", "ghcr.io/sdr-ventures/kb-service:v0.100.0"),
     ("kw-embedder", "ghcr.io/sdr-ventures/kb-service:v0.100.0"),
     ("kb-runner", "ghcr.io/sdr-ventures/kb-service:v0.100.0"),
+    ("kb-learn", "ghcr.io/sdr-ventures/kb-service:v0.100.0"),
     ("kw-extractor", "ghcr.io/sdr-ventures/kb-service:v0.100.0"),
     ("kb-ingest", "ghcr.io/sdr-ventures/kb-ingest:v0.100.0"),
     # kw-ops has no :stable yet (the first non-rc tag is the PM's to cut), so it runs the published
@@ -177,7 +178,8 @@ DOCKER_SOCKET_BY_DESIGN = frozenset({"kw-ops-proxy"})
 # PostArgs is the squid arguments behind its sync entry script; the host's --entrypoint bash
 # (ExtraParams, operator-owned) runs it, and the PostArgs holds no shell expansion. kb-browser is an
 # idle collector started on demand with docker exec, so its PostArgs is `sleep infinity` (no expansion).
-POSTARGS_BY_DESIGN = frozenset({"gambit-loop", "kb-redis", "kb-litellm", "kb-browser", "kw-proxy"})
+# kb-learn runs the kb-service image's learning pass, so its PostArgs is `python -m kb_service.learn` (no expansion).
+POSTARGS_BY_DESIGN = frozenset({"gambit-loop", "kb-redis", "kb-litellm", "kb-browser", "kw-proxy", "kb-learn"})
 
 # The privilege-posture rules are fleet policy, so a template that needs one is listed here
 # with the reason, and the entry is the review. Every list is empty today. An entry must name

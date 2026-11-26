@@ -505,5 +505,27 @@
     "paths": {
       "/config": "reads /config as the application data folder of the watchstate image: the publisher's README install section mounts the data folder at /config (rw) and the app writes its database, config and logs there"
     }
+  },
+  "kb-learn": {
+    "no_local_consumer": false,
+    "vars": {
+      "KB_DATABASE_URL": "reads KB_DATABASE_URL in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:242 env[\"KB_DATABASE_URL\"] in load_learn_settings, required by load_learn_settings at kb_service/config.py:234-237 (ConfigError, exit 2 via kb_service/learn.py:803-805); kb_service/learn.py:807 Database(s.database_url)",
+      "LITELLM_URL": "reads LITELLM_URL in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:243 env[\"LITELLM_URL\"] in load_learn_settings, required by load_learn_settings at kb_service/config.py:234-237 (ConfigError, exit 2 via kb_service/learn.py:803-805); kb_service/learn.py:761 posts each analysis to s.litellm_url/chat/completions",
+      "LITELLM_KEY": "reads LITELLM_KEY in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:244 env[\"LITELLM_KEY\"] in load_learn_settings, required by load_learn_settings at kb_service/config.py:234-237 (ConfigError, exit 2 via kb_service/learn.py:803-805); kb_service/learn.py:762 sent as the bearer of every router call",
+      "KB_LEARN_MODEL": "reads KB_LEARN_MODEL in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:248 env.get(\"KB_LEARN_MODEL\") or \"kb-learning\" in load_learn_settings; kb_service/learn.py:763 the router model group, and target(s.model) at :265 and :412 names the analysis version",
+      "KB_LEARN_WORKERS": "reads KB_LEARN_WORKERS in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:238 env.get(\"KB_LEARN_WORKERS\") or 2 in load_learn_settings; :239-240 refuse anything but 1 to 3; kb_service/learn.py:652 starts that many workers",
+      "KB_EMBED_BASE_URL": "reads KB_EMBED_BASE_URL in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:245 env[\"KB_EMBED_BASE_URL\"] in load_learn_settings, required by load_learn_settings at kb_service/config.py:234-237 (ConfigError, exit 2 via kb_service/learn.py:803-805); kb_service/learn.py:808 Embedder(s.embed_base_url, ...)",
+      "KB_EMBED_MODEL": "reads KB_EMBED_MODEL in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:246 env.get(\"KB_EMBED_MODEL\") in load_learn_settings (blank: qwen3-embedding:0.6b); kb_service/learn.py:808 Embedder(..., s.embed_model, ...)",
+      "KB_EMBED_API_KEY": "reads KB_EMBED_API_KEY in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:247 env.get(\"KB_EMBED_API_KEY\", \"\") in load_learn_settings; kb_service/learn.py:808 Embedder(..., s.embed_api_key)",
+      "KB_ROLES": "reads KB_ROLES in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:268 env.get(\"KB_ROLES\", \"\") in _roles, called by load_learn_settings at config.py:251; kb_service/learn.py:733 sends the morning report only when the role KB Analyst is listed, and :745 messages it",
+      "KB_LEARN_ROLE_FILE": "reads KB_LEARN_ROLE_FILE in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:252 env.get(\"KB_LEARN_ROLE_FILE\", \"\") in load_learn_settings; kb_service/learn.py:156-159 role() reads it (blank, missing or older than 15 minutes = unknown) and host_gate at :192 runs nothing unless it says active",
+      "KB_LEARN_MAINT_FILE": "reads KB_LEARN_MAINT_FILE in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:253 env.get(\"KB_LEARN_MAINT_FILE\", \"\") in load_learn_settings; kb_service/learn.py:169-171 in_maintenance() holds the pass while the UTC time in it is in the future",
+      "KB_LEARN_SERVICE_URL": "reads KB_LEARN_SERVICE_URL in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:254 env.get(\"KB_LEARN_SERVICE_URL\") or \"http://kb-service:8000\" in load_learn_settings; kb_service/learn.py:185 service_up() requires its /health to answer 200",
+      "KB_LEARN_STOP_FILE": "reads KB_LEARN_STOP_FILE in https://github.com/sdr-ventures/kb-service at v0.100.0: kb_service/config.py:250 env.get(\"KB_LEARN_STOP_FILE\") or \"/tmp/kb-learn.stop\" in load_learn_settings; kb_service/learn.py:204 and :789 start nothing new while the file exists"
+    },
+    "paths": {
+      "/facts": "reads /facts in https://github.com/sdr-ventures/kb-service at v0.100.0: through KB_LEARN_ROLE_FILE=/facts/kb_role and KB_LEARN_MAINT_FILE=/facts/maintenance.until, which this template sets: kb_service/learn.py:156-159 reads the role file and :169 the maintenance flag"
+    },
+    "declared_for": {}
   }
 }
